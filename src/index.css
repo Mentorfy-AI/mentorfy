@@ -232,3 +232,15 @@
   background-color: var(--color-border);
   color: var(--color-text-muted);
 }
+
+/* Animations for Rafael AI */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -7,6 +7,33 @@ import { useAgent } from '../../../hooks/rafael-ai/useAgent'
 
 const ACCENT_COLOR = '#10B981'
 
+// Mock video response for pricing-related questions
+const PRICING_KEYWORDS = ['pricing', 'charge', 'rates', 'money', 'price', 'cost']
+const MOCK_VIDEO_RESPONSE = {
+  message: `This is the question that changes everything.
+
+Most artists think about pricing backwards — they look at what other people charge and try to fit somewhere in the middle. That's why they stay stuck.
+
+I made a video that breaks down exactly how I think about this:
+
+[VIDEO]
+
+Skip to 2:47 if you want the part about handling the "that's too expensive" objection — that's probably where you're getting stuck.
+
+But here's what I want you to sit with: price isn't about what you're worth. It's about who you want to attract.
+
+When you charge $1k, you get $1k clients. When you charge $5k, you don't get fewer people — you get *different* people. People who value the work differently. People who show up differently.
+
+So let me ask you: what would change in your business if every client who booked you was genuinely excited to pay your rate?`,
+  videoUrl: 'https://rafaeltats.wistia.com/medias/4i06zkj7fg'
+}
+
+// Check if message contains pricing keywords
+function containsPricingKeyword(message) {
+  const lowerMessage = message.toLowerCase()
+  return PRICING_KEYWORDS.some(keyword => lowerMessage.includes(keyword))
+}
+
 // Avatar component with black glow (consistent with rest of app)
 function Avatar({ size = 32 }) {
   const [imgError, setImgError] = useState(false)
@@ -104,8 +131,65 @@ function UserBubble({ children }) {
   )
 }
 
+// Copy button component
+function CopyButton({ content }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  return (
+    <motion.button
+      onClick={handleCopy}
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 0.92 }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '6px 8px',
+        background: 'transparent',
+        border: 'none',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        color: copied ? ACCENT_COLOR : '#999',
+        fontSize: '12px',
+        fontFamily: "'Geist', -apple-system, sans-serif",
+        transition: 'all 0.15s ease',
+      }}
+    >
+      {copied ? (
+        <>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span style={{ fontWeight: '500' }}>Copied</span>
+        </>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
+    </motion.button>
+  )
+}
+
 // Rafael message - no container, Lora font, full width
-function RafaelMessage({ children }) {
+function RafaelMessage({ children, content, thinkingTime }) {
+  // Format time as seconds with 2 decimal places
+  const formatTime = (ms) => {
+    if (!ms) return null
+    return (ms / 1000).toFixed(2) + 's'
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -114,51 +198,96 @@ function RafaelMessage({ children }) {
       style={{ fontFamily: "'Lora', Charter, Georgia, serif" }}
     >
       {children}
+      {content && (
+        <div style={{
+          marginTop: '8px',
+          marginLeft: '-8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}>
+          <CopyButton content={content} />
+          {thinkingTime && (
+            <span style={{
+              fontFamily: "'Geist', -apple-system, sans-serif",
+              fontSize: '13px',
+              color: '#999',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {formatTime(thinkingTime)}
+            </span>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }
 
-// Thinking indicator with shimmer animation
-function ThinkingIndicator() {
+// Thinking indicator with green shimmer animation and timer
+function ThinkingIndicator({ onTimeUpdate }) {
+  const [elapsed, setElapsed] = useState(0)
+  const startTimeRef = useRef(Date.now())
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now()
+      const ms = now - startTimeRef.current
+      setElapsed(ms)
+      onTimeUpdate?.(ms)
+    }, 10) // Update every 10ms for smooth display
+
+    return () => clearInterval(interval)
+  }, [onTimeUpdate])
+
+  // Format as seconds with 2 decimal places
+  const formatTime = (ms) => {
+    return (ms / 1000).toFixed(2) + 's'
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{ position: 'relative', display: 'inline-block' }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+      }}
     >
       <span
         style={{
           fontFamily: "'Lora', Charter, Georgia, serif",
           fontSize: '17px',
           fontWeight: '600',
-          color: '#9CA3AF',
-          position: 'relative',
+          color: '#111',
           display: 'inline-block',
+          backgroundImage: `linear-gradient(90deg, #111 0%, #111 42%, ${ACCENT_COLOR} 46%, ${ACCENT_COLOR} 54%, #111 58%, #111 100%)`,
+          backgroundSize: '300% 100%',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          animation: 'shimmer 0.6s linear infinite',
         }}
       >
         Thinking...
-        {/* Shimmer overlay */}
-        <span
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.8) 50%, transparent 100%)',
-            backgroundSize: '200% 100%',
-            animation: 'shimmer 1.5s infinite',
-            pointerEvents: 'none',
-          }}
-        />
+      </span>
+      <span
+        style={{
+          fontFamily: "'Geist', -apple-system, sans-serif",
+          fontSize: '13px',
+          color: '#999',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {formatTime(elapsed)}
       </span>
       <style>{`
         @keyframes shimmer {
           0% {
-            background-position: 200% 0;
+            background-position: 100% 0;
           }
           100% {
-            background-position: -200% 0;
+            background-position: 0% 0;
           }
         }
       `}</style>
@@ -166,28 +295,194 @@ function ThinkingIndicator() {
   )
 }
 
+// Inline Video Embed component for streaming messages
+function InlineVideoEmbed({ url, isVisible }) {
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  // Extract video info from URL
+  const getVideoInfo = (url) => {
+    if (!url) return null
+
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&?/]+)/)
+    if (ytMatch) return { provider: 'youtube', id: ytMatch[1] }
+
+    // Wistia
+    const wistiaMatch = url.match(/wistia\.com\/medias\/([^?/]+)/)
+    if (wistiaMatch) return { provider: 'wistia', id: wistiaMatch[1] }
+
+    return null
+  }
+
+  const video = getVideoInfo(url)
+  if (!video) return null
+
+  const thumbnailUrl = video.provider === 'youtube'
+    ? `https://img.youtube.com/vi/${video.id}/maxresdefault.jpg`
+    : `https://fast.wistia.com/embed/medias/${video.id}/swatch`
+
+  const embedUrl = video.provider === 'youtube'
+    ? `https://www.youtube.com/embed/${video.id}?autoplay=1&rel=0`
+    : `https://fast.wistia.net/embed/iframe/${video.id}?autoplay=1`
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: isVisible ? 1 : 0, scale: isVisible ? 1 : 0.97 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      style={{
+        width: '100%',
+        aspectRatio: '16/9',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        margin: '20px 0',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+        cursor: isPlaying ? 'default' : 'pointer',
+        position: 'relative',
+        backgroundColor: '#000',
+      }}
+      onClick={() => !isPlaying && setIsPlaying(true)}
+    >
+      {isPlaying ? (
+        <iframe
+          src={embedUrl}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 'none',
+          }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title="Video"
+        />
+      ) : (
+        <>
+          {/* Thumbnail */}
+          <img
+            src={thumbnailUrl}
+            alt="Video thumbnail"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none'
+            }}
+          />
+          {/* Dark overlay */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            transition: 'background-color 0.2s ease',
+          }} />
+          {/* Play button */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+              transition: 'transform 0.2s ease',
+            }}>
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="#000"
+                style={{ marginLeft: '3px' }}
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+          {/* Bottom gradient */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '80px',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
+          }} />
+        </>
+      )}
+    </motion.div>
+  )
+}
+
 // Streaming message component - shows text character by character
-function StreamingRafaelMessage({ content, onComplete }) {
+function StreamingRafaelMessage({ content, videoUrl, onComplete }) {
   const [displayedText, setDisplayedText] = useState('')
   const [isComplete, setIsComplete] = useState(false)
+  const [videoVisible, setVideoVisible] = useState(false)
   const streamSpeed = 5 // ms per character
+  const videoMarker = '[VIDEO]'
+  const videoShownRef = useRef(false)
 
   useEffect(() => {
     if (!content) return
 
     let index = 0
-    const interval = setInterval(() => {
-      if (index < content.length) {
-        setDisplayedText(content.slice(0, index + 1))
-        index++
-      } else {
-        clearInterval(interval)
-        setIsComplete(true)
-        onComplete?.()
-      }
-    }, streamSpeed)
+    let interval
+    let isPaused = false
 
-    return () => clearInterval(interval)
+    const startStreaming = () => {
+      interval = setInterval(() => {
+        if (isPaused) return
+
+        if (index < content.length) {
+          const currentText = content.slice(0, index + 1)
+
+          // Check if we just revealed the video marker
+          if (currentText.includes(videoMarker) && !videoShownRef.current) {
+            setDisplayedText(currentText)
+            isPaused = true
+            clearInterval(interval)
+            videoShownRef.current = true
+
+            // Brief pause, then show video
+            setTimeout(() => {
+              setVideoVisible(true)
+              // Continue streaming after video appears
+              setTimeout(() => {
+                isPaused = false
+                index++
+                startStreaming()
+              }, 300) // 300ms pause after video appears
+            }, 100)
+            return
+          }
+
+          setDisplayedText(currentText)
+          index++
+        } else {
+          clearInterval(interval)
+          setIsComplete(true)
+          onComplete?.()
+        }
+      }, streamSpeed)
+    }
+
+    startStreaming()
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
   }, [content, onComplete])
 
   // Parse the displayed text for rendering
@@ -197,6 +492,17 @@ function StreamingRafaelMessage({ content, onComplete }) {
     const isFirst = index === 0
     const marginTop = isFirst ? 0 : '20px'
     const isLastBlock = index === blocks.length - 1
+
+    // Check for video marker
+    if (block.trim() === '[VIDEO]' || block.includes('[VIDEO]')) {
+      return (
+        <InlineVideoEmbed
+          key={index}
+          url={videoUrl}
+          isVisible={videoVisible}
+        />
+      )
+    }
 
     // Check for horizontal rule
     if (block.trim() === '---' || block.trim() === '***' || block.trim() === '___') {
@@ -333,9 +639,249 @@ function BlinkingCursor() {
   )
 }
 
+// Audio Waveform Visualizer component - scrolling waveform like Claude
+function AudioWaveform({ analyserNode, isRecording }) {
+  const canvasRef = useRef(null)
+  const animationRef = useRef(null)
+  const dataArrayRef = useRef(null)
+  const historyRef = useRef([]) // Rolling history of amplitude values
+  const lastUpdateRef = useRef(0)
+
+  const BAR_COUNT = 50
+  const UPDATE_INTERVAL = 50 // ms between adding new samples
+
+  useEffect(() => {
+    if (!analyserNode || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    const bufferLength = analyserNode.frequencyBinCount
+    dataArrayRef.current = new Uint8Array(bufferLength)
+
+    // Initialize history with zeros (silent)
+    if (historyRef.current.length === 0) {
+      historyRef.current = new Array(BAR_COUNT).fill(0)
+    }
+
+    const draw = (timestamp) => {
+      if (!isRecording) return
+
+      animationRef.current = requestAnimationFrame(draw)
+      analyserNode.getByteTimeDomainData(dataArrayRef.current)
+
+      // Calculate current amplitude (RMS)
+      let sum = 0
+      for (let i = 0; i < bufferLength; i++) {
+        const value = (dataArrayRef.current[i] - 128) / 128
+        sum += value * value
+      }
+      const rms = Math.sqrt(sum / bufferLength)
+      const amplitude = Math.min(1, rms * 3) // Normalize and boost
+
+      // Add new sample to history at regular intervals (pushes from right)
+      if (timestamp - lastUpdateRef.current > UPDATE_INTERVAL) {
+        historyRef.current.push(amplitude)
+        // Remove oldest sample from the left
+        if (historyRef.current.length > BAR_COUNT) {
+          historyRef.current.shift()
+        }
+        lastUpdateRef.current = timestamp
+      }
+
+      // Draw
+      const width = canvas.width
+      const height = canvas.height
+      ctx.clearRect(0, 0, width, height)
+
+      const barWidth = 3
+      const barGap = 2
+      const totalWidth = BAR_COUNT * (barWidth + barGap) - barGap
+      const startX = (width - totalWidth) / 2
+
+      for (let i = 0; i < historyRef.current.length; i++) {
+        const value = historyRef.current[i]
+        const minHeight = 3
+        const maxHeight = height * 0.85
+        const barHeight = Math.max(minHeight, value * maxHeight)
+
+        const x = startX + i * (barWidth + barGap)
+        const y = (height - barHeight) / 2
+
+        // Draw rounded bar
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.beginPath()
+        ctx.roundRect(x, y, barWidth, barHeight, 1.5)
+        ctx.fill()
+      }
+    }
+
+    if (isRecording) {
+      // Reset history when starting
+      historyRef.current = new Array(BAR_COUNT).fill(0)
+      lastUpdateRef.current = 0
+      draw(0)
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [analyserNode, isRecording])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={260}
+      height={40}
+      style={{
+        display: 'block',
+      }}
+    />
+  )
+}
+
+// Voice Recording Bar component
+function VoiceRecordingBar({ onCancel, onSend, analyserNode }) {
+  const [recordingTime, setRecordingTime] = useState(0)
+
+  // Timer effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRecordingTime(prev => prev + 1)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Format time as M:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: '12px 20px 24px',
+        background: 'transparent',
+        display: 'flex',
+        justifyContent: 'center',
+      }}
+    >
+      <motion.div
+        initial={{ backgroundColor: 'rgba(255, 255, 255, 0.25)' }}
+        animate={{ backgroundColor: ACCENT_COLOR }}
+        transition={{ duration: 0.3 }}
+        style={{
+          width: '100%',
+          maxWidth: '720px',
+          borderRadius: '20px',
+          padding: '12px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: `0 4px 30px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.2)`,
+          minHeight: '68px',
+        }}
+      >
+        {/* Cancel Button - Left */}
+        <motion.button
+          onClick={onCancel}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.2 }}
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </motion.button>
+
+        {/* Center - Waveform + Timer */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.2 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flex: 1,
+            justifyContent: 'center',
+          }}
+        >
+          <AudioWaveform analyserNode={analyserNode} isRecording={true} />
+          <span style={{
+            fontFamily: "'Geist', -apple-system, sans-serif",
+            fontSize: '15px',
+            fontWeight: '500',
+            color: 'rgba(255, 255, 255, 0.9)',
+            minWidth: '40px',
+          }}>
+            {formatTime(recordingTime)}
+          </span>
+        </motion.div>
+
+        {/* Send Button - Right */}
+        <motion.button
+          onClick={onSend}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.2 }}
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            backgroundColor: '#FFFFFF',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACCENT_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // Chat input bar (same as ChatHome)
 function ChatInputBar({ placeholder, onSend, disabled }) {
   const [value, setValue] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [analyserNode, setAnalyserNode] = useState(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const streamRef = useRef(null)
+  const audioContextRef = useRef(null)
 
   const hasText = value.trim().length > 0
 
@@ -361,140 +907,273 @@ function ChatInputBar({ placeholder, onSend, disabled }) {
     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'
   }
 
+  // Start voice recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+
+      // Set up Web Audio API for visualization
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      audioContextRef.current = audioContext
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 256
+      source.connect(analyser)
+      setAnalyserNode(analyser)
+
+      // Set up MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error('Error accessing microphone:', err)
+    }
+  }
+
+  // Stop recording and cleanup
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+    }
+    setIsRecording(false)
+    setAnalyserNode(null)
+  }
+
+  // Cancel recording
+  const handleCancelRecording = () => {
+    stopRecording()
+    audioChunksRef.current = []
+  }
+
+  // Transcribe audio using OpenAI Whisper API
+  const transcribeAudio = async (audioBlob) => {
+    const formData = new FormData()
+    formData.append('file', audioBlob, 'recording.webm')
+    formData.append('model', 'whisper-1')
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error('Transcription failed')
+    }
+
+    const data = await response.json()
+    return data.text
+  }
+
+  // Send voice recording - transcribe and send as message
+  const handleSendRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+
+        try {
+          const transcribedText = await transcribeAudio(audioBlob)
+          if (transcribedText && transcribedText.trim()) {
+            onSend(transcribedText.trim())
+          }
+        } catch (error) {
+          console.error('Transcription error:', error)
+        } finally {
+          audioChunksRef.current = []
+        }
+      }
+    }
+    stopRecording()
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isRecording) {
+        stopRecording()
+      }
+    }
+  }, [])
+
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      padding: '12px 20px 24px',
-      background: 'transparent',
-      display: 'flex',
-      justifyContent: 'center',
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '720px',
-        background: 'rgba(255, 255, 255, 0.25)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
-        borderRadius: '20px',
-        padding: '12px 14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        opacity: disabled ? 0.6 : 1,
-      }}>
-        {/* Text Area */}
-        <textarea
-          value={value}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          rows={1}
-          style={{
-            width: '100%',
-            fontFamily: "'Geist', -apple-system, sans-serif",
-            fontSize: '15px',
-            color: '#111',
-            border: 'none',
-            outline: 'none',
-            backgroundColor: 'transparent',
-            resize: 'none',
-            lineHeight: '1.5',
-            minHeight: '22px',
-            maxHeight: '150px',
-            padding: 0,
-          }}
+    <AnimatePresence mode="wait">
+      {isRecording ? (
+        <VoiceRecordingBar
+          key="recording"
+          onCancel={handleCancelRecording}
+          onSend={handleSendRecording}
+          analyserNode={analyserNode}
         />
-
-        {/* Bottom row - buttons */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          {/* Left side - Plus icon */}
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            border: '1.5px solid #E0E0E0',
+      ) : (
+        <motion.div
+          key="input"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '12px 20px 24px',
+            background: 'transparent',
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'center',
-            color: '#888',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
+          }}
+        >
+          <div style={{
+            width: '100%',
+            maxWidth: '720px',
+            background: 'rgba(255, 255, 255, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            borderRadius: '20px',
+            padding: '12px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            opacity: disabled ? 0.6 : 1,
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </div>
+            {/* Text Area */}
+            <textarea
+              value={value}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              disabled={disabled}
+              rows={1}
+              style={{
+                width: '100%',
+                fontFamily: "'Geist', -apple-system, sans-serif",
+                fontSize: '15px',
+                color: '#111',
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                resize: 'none',
+                lineHeight: '1.5',
+                minHeight: '22px',
+                maxHeight: '150px',
+                padding: 0,
+              }}
+            />
 
-          {/* Right side - Mic + Send */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Mic Icon */}
+            {/* Bottom row - buttons */}
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              border: '1.5px solid #E0E0E0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#888',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              justifyContent: 'space-between',
             }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-              </svg>
-            </div>
-
-            {/* Send Button */}
-            <div
-              onClick={handleSend}
-              style={{
+              {/* Left side - Plus icon */}
+              <div style={{
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
+                background: '#F0EBE4',
+                border: '1px solid #E8E3DC',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: hasText && !disabled ? 'pointer' : 'default',
-                backgroundColor: hasText ? ACCENT_COLOR : 'transparent',
-                border: hasText ? 'none' : '1.5px solid #E0E0E0',
-                boxShadow: hasText
-                  ? `0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.25)`
-                  : 'none',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={hasText ? '#FFFFFF' : '#CCC'}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ transition: 'stroke 0.2s ease' }}
-              >
-                <path d="M12 19V5M5 12l7-7 7 7" />
-              </svg>
+                color: '#666',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </div>
+
+              {/* Right side - Mic + Send */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Mic Icon */}
+                <motion.div
+                  onClick={!disabled ? startRecording : undefined}
+                  whileHover={!disabled ? { scale: 1.05 } : {}}
+                  whileTap={!disabled ? { scale: 0.95 } : {}}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#F0EBE4',
+                    border: '1px solid #E8E3DC',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#666',
+                    cursor: disabled ? 'default' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                  </svg>
+                </motion.div>
+
+                {/* Send Button */}
+                <div
+                  onClick={handleSend}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: hasText && !disabled ? 'pointer' : 'default',
+                    backgroundColor: hasText ? ACCENT_COLOR : '#F0EBE4',
+                    border: hasText ? 'none' : '1px solid #E8E3DC',
+                    boxShadow: hasText
+                      ? `0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.25)`
+                      : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={hasText ? '#FFFFFF' : '#666'}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ transition: 'stroke 0.2s ease' }}
+                  >
+                    <path d="M12 19V5M5 12l7-7 7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -519,6 +1198,17 @@ function RafaelContent({ content, videoUrl }) {
   const renderBlock = (block, index) => {
     const isFirst = index === 0
     const marginTop = isFirst ? 0 : '20px'
+
+    // Check for video marker
+    if (block.trim() === '[VIDEO]' || block.includes('[VIDEO]')) {
+      return (
+        <InlineVideoEmbed
+          key={index}
+          url={videoUrl}
+          isVisible={true}
+        />
+      )
+    }
 
     // Check for horizontal rule
     if (block.trim() === '---' || block.trim() === '***' || block.trim() === '___') {
@@ -650,11 +1340,14 @@ function RafaelContent({ content, videoUrl }) {
     )
   }
 
+  // Only show fallback video at bottom if content doesn't have inline [VIDEO] marker
+  const hasInlineVideo = content.includes('[VIDEO]')
+
   return (
     <>
       {blocks.map((block, i) => renderBlock(block, i))}
 
-      {videoUrl && (
+      {videoUrl && !hasInlineVideo && (
         <div style={{ marginTop: '20px' }}>
           <VideoEmbed url={videoUrl} maxWidth="100%" />
         </div>
@@ -725,6 +1418,7 @@ export function ActiveChat({ initialMessage, onBack }) {
   const streamingNodeRef = useRef(null)
   const messageNodeMapRef = useRef(new Map())
   const initialMessageSent = useRef(false)
+  const thinkingTimeRef = useRef(0) // Track thinking time
 
   // Ref callback for message nodes - memoize per ID to avoid re-renders
   const refCallbacksRef = useRef(new Map())
@@ -792,9 +1486,20 @@ export function ActiveChat({ initialMessage, onBack }) {
     setIsTyping(true)
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage })
 
-    // Get AI response
-    const response = await getResponse('chat', state, content)
+    // Add artificial delay to see thinking animation (2.3 seconds)
+    await new Promise(resolve => setTimeout(resolve, 2300))
 
+    // Check for pricing keywords - use mock response if found
+    let response
+    if (containsPricingKeyword(content)) {
+      response = MOCK_VIDEO_RESPONSE
+    } else {
+      // Get AI response
+      response = await getResponse('chat', state, content)
+    }
+
+    // Capture the final thinking time
+    const finalThinkingTime = thinkingTimeRef.current
     setIsTyping(false)
 
     // Update the assistant message content IN PLACE
@@ -804,7 +1509,8 @@ export function ActiveChat({ initialMessage, onBack }) {
         ? {
             ...msg,
             content: response.message || response,
-            videoUrl: response.videoKey ? mentor.videos[response.videoKey]?.url : null
+            videoUrl: response.videoUrl || (response.videoKey ? mentor.videos[response.videoKey]?.url : null),
+            thinkingTime: finalThinkingTime
             // DO NOT set _placeholder: false here - that removes filler too early
           }
         : msg
@@ -829,6 +1535,11 @@ export function ActiveChat({ initialMessage, onBack }) {
     // They will be cleaned up when user sends next message
   }, [])
 
+  // Update thinking time ref from ThinkingIndicator
+  const handleThinkingTimeUpdate = useCallback((ms) => {
+    thinkingTimeRef.current = ms
+  }, [])
+
   // Handle initial message if provided (append to sample messages for now)
   useEffect(() => {
     if (initialMessage && !initialMessageSent.current) {
@@ -850,28 +1561,36 @@ export function ActiveChat({ initialMessage, onBack }) {
       <div style={{
         position: 'fixed',
         top: 6,
-        left: 20,
-        right: 20,
+        left: 0,
+        right: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'center',
-        padding: '10px 14px',
-        borderRadius: '20px',
-        background: 'rgba(255, 255, 255, 0.25)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+        justifyContent: 'center',
+        padding: '0 20px',
       }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '720px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 14px',
+          borderRadius: '20px',
+          background: 'rgba(255, 255, 255, 0.25)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+        }}>
         <button
           onClick={onBack}
           style={{
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            color: '#888',
-            background: 'transparent',
-            border: '1.5px solid #E0E0E0',
+            color: '#666',
+            background: '#F0EBE4',
+            border: '1px solid #E8E3DC',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -899,7 +1618,30 @@ export function ActiveChat({ initialMessage, onBack }) {
           <RafaelLabel size="large" />
         </div>
 
-        <div style={{ width: '36px' }} /> {/* Spacer for centering */}
+        {/* Profile/Account Button */}
+        <button
+          onClick={() => console.log('Account clicked')}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            color: '#666',
+            background: '#F0EBE4',
+            border: '1px solid #E8E3DC',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
+        </div>
       </div>
 
       {/* Messages - Scroll Container (no padding here for sticky to work) */}
@@ -948,16 +1690,17 @@ export function ActiveChat({ initialMessage, onBack }) {
                     ) : isStreaming ? (
                       // Streaming assistant row - NEVER return null to keep DOM stable
                       isTyping ? (
-                        <ThinkingIndicator />
+                        <ThinkingIndicator onTimeUpdate={handleThinkingTimeUpdate} />
                       ) : (
                         // Always render StreamingRafaelMessage - it handles empty content gracefully
                         <StreamingRafaelMessage
                           content={message.content || ''}
+                          videoUrl={message.videoUrl}
                           onComplete={handleStreamingComplete}
                         />
                       )
                     ) : message.content ? (
-                      <RafaelMessage>
+                      <RafaelMessage content={message.content} thinkingTime={message.thinkingTime}>
                         <RafaelContent
                           content={message.content}
                           videoUrl={message.videoUrl}

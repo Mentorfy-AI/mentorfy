@@ -1106,6 +1106,18 @@ function ChatInputBar({ placeholder, onSend, disabled }) {
                 </svg>
               </div>
 
+              {/* Center - Subtle watermark */}
+              <div style={{
+                fontFamily: "'Lora', Charter, Georgia, serif",
+                fontSize: '9px',
+                fontWeight: '500',
+                letterSpacing: '0.1em',
+                color: 'rgba(0, 0, 0, 0.12)',
+                textTransform: 'uppercase',
+              }}>
+                Mentorfy AI Experience
+              </div>
+
               {/* Right side - Mic + Send */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {/* Mic Icon */}

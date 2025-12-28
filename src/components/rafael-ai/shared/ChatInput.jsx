@@ -20,7 +20,7 @@ export function ChatInput({ placeholder = "Message Rafael...", onSend, onAttach,
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 pb-2 z-50">
       <form onSubmit={handleSubmit} className="flex items-center gap-3 max-w-2xl mx-auto">
         {/* Plus button */}
         <button

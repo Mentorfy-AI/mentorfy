@@ -183,7 +183,9 @@ function LongAnswerStepContent({ step, onAnswer }: LongAnswerStepContentProps) {
             alignItems: 'center',
             gap: '8px',
             fontFamily: "'Geist', -apple-system, sans-serif",
-            boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
+            boxShadow: isValid
+              ? '0 4px 12px rgba(16, 185, 129, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+              : 'none',
             transition: 'all 0.15s ease',
           }}
         >
@@ -309,7 +311,9 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
             alignItems: 'center',
             gap: '8px',
             fontFamily: "'Geist', -apple-system, sans-serif",
-            boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
+            boxShadow: isValid
+              ? '0 4px 12px rgba(16, 185, 129, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+              : 'none',
             transition: 'all 0.15s ease',
           }}
         >
@@ -376,15 +380,16 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
   const [currentStreamParagraph, setCurrentStreamParagraph] = useState(0)
   const [streamingComplete, setStreamingComplete] = useState(false)
 
+  // TEMP: Speed up for testing (restore original values when done)
   const thinkingMessages = [
-    { text: "Give me a second...", pauseAfter: 800 },
-    { text: "I'm thinking about what you shared with me...", pauseAfter: 1200 },
-    { text: "Crafting a response for your situation...", pauseAfter: 1500, transitionToResponse: true }
+    { text: "Give me a second...", pauseAfter: 50 },
+    { text: "I'm thinking about what you shared with me...", pauseAfter: 50 },
+    { text: "Crafting a response for your situation...", pauseAfter: 50, transitionToResponse: true }
   ]
 
-  const typeSpeed = 45
-  const deleteSpeed = 12
-  const streamSpeed = 30
+  const typeSpeed = 5
+  const deleteSpeed = 2
+  const streamSpeed = 5
 
   // Fetch response in background
   useEffect(() => {
@@ -442,7 +447,7 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
         if (response) {
           setPhase('streaming')
         }
-      }, 400)
+      }, 50) // TEMP: Was 400
     } else if (phase === 'streaming' && response) {
       const { headline, paragraphs } = parsedResponse()
 
@@ -665,7 +670,7 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
                 alignItems: 'center',
                 gap: '8px',
                 fontFamily: "'Geist', -apple-system, sans-serif",
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -919,7 +924,7 @@ function VideoStepContent({ step, onContinue }: VideoStepContentProps) {
                   alignItems: 'center',
                   gap: '8px',
                   fontFamily: "'Geist', -apple-system, sans-serif",
-                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
                   transition: 'all 0.15s ease',
                 }}
               >

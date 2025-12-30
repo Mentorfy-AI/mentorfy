@@ -19,6 +19,8 @@ function RafaelAIContent() {
   const { state, dispatch } = useUser()
   const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null)
   const [arrowReady, setArrowReady] = useState(false)
+  const [fadeOverlay, setFadeOverlay] = useState(false) // Simple fade for phase transitions
+  const [instantScroll, setInstantScroll] = useState(false) // Skip scroll animation during transitions
 
   // Ref for PhaseFlow's back handler - allows stationary header to control internal navigation
   const levelFlowBackRef = useRef<(() => void) | null>(null)
@@ -50,25 +52,51 @@ function RafaelAIContent() {
     dispatch({ type: 'SET_SCREEN', payload: 'level-flow' })
   }
 
-  // Initial Level Complete (fullscreen Level 1) → Transition to Experience Shell
+  // Initial Level Complete (fullscreen Level 1) → Fade to Experience Shell
   const handleInitialLevelComplete = () => {
-    // Mark phase complete (this increments currentPhase)
-    dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
-    // Reset arrow state for the new cycle
-    setArrowReady(false)
-    // Go to Experience Shell, Past view (panel 0)
-    setPanel(0)
-    dispatch({ type: 'SET_SCREEN', payload: 'experience' })
+    // Show fade overlay instantly and enable instant scroll
+    setFadeOverlay(true)
+    setInstantScroll(true)
+    // Wait for overlay to render before making state changes
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Mark phase complete (this increments currentPhase)
+        dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+        // Reset arrow state for the new cycle
+        setArrowReady(false)
+        // Set up the experience screen at Panel 0
+        dispatch({ type: 'SET_SCREEN', payload: 'experience' })
+        setPanel(0)
+        // Fade out overlay after content has rendered
+        setTimeout(() => {
+          setFadeOverlay(false)
+          setInstantScroll(false)
+        }, 300)
+      })
+    })
   }
 
-  // Panel Level Complete (Panel 2) → Stay in Experience, go to Past view
+  // Panel Level Complete (Panel 2) → Fade back to AIMemory
   const handlePanelLevelComplete = () => {
-    // Mark phase complete (this increments currentPhase)
-    dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
-    // Reset arrow state for the new cycle
-    setArrowReady(false)
-    // Go back to Past view (panel 0) - already in experience screen
-    setPanel(0)
+    // Show fade overlay instantly and enable instant scroll
+    setFadeOverlay(true)
+    setInstantScroll(true)
+    // Wait for overlay to render before making state changes
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Mark phase complete (this increments currentPhase)
+        dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+        // Reset arrow state for the new cycle
+        setArrowReady(false)
+        // Set panel to AIMemory (Panel 0) - use dispatch directly to ensure it's set
+        dispatch({ type: 'SET_PANEL', payload: 0 })
+        // Wait briefly for instant scroll to complete, then fade out
+        setTimeout(() => {
+          setFadeOverlay(false)
+          setInstantScroll(false)
+        }, 300)
+      })
+    })
   }
 
   // Back from Level Flow panel → Present panel
@@ -131,14 +159,14 @@ function RafaelAIContent() {
 
         {/* EXPERIENCE SHELL (Past + Present + Future, 3 panels) */}
         {currentScreen === 'experience' && (
-          <div key="experience" style={{ position: 'relative' }}>
+          <div key="experience" style={{ position: 'relative', backgroundColor: '#FAF6F0', minHeight: '100vh' }}>
             {/* Stationary header - stays fixed while ALL panels slide */}
             <div style={{
               position: 'fixed',
               top: 6,
               left: 0,
               right: 0,
-              zIndex: 100,
+              zIndex: 250,
               display: 'flex',
               justifyContent: 'center',
               padding: '0 20px',
@@ -221,6 +249,7 @@ function RafaelAIContent() {
             <TimelineShell
               currentPanel={currentPanel}
               onPanelChange={setPanel}
+              instantScroll={instantScroll}
             >
               {/* Panel 0: AIMemory (Journey) */}
               <Panel>
@@ -368,6 +397,25 @@ function RafaelAIContent() {
           </div>
         )}
 
+      </AnimatePresence>
+
+      {/* Simple fade overlay for phase transitions */}
+      <AnimatePresence>
+        {fadeOverlay && (
+          <motion.div
+            key="fade-overlay"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              backgroundColor: '#FAF6F0',
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   )

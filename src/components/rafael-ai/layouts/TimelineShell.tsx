@@ -6,9 +6,10 @@ interface TimelineShellProps {
   children: ReactNode
   currentPanel?: number
   onPanelChange?: (panel: number) => void
+  instantScroll?: boolean // Use instant scroll (no animation)
 }
 
-export function TimelineShell({ children, currentPanel = 1, onPanelChange }: TimelineShellProps) {
+export function TimelineShell({ children, currentPanel = 1, onPanelChange, instantScroll }: TimelineShellProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
   const isProgrammaticScroll = useRef(false)
@@ -17,15 +18,18 @@ export function TimelineShell({ children, currentPanel = 1, onPanelChange }: Tim
     if (!containerRef.current || isScrolling) return
     const panelWidth = containerRef.current.offsetWidth
     isProgrammaticScroll.current = true
+
     containerRef.current.scrollTo({
       left: currentPanel * panelWidth,
-      behavior: 'smooth'
+      behavior: instantScroll ? 'instant' : 'smooth'
     })
-    // Reset after scroll completes - longer timeout for multi-panel scrolls
+
+    // Reset after scroll completes
+    const timeout = instantScroll ? 50 : 800
     setTimeout(() => {
       isProgrammaticScroll.current = false
-    }, 800)
-  }, [currentPanel, isScrolling])
+    }, timeout)
+  }, [currentPanel, isScrolling, instantScroll])
 
   const handleScroll = () => {
     if (!containerRef.current) return
@@ -63,6 +67,7 @@ export function TimelineShell({ children, currentPanel = 1, onPanelChange }: Tim
         WebkitOverflowScrolling: 'touch',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
+        backgroundColor: '#FAF6F0', // Consistent cream background
       }}
     >
       <style>{`
@@ -88,6 +93,7 @@ export function Panel({ children }: PanelProps) {
         position: 'relative',
         overflowX: 'hidden',
         overflowY: 'auto',
+        backgroundColor: '#FAF6F0', // Consistent cream background
       }}
     >
       {children}

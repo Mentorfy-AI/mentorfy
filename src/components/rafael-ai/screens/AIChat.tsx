@@ -778,6 +778,13 @@ export function AIChat({
   const thinkingTimeRef = useRef(0)
   const lastPhaseRef = useRef(currentPhase)
 
+  // Always call onArrowReady when component mounts/becomes visible
+  // This fixes the bug where navigating back to AIChat wouldn't re-enable the arrow
+  useEffect(() => {
+    const timer = setTimeout(() => onArrowReady?.(), 500)
+    return () => clearTimeout(timer)
+  }, [onArrowReady])
+
   // Ref callback for message nodes
   const handleMessageRef = useCallback((id: string, node: HTMLDivElement | null) => {
     if (node) {

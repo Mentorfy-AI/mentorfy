@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, ReactNode } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChatInputBar } from '../shared/ChatInputBar'
+import { motion } from 'framer-motion'
+import { ChatBar } from '../shared/ChatBar'
 import { VideoEmbed } from '../shared/VideoEmbed'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget } from 'react-calendly'
@@ -11,16 +11,16 @@ import { useAgent } from '@/hooks/useAgent'
 
 const ACCENT_COLOR = '#10B981'
 
-// Level completion messages based on current level
+// Level completion messages based on current phase
 const LEVEL_COMPLETE_MESSAGES: Record<number, string> = {
-  // After Level 1 (currentLevel = 2)
+  // After Phase 1 (currentPhase = 2)
   2: `Nice work — you just finished Level 1.
 
 You can keep chatting with me here if you want to go deeper on anything we covered. Or tap the arrow to start Level 2.
 
 I'm here whenever you need me.`,
 
-  // After Level 2 (currentLevel = 3, no more levels)
+  // After Phase 2 (currentPhase = 3, no more phases)
   3: `Congratulations — you've completed Level 2.
 
 There's no next level yet, but that doesn't mean we're done. Keep chatting with me here if you want to go deeper on anything we covered.
@@ -747,23 +747,23 @@ interface Message {
   thinkingTime?: number
 }
 
-interface PresentViewProps {
+interface AIChatProps {
   onNavigateToPast?: () => void
   onStartNextLevel?: () => void
   initialMessage?: string
   onMessageHandled?: () => void
   onArrowReady?: () => void
-  currentLevel: number
+  currentPhase: number
 }
 
-export function PresentView({
+export function AIChat({
   onNavigateToPast,
   onStartNextLevel,
   initialMessage,
   onMessageHandled,
   onArrowReady,
-  currentLevel
-}: PresentViewProps) {
+  currentPhase
+}: AIChatProps) {
   const { state, dispatch } = useUser()
   const { getResponse } = useAgent()
   const [messages, setMessages] = useState<Message[]>([])
@@ -776,25 +776,22 @@ export function PresentView({
   const initialMessageSent = useRef(false)
   const pendingMessageHandled = useRef(false)
   const thinkingTimeRef = useRef(0)
-  const lastLevelRef = useRef(currentLevel)
+  const lastPhaseRef = useRef(currentPhase)
 
   // Ref callback for message nodes
-  const refCallbacksRef = useRef(new Map<string, (node: HTMLDivElement | null) => void>())
-  const getRefCallback = useCallback((id: string) => {
-    if (!refCallbacksRef.current.has(id)) {
-      refCallbacksRef.current.set(id, (node) => {
-        if (node) messageNodeMapRef.current.set(id, node)
-        else messageNodeMapRef.current.delete(id)
-      })
+  const handleMessageRef = useCallback((id: string, node: HTMLDivElement | null) => {
+    if (node) {
+      messageNodeMapRef.current.set(id, node)
+    } else {
+      messageNodeMapRef.current.delete(id)
     }
-    return refCallbacksRef.current.get(id)
   }, [])
 
   // Initialize with level completion message - resets when level changes
   useEffect(() => {
     // Check if level changed - reset the message
-    if (lastLevelRef.current !== currentLevel) {
-      lastLevelRef.current = currentLevel
+    if (lastPhaseRef.current !== currentPhase) {
+      lastPhaseRef.current = currentPhase
       initialMessageSent.current = false
     }
 
@@ -808,17 +805,17 @@ export function PresentView({
     }))
 
     // Get message based on current level (defaults to level 2 message)
-    const levelMessage = LEVEL_COMPLETE_MESSAGES[currentLevel] || LEVEL_COMPLETE_MESSAGES[2]
+    const levelMessage = LEVEL_COMPLETE_MESSAGES[currentPhase] || LEVEL_COMPLETE_MESSAGES[2]
 
     const completionMessage: Message = {
-      id: `level-complete-${currentLevel}`,
+      id: `level-complete-${currentPhase}`,
       role: 'assistant',
       content: levelMessage
     }
 
     setMessages([...existingMessages, completionMessage])
     setTimeout(() => onArrowReady?.(), 1500)
-  }, [state.conversation, onArrowReady, currentLevel])
+  }, [state.conversation, onArrowReady, currentPhase])
 
   // Handle incoming message from PastView
   useEffect(() => {
@@ -962,7 +959,7 @@ export function PresentView({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
+      height: '100%',
       overflow: 'hidden',
       backgroundColor: '#FAF6F0',
     }}>
@@ -984,58 +981,60 @@ export function PresentView({
             flexDirection: 'column',
             gap: '28px',
           }}>
-            <AnimatePresence mode="popLayout">
-              {messages.map((message) => {
-                const isStreaming = message.id === streamingMessageId
-                const isPlaceholder = message._placeholder
-                const isFocusedUser = message.role === 'user' && message.id === focusMessageId
+            {messages.map((message) => {
+              const isStreaming = message.id === streamingMessageId
+              const isPlaceholder = message._placeholder
+              const isFocusedUser = message.role === 'user' && message.id === focusMessageId
 
-                return (
-                  <div
-                    key={message.id}
-                    ref={getRefCallback(message.id)}
-                    style={{
-                      minHeight: isPlaceholder && turnFillPx > 0 ? turnFillPx : undefined,
-                      marginTop: isFocusedUser ? 8 : undefined,
-                      scrollMarginTop: isFocusedUser ? 80 : undefined,
-                    }}
-                  >
-                    {message.role === 'user' ? (
-                      <UserBubble>{message.content}</UserBubble>
-                    ) : isStreaming ? (
-                      isTyping ? (
-                        <ThinkingIndicator onTimeUpdate={handleThinkingTimeUpdate} />
-                      ) : message.embedData ? (
-                        <EmbeddedRafaelMessage
-                          embedData={message.embedData}
-                          onComplete={handleStreamingComplete}
-                        />
-                      ) : (
-                        <StreamingRafaelMessage
-                          content={message.content || ''}
-                          onComplete={handleStreamingComplete}
-                        />
-                      )
+              return (
+                <div
+                  key={message.id}
+                  ref={(node) => handleMessageRef(message.id, node)}
+                  data-message-id={message.id}
+                  style={{
+                    // Apply turn filler to placeholder to create scroll space
+                    minHeight: isPlaceholder && turnFillPx > 0 ? turnFillPx : undefined,
+                    // Add top margin for focused user message
+                    marginTop: isFocusedUser ? 8 : undefined,
+                    // CSS scroll-margin so scrollIntoView leaves space at top
+                    scrollMarginTop: isFocusedUser ? 80 : undefined,
+                  }}
+                >
+                  {message.role === 'user' ? (
+                    <UserBubble>{message.content}</UserBubble>
+                  ) : isStreaming ? (
+                    isTyping ? (
+                      <ThinkingIndicator onTimeUpdate={handleThinkingTimeUpdate} />
                     ) : message.embedData ? (
-                      <CompletedEmbeddedMessage
+                      <EmbeddedRafaelMessage
                         embedData={message.embedData}
-                        thinkingTime={message.thinkingTime}
+                        onComplete={handleStreamingComplete}
                       />
-                    ) : message.content ? (
-                      <RafaelMessage content={message.content} thinkingTime={message.thinkingTime}>
-                        <RafaelContent content={message.content} />
-                      </RafaelMessage>
-                    ) : null}
-                  </div>
-                )
-              })}
-            </AnimatePresence>
+                    ) : (
+                      <StreamingRafaelMessage
+                        content={message.content || ''}
+                        onComplete={handleStreamingComplete}
+                      />
+                    )
+                  ) : message.embedData ? (
+                    <CompletedEmbeddedMessage
+                      embedData={message.embedData}
+                      thinkingTime={message.thinkingTime}
+                    />
+                  ) : message.content ? (
+                    <RafaelMessage content={message.content} thinkingTime={message.thinkingTime}>
+                      <RafaelContent content={message.content} />
+                    </RafaelMessage>
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
 
       {/* Chat input */}
-      <ChatInputBar
+      <ChatBar
         placeholder="Message Rafael..."
         onSend={handleSendMessage}
         disabled={isTyping}

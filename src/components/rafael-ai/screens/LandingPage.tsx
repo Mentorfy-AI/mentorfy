@@ -2,8 +2,8 @@
 
 import { motion } from 'framer-motion'
 import { VideoEmbed } from '../shared/VideoEmbed'
-import { Avatar } from '../shared/Avatar'
-import { RafaelLabel } from '../shared/RafaelLabel'
+import { MentorAvatar } from '../shared/MentorAvatar'
+import { MentorBadge } from '../shared/MentorBadge'
 import { MentorfyWatermark } from '../shared/MentorfyWatermark'
 import { mentor } from '@/data/rafael-ai/mentor'
 
@@ -35,11 +35,11 @@ function HeadlineWithAccent({ text }: HeadlineWithAccentProps) {
   )
 }
 
-interface WelcomeScreenProps {
+interface LandingPageProps {
   onStart: () => void
 }
 
-export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
+export function LandingPage({ onStart }: LandingPageProps) {
   return (
     <div style={{
       minHeight: '100vh',
@@ -57,12 +57,12 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
       }}>
         {/* Avatar */}
         <div style={{ marginBottom: '10px' }}>
-          <Avatar size={64} />
+          <MentorAvatar size={64} />
         </div>
 
         {/* Name + Badge */}
         <div style={{ marginBottom: '14px' }}>
-          <RafaelLabel />
+          <MentorBadge />
         </div>
 
         {/* Headline - $2k-$10k in green */}

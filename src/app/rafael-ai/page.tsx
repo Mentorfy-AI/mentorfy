@@ -3,16 +3,15 @@
 import { useState, useRef, MutableRefObject } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { UserProvider, useUser } from '@/context/UserContext'
-import { WelcomeScreen } from '@/components/rafael-ai/screens/WelcomeScreen'
-import { LevelFlow } from '@/components/rafael-ai/screens/LevelFlow'
-import { ActiveChat } from '@/components/rafael-ai/screens/ActiveChat'
-import { Avatar } from '@/components/rafael-ai/shared/Avatar'
-import { RafaelLabel } from '@/components/rafael-ai/shared/RafaelLabel'
+import { LandingPage } from '@/components/rafael-ai/screens/LandingPage'
+import { PhaseFlow } from '@/components/rafael-ai/screens/PhaseFlow'
+import { MentorAvatar } from '@/components/rafael-ai/shared/MentorAvatar'
+import { MentorBadge } from '@/components/rafael-ai/shared/MentorBadge'
 
-// Experience Shell with 3 panels (Past + Present + Future)
-import { ExperienceShell, Panel } from '@/components/rafael-ai/layouts/ExperienceShell'
-import { PastView } from '@/components/rafael-ai/screens/PastView'
-import { PresentView } from '@/components/rafael-ai/screens/PresentView'
+// Timeline Shell with 3 panels (AIMemory + AIChat + PhaseFlow)
+import { TimelineShell, Panel } from '@/components/rafael-ai/layouts/TimelineShell'
+import { AIMemory } from '@/components/rafael-ai/screens/AIMemory'
+import { AIChat } from '@/components/rafael-ai/screens/AIChat'
 
 const ACCENT_COLOR = '#10B981'
 
@@ -21,17 +20,17 @@ function RafaelAIContent() {
   const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null)
   const [arrowReady, setArrowReady] = useState(false)
 
-  // Ref for LevelFlow's back handler - allows stationary header to control internal navigation
+  // Ref for PhaseFlow's back handler - allows stationary header to control internal navigation
   const levelFlowBackRef = useRef<(() => void) | null>(null)
 
   // Screen states: 'welcome', 'level-flow', 'experience', 'chat'
   const currentScreen = state.progress.currentScreen
-  const currentLevelNumber = state.progress.currentLevel
+  const currentPhaseNumber = state.progress.currentPhase
   const currentPanel = state.timeline?.currentPanel ?? 0
 
   const setPanel = (panel: number) => dispatch({ type: 'SET_PANEL', payload: panel })
 
-  // Arrow becomes ready when PastView typing completes or PresentView loads
+  // Arrow becomes ready when AIMemory typing completes or AIChat loads
   const handleArrowReady = () => setArrowReady(true)
 
   // Handle the stationary arrow click based on current panel
@@ -53,8 +52,8 @@ function RafaelAIContent() {
 
   // Initial Level Complete (fullscreen Level 1) → Transition to Experience Shell
   const handleInitialLevelComplete = () => {
-    // Mark level complete (this increments currentLevel)
-    dispatch({ type: 'COMPLETE_LEVEL', payload: currentLevelNumber })
+    // Mark phase complete (this increments currentPhase)
+    dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
     // Reset arrow state for the new cycle
     setArrowReady(false)
     // Go to Experience Shell, Past view (panel 0)
@@ -64,8 +63,8 @@ function RafaelAIContent() {
 
   // Panel Level Complete (Panel 2) → Stay in Experience, go to Past view
   const handlePanelLevelComplete = () => {
-    // Mark level complete (this increments currentLevel)
-    dispatch({ type: 'COMPLETE_LEVEL', payload: currentLevelNumber })
+    // Mark phase complete (this increments currentPhase)
+    dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
     // Reset arrow state for the new cycle
     setArrowReady(false)
     // Go back to Past view (panel 0) - already in experience screen
@@ -73,7 +72,7 @@ function RafaelAIContent() {
   }
 
   // Back from Level Flow panel → Present panel
-  const handleBackFromLevelFlow = () => {
+  const handleBackFromPhaseFlow = () => {
     setPanel(1)
   }
 
@@ -113,19 +112,19 @@ function RafaelAIContent() {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Geist', sans-serif" }}>
       <AnimatePresence mode="wait">
-        {/* WELCOME SCREEN */}
+        {/* LANDING PAGE */}
         {currentScreen === 'welcome' && (
-          <WelcomeScreen
+          <LandingPage
             key="welcome"
             onStart={handleStartFromWelcome}
           />
         )}
 
-        {/* LEVEL FLOW (fullscreen - initial Level 1) */}
+        {/* PHASE FLOW (fullscreen - initial Phase 1) */}
         {currentScreen === 'level-flow' && (
-          <LevelFlow
-            key={`level-${currentLevelNumber}`}
-            levelId={currentLevelNumber}
+          <PhaseFlow
+            key={`level-${currentPhaseNumber}`}
+            levelId={currentPhaseNumber}
             onComplete={handleInitialLevelComplete}
           />
         )}
@@ -189,8 +188,8 @@ function RafaelAIContent() {
                   justifyContent: 'center',
                   gap: '10px',
                 }}>
-                  <Avatar size={40} />
-                  <RafaelLabel size="large" />
+                  <MentorAvatar size={40} />
+                  <MentorBadge size="large" />
                 </div>
 
                 {/* Account button - dimmed */}
@@ -219,47 +218,47 @@ function RafaelAIContent() {
               </div>
             </div>
 
-            <ExperienceShell
+            <TimelineShell
               currentPanel={currentPanel}
               onPanelChange={setPanel}
             >
-              {/* Panel 0: Past (Journey) */}
+              {/* Panel 0: AIMemory (Journey) */}
               <Panel>
-                <PastView
+                <AIMemory
                   onNavigateToPresent={handleNavigateToPresent}
                   onStartChat={handleStartChatFromPast}
                   onArrowReady={handleArrowReady}
-                  currentLevel={currentLevelNumber}
+                  currentPhase={currentPhaseNumber}
                 />
               </Panel>
 
-              {/* Panel 1: Present (Chat) */}
+              {/* Panel 1: AIChat */}
               <Panel>
-                <PresentView
+                <AIChat
                   onNavigateToPast={handleNavigateToPast}
                   onStartNextLevel={handleNavigateToFuture}
                   initialMessage={pendingChatMessage}
                   onMessageHandled={() => setPendingChatMessage(null)}
                   onArrowReady={handleArrowReady}
-                  currentLevel={currentLevelNumber}
+                  currentPhase={currentPhaseNumber}
                 />
               </Panel>
 
               {/* Panel 2: Future (Level Flow) - stationary header controls navigation via ref */}
-              {/* Only render LevelFlow if there's a valid level (1 or 2), otherwise show empty panel */}
+              {/* Only render PhaseFlow if there's a valid phase (1 or 2), otherwise show empty panel */}
               <Panel>
                 <AnimatePresence mode="wait">
-                  {currentLevelNumber <= 2 ? (
+                  {currentPhaseNumber <= 2 ? (
                     <motion.div
                       key="level-flow"
                       initial={{ opacity: 1 }}
                       exit={{ opacity: 0, transition: { duration: 0.2 } }}
                       style={{ minHeight: '100vh' }}
                     >
-                      <LevelFlow
-                        levelId={currentLevelNumber}
+                      <PhaseFlow
+                        levelId={currentPhaseNumber}
                         onComplete={handlePanelLevelComplete}
-                        onBack={handleBackFromLevelFlow}
+                        onBack={handleBackFromPhaseFlow}
                         backHandlerRef={levelFlowBackRef as MutableRefObject<(() => void) | null>}
                         hideHeader={true}
                       />
@@ -284,12 +283,12 @@ function RafaelAIContent() {
                   )}
                 </AnimatePresence>
               </Panel>
-            </ExperienceShell>
+            </TimelineShell>
 
             {/* Stationary arrow button - only visible on panels 0 and 1 */}
             {currentPanel < 2 && (() => {
               // Check if there are more levels (only levels 1 and 2 exist)
-              const noMoreLevels = currentLevelNumber > 2
+              const noMoreLevels = currentPhaseNumber > 2
               // Arrow is active unless on Chat panel with no more levels
               const isArrowActive = arrowReady && !(currentPanel === 1 && noMoreLevels)
 
@@ -369,14 +368,6 @@ function RafaelAIContent() {
           </div>
         )}
 
-        {/* ACTIVE CHAT (fullscreen) */}
-        {currentScreen === 'chat' && (
-          <ActiveChat
-            key="chat"
-            initialMessage={pendingChatMessage ?? undefined}
-            onBack={handleCloseChat}
-          />
-        )}
       </AnimatePresence>
     </div>
   )

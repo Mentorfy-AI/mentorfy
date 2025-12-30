@@ -38,9 +38,9 @@ const initialState = {
 
   progress: {
     currentScreen: "welcome",
-    currentLevel: 1,
+    currentPhase: 1,
     currentStep: 0,
-    completedLevels: [] as number[],
+    completedPhases: [] as number[],
     videosWatched: [] as string[],
     justCompletedLevel: false
   },
@@ -60,7 +60,7 @@ type Action =
   | { type: 'SET_ANSWER'; payload: { key: string; value: any } }
   | { type: 'ADVANCE_STEP' }
   | { type: 'SET_STEP'; payload: number }
-  | { type: 'COMPLETE_LEVEL'; payload: number }
+  | { type: 'COMPLETE_PHASE'; payload: number }
   | { type: 'START_LEVEL' }
   | { type: 'WATCH_VIDEO'; payload: string }
   | { type: 'ADD_MEMORY'; payload: string }
@@ -71,7 +71,7 @@ type Action =
   | { type: 'RESET' }
   | { type: 'SET_PANEL'; payload: number }
   | { type: 'SET_PROFILE_COMPLETE'; payload: boolean }
-  | { type: 'SET_CURRENT_LEVEL'; payload: number }
+  | { type: 'SET_CURRENT_PHASE'; payload: number }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -115,18 +115,18 @@ function reducer(state: State, action: Action): State {
         }
       }
 
-    case 'COMPLETE_LEVEL': {
-      const levelId = action.payload
-      const completedLevels = state.progress.completedLevels.includes(levelId)
-        ? state.progress.completedLevels
-        : [...state.progress.completedLevels, levelId]
+    case 'COMPLETE_PHASE': {
+      const phaseId = action.payload
+      const completedPhases = state.progress.completedPhases.includes(phaseId)
+        ? state.progress.completedPhases
+        : [...state.progress.completedPhases, phaseId]
 
       return {
         ...state,
         progress: {
           ...state.progress,
-          completedLevels,
-          currentLevel: levelId + 1,
+          completedPhases,
+          currentPhase: phaseId + 1,
           currentStep: 0,
           justCompletedLevel: true
           // Note: screen is set separately by the caller
@@ -228,12 +228,12 @@ function reducer(state: State, action: Action): State {
         }
       }
 
-    case 'SET_CURRENT_LEVEL':
+    case 'SET_CURRENT_PHASE':
       return {
         ...state,
         progress: {
           ...state.progress,
-          currentLevel: action.payload
+          currentPhase: action.payload
         }
       }
 
@@ -253,6 +253,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
+        // Migrate old state property names (currentLevel → currentPhase, completedLevels → completedPhases)
+        if (parsed.progress) {
+          if ('currentLevel' in parsed.progress && !('currentPhase' in parsed.progress)) {
+            parsed.progress.currentPhase = parsed.progress.currentLevel
+            delete parsed.progress.currentLevel
+          }
+          if ('completedLevels' in parsed.progress && !('completedPhases' in parsed.progress)) {
+            parsed.progress.completedPhases = parsed.progress.completedLevels
+            delete parsed.progress.completedLevels
+          }
+        }
         dispatch({ type: 'LOAD_STATE', payload: parsed })
       } catch (e) {
         console.error('Failed to load state:', e)

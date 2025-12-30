@@ -1,4 +1,4 @@
-import { levels } from './levels'
+import { phases } from './phases'
 
 export const mockResponses: Record<string, any> = {
   "level-1-diagnosis": () => `Here's what I see.
@@ -112,20 +112,20 @@ Now — ready to build the system that keeps your calendar full?`,
       ? Math.floor((Date.now() - new Date(state.lastVisit).getTime()) / (1000 * 60 * 60 * 24))
       : 0
 
-    const currentLevel = state.progress?.currentLevel || 2
-    const completedLevels = state.progress?.completedLevels || [1]
+    const currentPhase = state.progress?.currentPhase || 2
+    const completedPhases = state.progress?.completedPhases || [1]
 
     if (state.progress?.justCompletedLevel) {
       return {
         message: `That was a big one.
 
-You just finished Level ${currentLevel - 1}. ${levels[currentLevel - 2]?.completionMessage || ''}
+You just finished Level ${currentPhase - 1}. ${phases[currentPhase - 2]?.completionMessage || ''}
 
 Take a breath. Let it sink in.
 
-When you're ready, Level ${currentLevel} is about ${levels[currentLevel - 1]?.description || 'the next step'}.`,
-        videoKey: levels[currentLevel - 1]?.introVideo,
-        buttonText: `Start Level ${currentLevel}`
+When you're ready, Level ${currentPhase} is about ${phases[currentPhase - 1]?.description || 'the next step'}.`,
+        videoKey: phases[currentPhase - 1]?.introVideo,
+        buttonText: `Start Level ${currentPhase}`
       }
     }
 
@@ -133,24 +133,24 @@ When you're ready, Level ${currentLevel} is about ${levels[currentLevel - 1]?.de
       return {
         message: `Been a minute. No stress — life happens.
 
-Last time we talked, you'd just finished Level ${Math.max(...completedLevels, 0)}. ${state.memory?.[state.memory.length - 1]?.insight ? `You were thinking about ${state.memory[state.memory.length - 1].insight.toLowerCase()}.` : ''}
+Last time we talked, you'd just finished Level ${Math.max(...completedPhases, 0)}. ${state.memory?.[state.memory.length - 1]?.insight ? `You were thinking about ${state.memory[state.memory.length - 1].insight.toLowerCase()}.` : ''}
 
-When you're ready, Level ${currentLevel} is here.`,
-        videoKey: levels[currentLevel - 1]?.introVideo,
-        buttonText: `Start Level ${currentLevel}`
+When you're ready, Level ${currentPhase} is here.`,
+        videoKey: phases[currentPhase - 1]?.introVideo,
+        buttonText: `Start Level ${currentPhase}`
       }
     }
 
     return {
-      message: `You finished Level ${currentLevel - 1} — nice work.
+      message: `You finished Level ${currentPhase - 1} — nice work.
 
-${levels[currentLevel - 2]?.completionMessage || "You're making progress."}
+${phases[currentPhase - 2]?.completionMessage || "You're making progress."}
 
-Level ${currentLevel} is **${levels[currentLevel - 1]?.name || 'next'}**. ${levels[currentLevel - 1]?.description || ''}
+Level ${currentPhase} is **${phases[currentPhase - 1]?.name || 'next'}**. ${phases[currentPhase - 1]?.description || ''}
 
 Ready to keep going?`,
-      videoKey: levels[currentLevel - 1]?.introVideo,
-      buttonText: `Start Level ${currentLevel}`
+      videoKey: phases[currentPhase - 1]?.introVideo,
+      buttonText: `Start Level ${currentPhase}`
     }
   },
 
@@ -164,7 +164,7 @@ Ready to keep going?`,
 Here's how I think about it: your price is a signal, not a barrier. When you charge premium rates, you're not excluding people. You're attracting people who value what you do.
 
 What's the specific situation you're dealing with? Are you trying to raise prices with existing clients, or set prices for new ones?`,
-        videoKey: state.progress?.completedLevels?.includes(2) ? null : "pricing-objections"
+        videoKey: state.progress?.completedPhases?.includes(2) ? null : "pricing-objections"
       }
     }
 

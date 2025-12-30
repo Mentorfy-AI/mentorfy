@@ -5,7 +5,7 @@ interface Props {
   total: number
 }
 
-export function ProgressIndicator({ current, total }: Props) {
+export function StepProgress({ current, total }: Props) {
   return (
     <div className="flex items-center justify-center gap-2">
       {Array.from({ length: total }, (_, i) => (

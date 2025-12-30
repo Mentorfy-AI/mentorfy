@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef, MutableRefObject } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LiquidGlassHeader } from '../shared/LiquidGlassHeader'
-import { ProgressIndicator } from '../shared/ProgressIndicator'
+import { GlassHeader } from '../shared/GlassHeader'
+import { StepProgress } from '../shared/StepProgress'
 import { ThinkingAnimation } from '../shared/ThinkingAnimation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
-import { levels } from '@/data/rafael-ai/levels'
+import { phases } from '@/data/rafael-ai/phases'
 import { mentor } from '@/data/rafael-ai/mentor'
 import { useUser } from '@/context/UserContext'
 import { useAgent } from '@/hooks/useAgent'
@@ -1545,7 +1545,7 @@ const contentVariants = {
   exit: { opacity: 0, x: -60, transition: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] as const } }
 }
 
-interface LevelFlowProps {
+interface PhaseFlowProps {
   levelId: number
   onComplete?: () => void
   onBack?: () => void
@@ -1553,9 +1553,9 @@ interface LevelFlowProps {
   backHandlerRef?: MutableRefObject<(() => void) | null>
 }
 
-export function LevelFlow({ levelId, onComplete, onBack, hideHeader = false, backHandlerRef }: LevelFlowProps) {
+export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, backHandlerRef }: PhaseFlowProps) {
   const { state, dispatch } = useUser()
-  const level = levels.find(l => l.id === levelId)
+  const level = phases.find(l => l.id === levelId)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
   // Expose back handler to parent via ref (for stationary header control)
@@ -1604,7 +1604,7 @@ export function LevelFlow({ levelId, onComplete, onBack, hideHeader = false, bac
       setCurrentStepIndex(prev => prev + 1)
     } else {
       // Level complete
-      dispatch({ type: 'COMPLETE_LEVEL', payload: levelId })
+      dispatch({ type: 'COMPLETE_PHASE', payload: levelId })
       onComplete?.()
     }
   }
@@ -1693,7 +1693,7 @@ export function LevelFlow({ levelId, onComplete, onBack, hideHeader = false, bac
     <div style={{ backgroundColor: BACKGROUND_COLOR, minHeight: '100vh', position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>
       {/* Persistent Header - uses absolute positioning when inside a panel */}
       {!hideHeader && (
-        <LiquidGlassHeader
+        <GlassHeader
           onBack={goToPreviousStep}
           showBackButton={currentStepIndex > 0 || !!onBack}
           dimBackButton={shouldDimBackButton}
@@ -1713,7 +1713,7 @@ export function LevelFlow({ levelId, onComplete, onBack, hideHeader = false, bac
         justifyContent: 'center',
         padding: '0 24px',
       }}>
-        <ProgressIndicator current={currentStepNumber} total={totalSteps} />
+        <StepProgress current={currentStepNumber} total={totalSteps} />
       </div>
 
       {/* Animated Content Area - slides horizontally */}

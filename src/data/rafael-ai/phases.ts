@@ -1,4 +1,4 @@
-export const levels = [
+export const phases = [
   {
     id: 1,
     name: "The Diagnosis",

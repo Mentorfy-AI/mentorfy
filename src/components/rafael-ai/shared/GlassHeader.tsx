@@ -1,7 +1,7 @@
 'use client'
 
-import { Avatar } from './Avatar'
-import { RafaelLabel } from './RafaelLabel'
+import { MentorAvatar } from './MentorAvatar'
+import { MentorBadge } from './MentorBadge'
 
 interface Props {
   onBack?: () => void
@@ -10,9 +10,9 @@ interface Props {
   useAbsolutePosition?: boolean
 }
 
-// Liquid Glass Header - matching ChatHome/ActiveChat design
-// useAbsolutePosition: true for panels in ExperienceShell to avoid overlap
-export function LiquidGlassHeader({ onBack, showBackButton = true, dimBackButton = false, useAbsolutePosition = false }: Props) {
+// Glass Header
+// useAbsolutePosition: true for panels in TimelineShell to avoid overlap
+export function GlassHeader({ onBack, showBackButton = true, dimBackButton = false, useAbsolutePosition = false }: Props) {
   return (
     <div style={{
       position: useAbsolutePosition ? 'absolute' : 'fixed',
@@ -71,8 +71,8 @@ export function LiquidGlassHeader({ onBack, showBackButton = true, dimBackButton
             gap: '10px',
           }}
         >
-          <Avatar size={40} />
-          <RafaelLabel size="large" />
+          <MentorAvatar size={40} />
+          <MentorBadge size="large" />
         </div>
 
         {/* Account Icon - Dimmed (user not signed in yet) */}

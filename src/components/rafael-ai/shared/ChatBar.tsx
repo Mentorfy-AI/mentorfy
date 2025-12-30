@@ -241,14 +241,14 @@ function VoiceRecordingBar({ onCancel, onSend, analyserNode }: VoiceRecordingBar
   )
 }
 
-interface ChatInputBarProps {
+interface ChatBarProps {
   placeholder?: string
   onSend: (message: string) => void
   disabled?: boolean
 }
 
-// Chat input bar (matching ActiveChat's liquid glass style)
-export function ChatInputBar({ placeholder = "Message Rafael...", onSend, disabled }: ChatInputBarProps) {
+// Chat input bar with liquid glass style
+export function ChatBar({ placeholder = "Message Rafael...", onSend, disabled }: ChatBarProps) {
   const [value, setValue] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)

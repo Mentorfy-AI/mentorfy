@@ -2,13 +2,13 @@
 
 import { useRef, useEffect, useState, ReactNode } from 'react'
 
-interface ExperienceShellProps {
+interface TimelineShellProps {
   children: ReactNode
   currentPanel?: number
   onPanelChange?: (panel: number) => void
 }
 
-export function ExperienceShell({ children, currentPanel = 1, onPanelChange }: ExperienceShellProps) {
+export function TimelineShell({ children, currentPanel = 1, onPanelChange }: TimelineShellProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
   const isProgrammaticScroll = useRef(false)

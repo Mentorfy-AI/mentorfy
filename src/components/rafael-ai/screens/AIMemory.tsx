@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChatInputBar } from '../shared/ChatInputBar'
+import { ChatBar } from '../shared/ChatBar'
 
-// Journey text varies based on completed level
+// Journey text varies based on completed phase
 const JOURNEY_TEXTS: Record<number, string> = {
-  // After completing Level 1 (currentLevel = 2)
+  // After completing Phase 1 (currentPhase = 2)
   2: `Your journey so far...
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -30,7 +30,7 @@ We're going to fix that.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
 
-  // After completing Level 2 (currentLevel = 3)
+  // After completing Phase 2 (currentPhase = 3)
   3: `Your journey so far...
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -56,21 +56,21 @@ You're ready for the next phase.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
 }
 
-interface PastViewProps {
+interface AIMemoryProps {
   onNavigateToPresent?: () => void
   onStartChat: (message: string) => void
   onArrowReady?: () => void
-  currentLevel: number
+  currentPhase: number
 }
 
-export function PastView({ onNavigateToPresent, onStartChat, onArrowReady, currentLevel }: PastViewProps) {
+export function AIMemory({ onNavigateToPresent, onStartChat, onArrowReady, currentPhase }: AIMemoryProps) {
   const [displayedText, setDisplayedText] = useState('')
   const [isTypingComplete, setIsTypingComplete] = useState(false)
 
   // Get journey text for current level (default to level 2 text)
-  const journeyText = JOURNEY_TEXTS[currentLevel] || JOURNEY_TEXTS[2]
+  const journeyText = JOURNEY_TEXTS[currentPhase] || JOURNEY_TEXTS[2]
 
-  // Typewriter effect - resets when currentLevel changes
+  // Typewriter effect - resets when currentPhase changes
   useEffect(() => {
     setDisplayedText('')
     setIsTypingComplete(false)
@@ -89,7 +89,7 @@ export function PastView({ onNavigateToPresent, onStartChat, onArrowReady, curre
     }, speed)
 
     return () => clearInterval(typeInterval)
-  }, [currentLevel, journeyText])
+  }, [currentPhase, journeyText])
 
   // Notify parent that arrow should be ready 1 second after typing completes
   useEffect(() => {
@@ -106,7 +106,7 @@ export function PastView({ onNavigateToPresent, onStartChat, onArrowReady, curre
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
+      height: '100%',
       backgroundColor: '#FAF6F0',
     }}>
       {/* Header is now stationary in parent - no header here */}
@@ -151,7 +151,7 @@ export function PastView({ onNavigateToPresent, onStartChat, onArrowReady, curre
       `}</style>
 
       {/* Chat input */}
-      <ChatInputBar
+      <ChatBar
         placeholder="Message Rafael..."
         onSend={(message) => onStartChat(message)}
       />

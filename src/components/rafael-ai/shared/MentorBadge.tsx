@@ -8,8 +8,8 @@ interface Props {
   size?: 'large' | 'small'
 }
 
-// Rafael label with verified badge
-export function RafaelLabel({ size = 'large' }: Props) {
+// Mentor name with verified badge
+export function MentorBadge({ size = 'large' }: Props) {
   const isLarge = size === 'large'
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

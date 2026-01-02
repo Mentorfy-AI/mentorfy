@@ -154,6 +154,7 @@ Update session with contact info, answers, or other data.
   email?: string
   phone?: string
   name?: string
+  status?: 'in_progress' | 'completed' | 'abandoned'
   context?: Record<string, any>  // Merged into existing context
 }
 ```
@@ -168,6 +169,7 @@ Update session with contact info, answers, or other data.
 
 **Behavior**:
 - Updates contact info columns if provided
+- Updates `status` if provided
 - Deep merges `context` into existing `context` JSONB
 - Transforms context updates into semantic memories and writes to Supermemory (async)
 - If `email` is provided and matches another session for same org with a `clerk_user_id`, return that session's ID (user already has an account)
@@ -196,32 +198,6 @@ Link session to Clerk user after authentication.
 **Behavior**:
 - Sets `clerk_user_id` on the session
 - Simple update, no complex merge logic
-
----
-
-### `POST /api/session/[id]/complete`
-
-Mark session complete.
-
-**Request**:
-```typescript
-{
-  // No body needed, or optional final context updates
-  context?: Record<string, any>
-}
-```
-
-**Response**:
-```typescript
-{
-  success: true
-}
-```
-
-**Behavior**:
-- Sets `status = 'completed'`
-- If `context` provided, merges and writes to Supermemory (same as PATCH)
-- No special flush needed - Supermemory already has all context from previous updates
 
 ---
 
@@ -308,7 +284,7 @@ src/
 │   │
 │   └── _shared/
 │       └── tools/
-│           └── memory-search.ts  # Search user's memories (for completed sessions)
+│           └── .gitkeep          # Tools added as needed
 │
 ├── lib/
 │   ├── supermemory.ts        # Supermemory client wrapper
@@ -321,10 +297,8 @@ src/
         │   ├── route.ts              # POST /api/session
         │   └── [id]/
         │       ├── route.ts          # PATCH /api/session/[id]
-        │       ├── link/
-        │       │   └── route.ts      # POST /api/session/[id]/link
-        │       └── complete/
-        │           └── route.ts      # POST /api/session/[id]/complete
+        │       └── link/
+        │           └── route.ts      # POST /api/session/[id]/link
         ├── chat/
         │   └── route.ts              # POST /api/chat
         └── generate/
@@ -440,10 +414,10 @@ Actions: created, started, completed, viewed, sent, received, served, booked
 |-------|------------|---------|
 | `session.created` | `orgId`, `sessionId` | Experience started |
 | `session.authenticated` | `sessionId` | Clerk auth completed |
-| `phase.started` | `sessionId`, `phase` | User enters a phase |
-| `phase.completed` | `sessionId`, `phase`, `duration` | User finishes a phase |
-| `step.viewed` | `sessionId`, `phase`, `step`, `stepType` | User sees a step |
-| `step.completed` | `sessionId`, `phase`, `step`, `stepType` | User completes a step |
+| `phase.started` | `sessionId`, `phaseSlug` | User enters a phase |
+| `phase.completed` | `sessionId`, `phaseSlug`, `duration` | User finishes a phase |
+| `step.viewed` | `sessionId`, `phaseSlug`, `stepSlug`, `stepType` | User sees a step |
+| `step.completed` | `sessionId`, `phaseSlug`, `stepSlug`, `stepType` | User completes a step |
 | `chat.message_sent` | `sessionId`, `messageLength` | User sends chat |
 | `chat.message_received` | `sessionId`, `responseLength`, `latency` | AI responds |
 | `content.served` | `sessionId`, `contentType`, `contentId` | Video/resource shown |

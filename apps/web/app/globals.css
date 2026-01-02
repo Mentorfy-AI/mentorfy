@@ -1,0 +1,476 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+:root {
+  /* =============================================================================
+     LUMINA FORM THEME - Change these values to re-theme the form renderer
+     ============================================================================= */
+
+  /* Brand Color Palette (Sky Blue Default) */
+  --form-brand-50: #f0f9ff;
+  --form-brand-100: #e0f2fe;
+  --form-brand-200: #bae6fd;
+  --form-brand-300: #7dd3fc;
+  --form-brand-400: #38bdf8;
+  --form-brand-500: #0ea5e9;  /* Primary action color */
+  --form-brand-600: #0284c7;
+  --form-brand-700: #0369a1;
+  --form-brand-800: #075985;
+  --form-brand-900: #0c4a6e;
+
+  /* Neutral Palette (Slate) */
+  --form-slate-50: #f8fafc;
+  --form-slate-100: #f1f5f9;
+  --form-slate-200: #e2e8f0;
+  --form-slate-300: #cbd5e1;
+  --form-slate-400: #94a3b8;
+  --form-slate-500: #64748b;
+  --form-slate-600: #475569;
+  --form-slate-700: #334155;
+  --form-slate-800: #1e293b;
+  --form-slate-900: #0f172a;
+
+  /* Typography - Using existing Mentorfy fonts */
+  --form-font-sans: var(--font-primary);     /* Neue Haas Display */
+  --form-font-display: var(--font-secondary); /* Testuale */
+
+  /* =============================================================================
+     EXISTING MENTORFY THEME VARIABLES
+     ============================================================================= */
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  /* =============================================================================
+     FONT CONFIGURATION - Switch between Google Fonts and Local Fonts
+     ============================================================================= */
+
+  /* OPTION 1: Google Fonts (Original Lumina Design) - ACTIVE */
+  /* Fonts are loaded via Next.js font system in lib/fonts.ts */
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+
+  /* OPTION 2: Local Fonts (Mentorfy Brand Fonts) - INACTIVE */
+  /* Uncomment these and comment out the Google Fonts above to use local fonts */
+  /* --font-sans: var(--font-primary); */
+  /* --font-display: var(--font-secondary); */
+
+  /* Legacy font mappings for non-form pages */
+  --font-mono: var(--font-secondary);
+  --font-family-primary: var(--font-primary);
+  --font-family-secondary: var(--font-secondary);
+
+  /* Lumina Form Brand Colors */
+  --color-brand-50: var(--form-brand-50);
+  --color-brand-100: var(--form-brand-100);
+  --color-brand-200: var(--form-brand-200);
+  --color-brand-300: var(--form-brand-300);
+  --color-brand-400: var(--form-brand-400);
+  --color-brand-500: var(--form-brand-500);
+  --color-brand-600: var(--form-brand-600);
+  --color-brand-700: var(--form-brand-700);
+  --color-brand-800: var(--form-brand-800);
+  --color-brand-900: var(--form-brand-900);
+
+  /* Animation */
+  --animate-blob: blob 10s infinite;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .font-primary {
+    font-family: var(--font-primary);
+  }
+  .font-secondary {
+    font-family: var(--font-secondary);
+  }
+}
+
+/* Added custom scrollbar styles for the MentorPromptBox textarea */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Firefox scrollbar styling */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+}
+
+/* Custom scrollbar for chat input */
+.custom-chat-scrollbar {
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}
+
+.custom-chat-scrollbar::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.custom-chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin: 2px 0;
+}
+
+.custom-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 10px !important;
+  min-height: 30px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+  background-clip: padding-box;
+}
+
+/* Dark mode scrollbar */
+.dark .custom-chat-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}
+
+.dark .custom-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.5) !important;
+  background-clip: padding-box;
+}
+
+.dark .custom-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+  background-clip: padding-box;
+}
+
+/* Blinking cursor animation for streaming chat */
+@keyframes blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 0.8s step-end infinite;
+}
+
+/* Pulse glow animation for LLM loading state */
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* Hamburger menu logo entrance animation - 720deg spin + eerie glow pulse */
+@keyframes logo-entrance {
+  0% {
+    transform: rotate(0deg);
+    filter: brightness(1) drop-shadow(0 0 0px #fff);
+  }
+  33.33% {
+    transform: rotate(720deg);
+    filter: brightness(1) drop-shadow(0 0 0px #fff);
+  }
+  66.67% {
+    transform: rotate(720deg);
+    filter: brightness(2.2)
+           drop-shadow(0 0 6px #fff)
+           drop-shadow(0 0 12px rgba(255, 255, 255, 0.8))
+           drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+  }
+  100% {
+    transform: rotate(720deg);
+    filter: brightness(1) drop-shadow(0 0 0px #fff);
+  }
+}
+
+.animate-logo-entrance {
+  animation: logo-entrance 3s ease-out forwards;
+}
+
+/* Pulsating logo animation for loading states - LEGACY (unused) */
+@keyframes logo-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+}
+
+/* New loading animation - Regime 1: Initial mega spin */
+@keyframes logo-spin-initial {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  66.67% {
+    opacity: 1;
+    transform: scale(1) rotate(2880deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(2880deg);
+  }
+}
+
+/* New loading animation - Regime 2: Pulse pattern with spin every 3rd */
+@keyframes logo-pulse-pattern {
+  /* 1st pulse - just visible, no scale/opacity change */
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  33.33% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  /* 2nd pulse - just visible, no scale/opacity change */
+  33.34% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  66.67% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  /* 3rd pulse - WITH SPIN ONLY */
+  66.68% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  83.34% {
+    opacity: 1;
+    transform: scale(1) rotate(1440deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(1440deg);
+  }
+}
+
+/* Text scanning animation for "Thinking..." text */
+@keyframes text-scan {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.text-scan-char {
+  animation: text-scan 2.4s ease-in-out infinite;
+}
+
+/* Fix Clerk OrganizationSwitcher pointer-events bug */
+/* Clerk sets pointer-events: none on all dropdown elements, preventing clicks */
+.cl-organizationSwitcherPopoverMain,
+.cl-organizationSwitcherPopoverMain *,
+.cl-organizationSwitcherPopoverActions,
+.cl-organizationSwitcherPopoverActions * {
+  pointer-events: auto !important;
+}
+
+/* =============================================================================
+   LUMINA FORM ANIMATIONS & UTILITIES
+   ============================================================================= */
+
+/* Blob animation for ambient background orbs */
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-blob {
+  animation: blob 10s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Hide scrollbar for clean form UI */
+.form-no-scrollbar::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+.form-no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Form-specific selection color */
+.form-selection::selection {
+  background-color: var(--form-brand-100);
+  color: var(--form-brand-900);
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}

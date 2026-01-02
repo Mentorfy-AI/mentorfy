@@ -1,0 +1,124 @@
+{
+  "description": "Complete authorization access matrix for all user roles in Mentorfy",
+  "roles": {
+    "no_org_user": {
+      "description": "Authenticated user without organization membership",
+      "clerk_user_id": "user_33WppdQzEsSxxjRmlAeK1nm5UsP",
+      "orgRole": null,
+      "orgId": null
+    },
+    "org_member": {
+      "description": "Organization team member (mentor)",
+      "clerk_user_id": "user_33Wq6nZQ9OO0EBVLMsoncrbf9jI",
+      "orgRole": "org:team_member",
+      "orgId": "org_33WpQQKfCN9aNpxYKNtPQGjjRHy"
+    },
+    "org_admin": {
+      "description": "Organization administrator (mentor with admin privileges)",
+      "clerk_user_id": "user_2qILPXlCZ77jVzS7JBJlDbJWFZ5",
+      "orgRole": "org:admin",
+      "orgId": "org_33WpQQKfCN9aNpxYKNtPQGjjRHy"
+    },
+    "org_student": {
+      "description": "Student in organization",
+      "clerk_user_id": "TBD",
+      "orgRole": "org:student",
+      "orgId": "org_33WpQQKfCN9aNpxYKNtPQGjjRHy"
+    },
+    "mentorfy_staff": {
+      "description": "Platform super administrator",
+      "clerk_user_id": "user_2rVsz58G0L40fzQnWO0YKSe5vj1",
+      "orgRole": null,
+      "super_admin": true,
+      "supabase_check": "SELECT * FROM super_admin WHERE clerk_user_id = 'user_2rVsz58G0L40fzQnWO0YKSe5vj1'"
+    }
+  },
+  "routes": {
+    "public": {
+      "paths": ["/", "/sign-in", "/sign-up", "/api/webhooks/*"],
+      "access": {
+        "no_org_user": "allow",
+        "org_member": "allow",
+        "org_admin": "allow",
+        "org_student": "allow",
+        "mentorfy_staff": "allow"
+      }
+    },
+    "no_organization_page": {
+      "paths": ["/no-organization"],
+      "access": {
+        "no_org_user": "allow",
+        "org_member": "allow",
+        "org_admin": "allow",
+        "org_student": "allow",
+        "mentorfy_staff": "allow"
+      }
+    },
+    "mentor_routes": {
+      "paths": [
+        "/dashboard",
+        "/students",
+        "/conversations",
+        "/knowledge",
+        "/training",
+        "/integrations",
+        "/experience",
+        "/account"
+      ],
+      "middleware_matcher": "isMentorRoute",
+      "access": {
+        "no_org_user": "redirect:/no-organization",
+        "org_member": "allow",
+        "org_admin": "allow",
+        "org_student": "403",
+        "mentorfy_staff": "allow"
+      }
+    },
+    "student_routes": {
+      "paths": ["/mentor-chat", "/mentor-memory"],
+      "middleware_matcher": "isStudentRoute",
+      "access": {
+        "no_org_user": "redirect:/no-organization",
+        "org_member": "allow",
+        "org_admin": "allow",
+        "org_student": "allow",
+        "mentorfy_staff": "allow"
+      },
+      "note": "Mentors can access student routes for monitoring/support"
+    },
+    "super_admin_routes": {
+      "paths": ["/agent-console", "/admin"],
+      "middleware_matcher": "isSuperAdminRoute",
+      "access": {
+        "no_org_user": "404",
+        "org_member": "404",
+        "org_admin": "404",
+        "org_student": "404",
+        "mentorfy_staff": "allow"
+      },
+      "note": "404 used for security obscurity. Access verified via Supabase super_admin table, not Clerk roles."
+    }
+  },
+  "middleware_logic": {
+    "order": [
+      "1. Public routes bypass all auth checks",
+      "2. Require authentication (userId)",
+      "3. Super admin routes check Supabase super_admin table",
+      "4. Mentor/student routes require orgId",
+      "5. Mentor routes require org:admin OR org:team_member",
+      "6. Student routes allow org:student, org:admin, org:team_member"
+    ],
+    "file": "/Users/elijah/code/mentorfy-frontend/middleware.ts"
+  },
+  "test_instructions": {
+    "setup": "Fix test credentials - passwords flagged as compromised by Clerk",
+    "execution": [
+      "For each role, sign in with credentials from .auth-test-credentials.json",
+      "Navigate to each route category",
+      "Verify response matches access matrix (allow/403/404/redirect)",
+      "Take screenshots of violations",
+      "Sign out completely between role tests"
+    ],
+    "expected_results": "All access outcomes must match this matrix exactly"
+  }
+}

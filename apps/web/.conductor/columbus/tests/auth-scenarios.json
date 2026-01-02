@@ -1,0 +1,74 @@
+{
+  "scenarios": [
+    {
+      "name": "No Org User - Blocked from Dashboard",
+      "allowedRoles": ["org_member", "org_admin", "mentorfy_staff"],
+      "deniedRoles": ["no_org_user"],
+      "test": {
+        "navigate": "/dashboard",
+        "expectForAllowed": "page loads successfully",
+        "expectForDenied": "redirect to /no-organization"
+      }
+    },
+    {
+      "name": "Member/Admin Can Access Students Page",
+      "allowedRoles": ["org_member", "org_admin", "mentorfy_staff"],
+      "deniedRoles": ["no_org_user", "org_student"],
+      "test": {
+        "navigate": "/students",
+        "expectForAllowed": "page loads successfully",
+        "expectForDenied": "redirect to /no-organization or 403"
+      }
+    },
+    {
+      "name": "Member/Admin Can Access Mentor Chat (Student View)",
+      "allowedRoles": ["org_member", "org_admin", "org_student", "mentorfy_staff"],
+      "deniedRoles": ["no_org_user"],
+      "test": {
+        "navigate": "/mentor-chat",
+        "expectForAllowed": "chat page loads",
+        "expectForDenied": "redirect to /no-organization"
+      }
+    },
+    {
+      "name": "Member/Admin Can Access Mentor Memory",
+      "allowedRoles": ["org_member", "org_admin", "org_student", "mentorfy_staff"],
+      "deniedRoles": ["no_org_user"],
+      "test": {
+        "navigate": "/mentor-memory",
+        "expectForAllowed": "memory page loads",
+        "expectForDenied": "redirect to /no-organization"
+      }
+    },
+    {
+      "name": "Students Cannot Access Mentor-Only Routes",
+      "allowedRoles": ["org_member", "org_admin", "mentorfy_staff"],
+      "deniedRoles": ["no_org_user", "org_student"],
+      "test": {
+        "navigate": "/knowledge",
+        "expectForAllowed": "page loads successfully",
+        "expectForDenied": "403 Unauthorized"
+      }
+    },
+    {
+      "name": "Only Mentorfy Staff Can Access Agent Console",
+      "allowedRoles": ["mentorfy_staff"],
+      "deniedRoles": ["no_org_user", "org_member", "org_admin", "org_student"],
+      "test": {
+        "navigate": "/agent-console",
+        "expectForAllowed": "agent console loads",
+        "expectForDenied": "404 Not Found"
+      }
+    },
+    {
+      "name": "Public Routes Accessible to All",
+      "allowedRoles": ["no_org_user", "org_member", "org_admin", "org_student", "mentorfy_staff"],
+      "deniedRoles": [],
+      "test": {
+        "navigate": "/",
+        "expectForAllowed": "landing page loads",
+        "expectForDenied": "n/a"
+      }
+    }
+  ]
+}

@@ -1,0 +1,213 @@
+⏺ Form → Bot Greeting Implementation Plan
+
+  Overview
+
+  After SMS verification, create conversation with metadata flag, redirect
+  to chat page, auto-trigger greeting stream using existing infrastructure.
+
+  ---
+  1. Backend: New Forms Endpoint
+
+  File: mentorfy-api/mentorfy/api/routes/forms.py (new)
+
+  @router.post("/complete")
+  async def complete_form_submission(request: FormCompleteRequest):
+      # Fetch submission
+      submission = supabase.table("form_submissions")\
+          .select("*, forms!inner(bot_id)")\
+          .eq("id", request.submission_id)\
+          .single().execute()
+
+      # Store form in Supermemory async (non-blocking)
+      form_text = format_form_answers(submission.data["answers"])
+      asyncio.create_task(
+          asyncio.to_thread(
+              model_manager.supermemory_client.memories.add,
+              content=f"Intake Form:\n{form_text}",
+              container_tags=[f"{request.org_id}-{request.clerk_user_id}"],
+              metadata={"type": "intake_form"}
+          )
+      )
+
+      # Create conversation with greeting flag
+      conversation = supabase.table("conversation").insert({
+          "clerk_user_id": request.clerk_user_id,
+          "clerk_org_id": request.org_id,
+          "mentor_bot_id": submission.data["forms"]["bot_id"],
+          "title": "Welcome",
+          "metadata": {
+              "needs_form_greeting": True,
+              "form_submission_id": request.submission_id
+          }
+      }).execute()
+
+      return {"conversationId": conversation.data[0]["id"]}
+
+  ---
+  2. Backend: Modify Chat Stream
+
+  File: mentorfy-api/mentorfy/api/routes/chat.py
+
+  Add ONE block after loading bot config (~line 100):
+
+  # Handle form greeting (one-time, auto-triggered)
+  if not request.message or request.message.strip() == "":
+      conversation = supabase.table("conversation")\
+          .select("metadata")\
+          .eq("id", request.conversation_id)\
+          .single().execute()
+
+      if conversation.data.get("metadata", {}).get("needs_form_greeting"):
+          # Fetch form submission
+          form_id = conversation.data["metadata"]["form_submission_id"]
+          submission = supabase.table("form_submissions")\
+              .select("answers")\
+              .eq("id", form_id)\
+              .single().execute()
+
+          # Build greeting prompt with form context
+          form_text = format_form_answers(submission.data["answers"])
+          request.message = f"""Greet this user warmly based on their intake
+   form. Show you understand their situation and invite questions.
+
+  {form_text}"""
+
+          # Clear flag (one-time only)
+          supabase.table("conversation")\
+              .update({"metadata": {"needs_form_greeting": False}})\
+              .eq("id", request.conversation_id)\
+              .execute()
+
+  ---
+  3. Frontend: Form Completion Handler
+
+  File: components/form-renderer/CompletionScreen.tsx
+
+  async function handleSMSVerified() {
+    const response = await fetch('/api/forms/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        submissionId: submission.id,
+        clerkUserId: user.id,
+        orgId: organization.id,
+      })
+    });
+
+    const { conversationId } = await response.json();
+    router.push(`/chat/${conversationId}`);
+  }
+
+  ---
+  4. Frontend: Chat Page
+
+  File: app/(user)/chat/[conversationId]/page.tsx
+
+  Line ~167, add one property:
+  setBotData({
+    botId: conversation.mentor_bot_id.id,
+    botInfo: { /* ... */ },
+    initialMessages,
+    needsFormGreeting: conversation.metadata?.needs_form_greeting &&
+  initialMessages.length === 0,
+  });
+
+  Line ~214, pass to component:
+  <UnifiedChatInterface
+    botId={botData.botId}
+    botInfo={botData.botInfo}
+    conversationId={conversationId === 'new' ? undefined : conversationId}
+    initialMessages={botData.initialMessages}
+    allBots={botData.allBots}
+    needsFormGreeting={botData.needsFormGreeting}
+  />
+
+  ---
+  5. Frontend: Unified Chat Interface
+
+  File: components/unified-chat-interface.tsx
+
+  Add prop:
+  interface UnifiedChatInterfaceProps {
+    // ... existing
+    needsFormGreeting?: boolean;
+  }
+
+  export function UnifiedChatInterface({
+    botId,
+    botInfo,
+    conversationId,
+    initialMessages = [],
+    allBots,
+    needsFormGreeting,
+  }: UnifiedChatInterfaceProps) {
+
+  Pass to hook:
+  const { messages, isStreaming, sendMessage, ... } = useStreamingChat({
+    conversationId: conversationId || 'temp',
+    botId,
+    initialMessages,
+    needsFormGreeting,
+    // ...
+  });
+
+  ---
+  6. Frontend: Chat Hook Auto-Stream
+
+  File: hooks/use-streaming-chat.ts
+
+  Add to interface:
+  export interface UseStreamingChatOptions {
+    // ... existing
+    needsFormGreeting?: boolean;
+  }
+
+  Modify sendMessage validation (~line 134):
+  const hasFiles = files && files.length > 0 && files.some(f => f.status ===
+   'success')
+  const isFormGreeting = needsFormGreeting && messages.length === 0
+
+  if ((!content.trim() && !hasFiles && !isFormGreeting) || isStreaming) {
+    return;
+  }
+
+  Add auto-trigger effect (~line 120):
+  const hasAutoStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      needsFormGreeting &&
+      conversationId !== 'temp' &&
+      messages.length === 0 &&
+      !hasAutoStartedRef.current &&
+      !isStreaming
+    ) {
+      hasAutoStartedRef.current = true;
+      sendMessage('');  // Empty message triggers form greeting
+    }
+  }, [needsFormGreeting, conversationId, messages.length, isStreaming,
+  sendMessage]);
+
+  ---
+  Summary
+
+  Changes:
+  - Backend: 2 files (~90 lines)
+    - New /api/forms/complete endpoint
+    - One block in /api/chat/stream
+  - Frontend: 4 files (~30 lines)
+    - CompletionScreen: call endpoint
+    - Chat page: pass flag down
+    - UnifiedChatInterface: pass flag to hook
+    - useStreamingChat: validate empty messages + auto-trigger effect
+
+  Flow:
+  1. SMS verified → /api/forms/complete → conversation created with flag
+  2. Redirect to /chat/[id]
+  3. Page loads empty conversation with needsFormGreeting=true
+  4. Hook auto-calls sendMessage('')
+  5. Backend detects empty message + flag → fetches form → builds prompt
+  6. Greeting streams back (existing SSE logic)
+  7. User sees logo spin → greeting appears
+
+  Total: ~120 lines, zero duplication, fully reuses existing infrastructure.

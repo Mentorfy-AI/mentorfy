@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+python/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Development files
+.env.local
+.env.development
+.next/
+.git/
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+temp/
+tmp/
+screenshots/
+
+# Build outputs
+dist/
+build/
+
+# Testing
+coverage/
+.pytest_cache/
+.coverage

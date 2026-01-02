@@ -1,0 +1,134 @@
+⏺ Usage & Billing Implementation Plan
+
+  Context
+
+  Building org-level and user-level usage tracking for pricing tiers. Focus
+  is on chat usage first (80/20 rule) since that's where pricing tiers will
+  be based.
+
+  What's Already Done
+
+  - ✅ token_usage table exists and tracks chat LLM usage (input/output
+  tokens, model, org, user, bot)
+  - ✅ Migration applied: conversation_id column added to token_usage
+
+  What's Not Tracked (Parking for Later)
+
+  | Resource               | Provider            | Notes
+                          |
+  |------------------------|---------------------|--------------------------
+  ------------------------|
+  | Chunking LLM           | Anthropic Haiku     | ~$0.02/doc, data
+  available in response           |
+  | KG Ingest              | OpenAI via Graphiti | Opaque - would need to
+  estimate or fork Graphiti |
+  | Transcription (ingest) | Deepgram            | Duration available, easy
+  to add later            |
+  | Transcription (chat)   | Groq                | Lives in frontend
+  /api/transcribe/route.ts       |
+  | User memory            | Supermemory         | Need to check their API
+                          |
+
+  ---
+  Implementation Plan
+
+  Step 1: Wire up conversation_id in tracking
+
+  File: mentorfy-api/mentorfy/models/manager.py
+
+  - Add conversation_id parameter to generate() method signature
+  - Pass it through to _track_usage()
+  - Update the insert to include conversation_id
+
+  Files to update for callers:
+  - api/routes/chat.py - pass conversation_id when calling generate()
+  - integrations/slack.py - pass conversation_id when calling generate()
+
+  Step 2: Create aggregation views in Supabase
+
+  -- Org monthly usage
+  CREATE VIEW org_monthly_usage AS
+  SELECT
+    clerk_org_id,
+    DATE_TRUNC('month', created_at) as month,
+    SUM(input_tokens) as input_tokens,
+    SUM(output_tokens) as output_tokens,
+    SUM(input_tokens + output_tokens) as total_tokens,
+    COUNT(*) as request_count
+  FROM token_usage
+  GROUP BY clerk_org_id, DATE_TRUNC('month', created_at);
+
+  -- User monthly usage (for allowance % of org)
+  CREATE VIEW user_monthly_usage AS
+  SELECT
+    clerk_org_id,
+    user_id,
+    DATE_TRUNC('month', created_at) as month,
+    SUM(input_tokens + output_tokens) as total_tokens,
+    COUNT(*) as request_count
+  FROM token_usage
+  WHERE user_id IS NOT NULL
+  GROUP BY clerk_org_id, user_id, DATE_TRUNC('month', created_at);
+
+  -- Daily usage (for rate limiting)
+  CREATE VIEW org_daily_usage AS
+  SELECT
+    clerk_org_id,
+    DATE(created_at) as day,
+    SUM(input_tokens + output_tokens) as total_tokens
+  FROM token_usage
+  GROUP BY clerk_org_id, DATE(created_at);
+
+  Step 3: Add tier config to organization
+
+  ALTER TABLE organization
+  ADD COLUMN tier TEXT DEFAULT 'free',
+  ADD COLUMN monthly_token_limit BIGINT DEFAULT 100000;
+
+  -- Or store in existing settings JSONB:
+  -- settings.tier = 'free' | 'pro' | 'enterprise'
+  -- settings.monthly_token_limit = 100000
+
+  Step 4: Update limit checking
+
+  File: mentorfy-api/mentorfy/models/manager.py
+
+  Update _check_org_limits() to:
+  1. Read org's tier/limit from organization table
+  2. Check monthly usage (not just daily)
+  3. Compare against tier's token limit
+
+  Step 5: (Future) Deprecate cost_usd
+
+  Once token-based tracking is working:
+  1. Update get_usage_stats() to calculate cost from tokens if needed
+  2. Update frontend /api/usage/current/route.ts to not rely on cost
+  3. Stop populating cost_usd in _track_usage()
+  4. Eventually drop the column
+
+  ---
+  Key Design Decisions Made
+
+  1. Track tokens, not USD - Calculate cost later if needed, don't maintain
+  pricing in code
+  2. Postgres views for aggregation - Live data, RLS applies, zero sync
+  issues
+  3. Non-breaking migrations - Add columns as nullable, deprecate
+  incrementally
+  4. Chat first - Ingest/transcription tracking can wait
+
+  ---
+  Files Reference
+
+  - mentorfy-api/mentorfy/models/manager.py - _track_usage(),
+  _calculate_cost(), _check_org_limits(), generate()
+  - mentorfy-api/mentorfy/api/routes/chat.py - Main chat endpoint
+  - mentorfy-api/mentorfy/integrations/slack.py - Slack chat (uses
+  model_manager.generate())
+  - mentorfy-frontend/app/api/usage/current/route.ts - Frontend usage
+  display
+  - mentorfy-frontend/app/api/transcribe/route.ts - Groq transcription
+  (untracked)
+
+
+

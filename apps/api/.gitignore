@@ -1,0 +1,26 @@
+# production
+/build
+
+# env files
+.env*
+
+planning_docs/
+
+mentor_docs/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+credentials.json
+token.json
+dump.rdb

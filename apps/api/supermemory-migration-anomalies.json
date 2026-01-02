@@ -1,0 +1,56 @@
+[
+  {
+    "id": "NRTJgApSQYMf63UTXcfdcS",
+    "type": "malformed_tag",
+    "message": "Tag doesn't match org-user format: test_org_123-test_user_456",
+    "tag": "test_org_123-test_user_456",
+    "metadata": {
+      "org_id": "test_org_123",
+      "user_id": "test_user_456",
+      "conversation_id": "test_conv_789",
+      "bot_id": "test_bot_abc",
+      "timestamp": "2025-10-22T18:59:10.678906",
+      "test": true
+    }
+  },
+  {
+    "id": "RSAFTeJixhn9m4QhuEpUME",
+    "type": "metadata_incomplete",
+    "message": "Tag has org/user but metadata missing: org_id=None, user_id=None",
+    "tag": "org_33XsKTrZLKrSf7krKYqrKvO65my-user_33UFbyhW8Q61VpglzMfL6AytUte",
+    "org_from_tag": "org_33XsKTrZLKrSf7krKYqrKvO65my",
+    "user_from_tag": "user_33UFbyhW8Q61VpglzMfL6AytUte",
+    "org_from_meta": null,
+    "user_from_meta": null
+  },
+  {
+    "id": "ngyAh67x3b2FVLVHMTnFgq",
+    "type": "metadata_incomplete",
+    "message": "Tag has org/user but metadata missing: org_id=None, user_id=None",
+    "tag": "org_33XsKTrZLKrSf7krKYqrKvO65my-user_33UFbyhW8Q61VpglzMfL6AytUte",
+    "org_from_tag": "org_33XsKTrZLKrSf7krKYqrKvO65my",
+    "user_from_tag": "user_33UFbyhW8Q61VpglzMfL6AytUte",
+    "org_from_meta": null,
+    "user_from_meta": null
+  },
+  {
+    "id": "VN4ZKVNpKbeKwCfhQW7p2Z",
+    "type": "metadata_incomplete",
+    "message": "Tag has org/user but metadata missing: org_id=None, user_id=None",
+    "tag": "org_33XsKTrZLKrSf7krKYqrKvO65my-user_33UFYeIFvAMvcAYAPNvmwbolWVv",
+    "org_from_tag": "org_33XsKTrZLKrSf7krKYqrKvO65my",
+    "user_from_tag": "user_33UFYeIFvAMvcAYAPNvmwbolWVv",
+    "org_from_meta": null,
+    "user_from_meta": null
+  },
+  {
+    "id": "25hwEe3wCsBHJbUYbqSsr4",
+    "type": "metadata_incomplete",
+    "message": "Tag has org/user but metadata missing: org_id=None, user_id=None",
+    "tag": "org_33XsKTrZLKrSf7krKYqrKvO65my-user_33UFYeIFvAMvcAYAPNvmwbolWVv",
+    "org_from_tag": "org_33XsKTrZLKrSf7krKYqrKvO65my",
+    "user_from_tag": "user_33UFYeIFvAMvcAYAPNvmwbolWVv",
+    "org_from_meta": null,
+    "user_from_meta": null
+  }
+]

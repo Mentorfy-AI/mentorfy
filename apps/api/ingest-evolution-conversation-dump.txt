@@ -1,0 +1,1782 @@
+> I've not been feeling great about this system we've built (the whole import -> 
+enrich (future) -> ingest flow) and I finally
+  realized why.
+
+  My goal is to evolve this critical piece of technical infrastructure for 
+Mentorfy, so that we can rapidly scale to 100x to
+  1000x our users.
+
+  At its core, Mentorfy is an *agent lab*, specifically using our customers' 
+propietary coaching and mentorship data. And so
+  we must have a truly scalable and robust system for bringing their data into 
+scope for building our agents: that's what this
+  system needs to support.
+
+  Now, as I zoom out and think about it, I realize that we need to have 
+indepedently-scalable phases for this process. I'm
+  willing to avoid going to full-on microservices YET, but I think the 
+architecture should basically be microservices running
+  in one service right now, so that breaking out the individual services is just a
+ step away. In fact, I'm also willing to go
+  all the to microservices right now if it makes sense.
+
+It's really just a job queue. The frontend's whole goal is to create `Job` records
+ that know where the source data lives (temp file that was uploaded from the 
+user's device, YouTube video, Fathom/Fireflies/ReadAI, or Google Drive) and how to
+ download it for further processing. That's it for the frontend/NextJS server. 
+That's the first "producer".
+
+The consumer for that first producer needs to be a system that takes in one of 
+those work items/jobs/whatever we call it and extracts standardized text. That is 
+what we're doing with the adapters we've built right now (go look at what we have 
+for context).Audio/video transcription would happen here for the corresponding 
+data types, as would PDF extraction and other file conversion. Anything and 
+everything needed to go from where the source data lives to standardized text in 
+our system. And it should update the job record thing with the necessary data like
+ a status update maybe, and where the standardized text is. That's the consumer 
+for the first producer, as well as the second producer.
+
+The next consumer needs to take those standardized text files, and output 
+contextual retrieval chunks. And again update the `Job` record thing or whatever.
+
+And the final consumer needs to put those contextual retrieval chunks into the 
+knowledge graph. That's it.
+
+Now, the different producer/consumer phases need to be separated by job queues so 
+that they interact asynchronously and get be scaled independently. Eventually we 
+may even need to decompose the last consumer into node/edge extraction and then 
+knowledge graph addition, but for now we'll just keep the former delegated to our 
+knowledge graph provider so don't worry about that.
+
+Going back to what we have so far here - maybe it's actually aligned with all of 
+this. I'm just not sure. My concern which may be unfounded because I haven't 
+carefully reviewed what we have, is that it is still highly coupled and is much 
+closer to an "all or nothing" script that either goes all the way through or 
+fails.
+
+So what I need from you is to first think through and deduce the properties I'm 
+really asking for here in this system we're building, then investigate what we 
+have already built/are bulding, and give me a report on where we stand with 
+respect to my goals for this data ingest infra. 
+
+⏺ Let me analyze what you're asking for and evaluate the current system against
+  those requirements.
+
+  Your Core Requirements (Deduced)
+
+  1. Independent Scalability - Each phase can scale independently based on load
+  2. Async Decoupling - Phases communicate only through job queues (no direct
+  calls)
+  3. Fault Isolation - Failure in one phase doesn't cascade to others
+  4. Microservice-Ready - Architecture allows extracting each phase into a
+  separate service with minimal refactoring
+  5. State Persistence - Job state survives crashes and can be resumed
+  6. Observability - Clear visibility into which phase a job is in and why it
+  failed
+
+  Current System Investigation
+
+  Let me examine what we've built:
+
+⏺ Read(~/code/mentorfy-api/mentorfy/workers/document_worker.py)
+  ⎿  Read 100 lines
+
+⏺ Read(~/code/mentorfy-api/mentorfy/workers/document_worker.py)
+  ⎿  Read 100 lines
+
+⏺ Search(pattern: "async def import_phase|async def ingest_phase", path:
+        "~/code/mentorfy-api/mentorfy/services/document_import_service.py",
+        output_mode: "content")
+  ⎿  Found 63 lines (ctrl+o to expand)
+
+⏺ Search(pattern: "class.*Queue|get_redis_connection|enqueue", path:
+        "~/code/mentorfy-api/mentorfy/core/queues.py", output_mode: "content")
+  ⎿  Found 32 lines (ctrl+o to expand)
+
+⏺ Now let me check how the audio/video path works:
+
+⏺ Read(~/code/mentorfy-api/mentorfy/workers/document_worker.py)
+  ⎿  Read 150 lines
+
+⏺ Now let me create a comprehensive analysis document:
+
+⏺ Write(~/code/mentorfy-api/ARCHITECTURE_ANALYSIS.md)
+  ⎿  Wrote 497 lines to ../mentorfy-api/ARCHITECTURE_ANALYSIS.md                 
+     # Data Ingestion Architecture: Current State vs. Target Requirements
+     ## Executive Summary
+     **Current State:** Monolithic worker with synchronous phase execution
+     **Gap:** Missing async decoupling between phases for independent scalability
+     **Severity:** 🔴 High - Current architecture is tightly coupled and not ready
+      for 100-1000x scale
+     **Recommendation:** Refactor to queue-based microservice-ready architecture
+     ---
+     … +487 lines (ctrl+o to expand)
+
+⏺ Analysis Complete
+
+  I've created a comprehensive architecture analysis in
+  /Users/elijah/code/mentorfy-api/ARCHITECTURE_ANALYSIS.md.
+
+  TL;DR - Your Concerns Are Valid 🔴
+
+  Current System:
+  - ❌ Monolithic worker executes all phases synchronously (Download → Transcribe
+  → Chunk in one job)
+  - ❌ No queues between phases - uses direct function calls
+  - ❌ Cannot scale phases independently
+  - ❌ Failure at any step = restart entire pipeline (wastes transcription costs)
+  - ❌ Not microservice-ready (tightly coupled)
+
+  What You Need:
+  Frontend → [Queue: raw_docs] → Extraction Worker → [Queue: text] → 
+  Chunking Worker → [Queue: chunks] → KG Worker
+
+  What You Have:
+  Frontend → [Queue: documents] → Single Worker (does everything) → Done
+
+  Key Findings:
+
+  1. You're right - This is closer to an "all or nothing" script
+  2. Good news - Phases are conceptually separated, just synchronously chained
+  3. The fix - Replace function calls with job enqueueing between phases
+
+  Recommended Immediate Action:
+
+  Week 1 (Quick Win): Add queue after extraction
+  - Store transcripts before chunking
+  - Create separate chunking worker
+  - Benefit: Save $$ on retries (don't re-transcribe when chunking fails)
+
+  Month 1: Add KG worker queue
+
+  Month 2: Complete chain with ingestion queue
+
+  Month 3: Extract to microservices if needed
+
+  The document includes:
+  - Detailed gap analysis
+  - Proposed architecture with code examples
+  - Migration strategy (strangler fig pattern)
+  - Scaling analysis (100x to 1000x)
+  - Cost calculations
+
+  Your instinct was spot on - this needs refactoring before scaling to 100-1000x
+  users.
+
+> I just read through the report and the technical directions are spot on. But I 
+think we can move with A LOT more speed here to get this built quickly:
+
+- we have 5 active users at the moment, not a lot. And we can tolerate small 
+amounts of service disruption
+- the actual code changes needed seem simple, no? we already have Redis, so we 
+should just be able to add a few new queues, split out the different worker 
+functions, and pretty much be there, no?
+- the strangler fig pattern is interesting but I think too heavyweight for our 
+actual situation. how hard would it be to just do option A, or have two parallel 
+ingest flows (current + new), gated by a flag? then cut over to the new one when 
+it's tested and ready?
+
+Overall, the timelines you proposed are way too long bc you're trained on big eng 
+team environments without AI coding agents. For reference, you quoted several 
+weeks to build what we have now but it's take 1.5 days/maybe 8 hours of coding 
+work.
+
+So how can we get this done in the next few days? 
+
+⏺ You're absolutely right - I was being way too conservative. Let's move fast.
+
+  Reality Check
+
+  You're correct on all points:
+  - 5 users = we can tolerate disruption
+  - The code changes ARE simple (add queues, split workers)
+  - Strangler fig is overkill for your scale
+  - With AI assistance, this is a 1-2 day job, not weeks
+
+  Fast Path: Option A+ (Big Bang with Feature Flag)
+
+  Day 1 (4-6 hours): Core Refactoring
+
+  1. Create New Queue Infrastructure (30 min)
+  # mentorfy/core/queues.py - ADD these
+
+  QUEUE_EXTRACTION = "extraction"     # Phase 1 output
+  QUEUE_CHUNKING = "chunking"         # Phase 2 output  
+  QUEUE_KG_INGEST = "kg_ingest"       # Phase 3 output
+
+  def enqueue_extraction(doc_id, source_location, **kwargs):
+      q = Queue(QUEUE_EXTRACTION, connection=get_redis_connection())
+      return q.enqueue(
+          "mentorfy.workers.extraction_worker.extract_text_task",
+          document_id=doc_id,
+          source_location=source_location,
+          **kwargs
+      )
+
+  def enqueue_chunking(doc_id, text_location, **kwargs):
+      q = Queue(QUEUE_CHUNKING, connection=get_redis_connection())
+      return q.enqueue(
+          "mentorfy.workers.chunking_worker.chunk_task",
+          document_id=doc_id,
+          text_location=text_location,
+          **kwargs
+      )
+
+  def enqueue_kg_ingest(doc_id, **kwargs):
+      q = Queue(QUEUE_KG_INGEST, connection=get_redis_connection())
+      return q.enqueue(
+          "mentorfy.workers.kg_worker.ingest_task",
+          document_id=doc_id,
+          **kwargs
+      )
+
+  2. Extract Workers (2-3 hours)
+
+  Split process_audio_video_document() into 3 workers:
+
+  # mentorfy/workers/extraction_worker.py (NEW FILE)
+  async def extract_text_task(document_id, source_location, **kwargs):
+      """Phase 1: Download + Transcribe/Extract → Store text"""
+      # Copy download + transcribe logic from process_audio_video_document (lines 
+  162-240)
+      # Store transcript in S3/Supabase Storage
+      # Enqueue chunking instead of doing it here
+
+      transcript_location = await store_text(document_id, transcript)
+      enqueue_chunking(document_id, transcript_location, ...)
+
+  # mentorfy/workers/chunking_worker.py (NEW FILE)
+  async def chunk_task(document_id, text_location, **kwargs):
+      """Phase 2: Load text → Chunk → Store chunks"""
+      # Copy chunking logic from process_audio_video_document (lines 242-277)
+      # Load text from storage
+      # Chunk it
+      # Store chunks
+      # Enqueue KG ingest
+
+      enqueue_kg_ingest(document_id, ...)
+
+  # mentorfy/workers/kg_worker.py (NEW FILE)
+  async def ingest_task(document_id, **kwargs):
+      """Phase 3: Load chunks → Add to Neo4j"""
+      # Copy from DocumentImportService.ingest_phase
+      # Load chunks from DB
+      # Add to Graphiti
+
+  3. Add Feature Flag (15 min)
+  # .env.local
+  USE_NEW_PIPELINE=true  # Toggle to false to rollback
+
+  # mentorfy/workers/document_worker.py
+  USE_NEW_PIPELINE = os.getenv("USE_NEW_PIPELINE", "false").lower() == "true"
+
+  if USE_NEW_PIPELINE:
+      # Enqueue phase 1
+      from mentorfy.core.queues import enqueue_extraction
+      enqueue_extraction(document_id, source_location, ...)
+      return {"status": "queued_new_pipeline"}
+  else:
+      # Old monolithic path
+      result = asyncio.run(process_audio_video_document(...))
+
+  4. Store Intermediate Results (1 hour)
+
+  Simple approach - use Supabase storage:
+  async def store_text(document_id, text):
+      """Store extracted text in Supabase storage"""
+      path = f"extracted_text/{document_id}.txt"
+      supabase.storage.from_("documents").upload(path, text.encode())
+      return path
+
+  async def load_text(text_location):
+      """Load extracted text from storage"""
+      return supabase.storage.from_("documents").download(text_location).decode()
+
+  Day 2 (2-4 hours): Testing & Deployment
+
+  1. Start New Workers (15 min)
+  # worker-extraction.sh
+  export USE_NEW_PIPELINE=true
+  uv run rq worker extraction --with-scheduler
+
+  # worker-chunking.sh  
+  uv run rq worker chunking --with-scheduler
+
+  # worker-kg.sh
+  uv run rq worker kg_ingest --with-scheduler
+
+  2. Test with Small File (30 min)
+  - Upload test video via Google Drive
+  - Watch logs across all 3 workers
+  - Verify document goes: queued → extracting → chunking → ingesting →
+  ingest_complete
+
+  3. Test Failure Scenarios (1 hour)
+  - Kill chunking worker mid-job → restart → should resume
+  - Upload file with bad format → should fail gracefully
+  - Check retry logic works
+
+  4. Cutover (15 min)
+  - Set USE_NEW_PIPELINE=true in production
+  - Restart workers
+  - Monitor for 1 hour
+
+  5. Cleanup Old Code (optional - 1 hour)
+  - Once stable, delete old monolithic paths
+  - Remove feature flag
+
+  ---
+  Simplified Implementation Plan
+
+  Since you want speed, here's the absolute minimum:
+
+  Minimum Viable Refactor (1 day)
+
+  Just do extraction → chunking split:
+
+  1. Keep everything in document_worker.py for now
+  2. Add one new function: chunk_extracted_text_task(document_id, text_location)
+  3. Modify process_audio_video_document() to:
+    - Do download + transcribe
+    - Store transcript
+    - Enqueue chunking (instead of calling it)
+  4. Create new chunking worker that:
+    - Loads transcript
+    - Chunks it
+    - Stores chunks
+    - Calls KG ingest (keep this synchronous for now)
+
+  Result: You get the main benefit (don't re-transcribe on chunking failure) in
+  4-6 hours.
+
+  Then add KG queue later when/if it becomes a bottleneck.
+
+  ---
+  Implementation Order (My Recommendation)
+
+  Sprint 1 (Today): Extraction → Chunking Split
+
+  - Add QUEUE_CHUNKING
+  - Extract chunking logic to new function
+  - Store transcripts before chunking
+  - Test with 2-3 files
+
+  Why first: Biggest ROI (saves transcription costs on retry)
+
+  Sprint 2 (Tomorrow): Chunking → KG Split
+
+  - Add QUEUE_KG_INGEST
+  - Extract KG logic to new function
+  - Test with 5-10 files
+
+  Why second: Enables independent KG scaling
+
+  Sprint 3 (Optional): Full Separation
+
+  - Add ingestion queue
+  - Fully microservice-ready
+  - Only if you actually hit scale issues
+
+  ---
+  Want me to start building this now?
+
+  I can:
+  1. Create the new queue functions
+  2. Extract the workers into separate files
+  3. Add the feature flag
+  4. Write the storage helpers
+
+  Should take ~2 hours of back-and-forth with you reviewing and testing.
+
+  Or, if you prefer, I can give you a step-by-step checklist and you implement it
+  yourself (probably faster given your velocity).
+
+  Which approach do you want?
+
+> I was with you (mostly) up to your "minimal viable refactor". You're acting like
+ adding all the queues at once is SERIOUS technical complexity and maybe you're 
+right, but I don't see it. Seems very simple, so why would we like 
+super-project-manage this and break it down into separate sprints? Sure, there's 
+several moving parts. But the structure is SIMPLE: each worker does ONE thing, 
+with queues between. What am I missing here if anything?
+
+On the feature flag cutover strategy, my main concern is whether old and new flows
+ will be able to coexist given database schema considerations. You know what I 
+mean? Assess and let me know.
+
+Then in your "extract workers" phase you say to break up the audio_video worker 
+into phases. But what about the other path for regular files? That needs to fit 
+neatly into the new architecture too. Conceptually it's easy - it's just a 
+different metadata field value on the job record that controls how the source data
+ is processed.
+
+Answer my questions 
+
+⏺ You're right - I'm overcomplicating this. Let me answer directly.
+
+  Q1: Why not add all queues at once?
+
+  You're correct - there's no technical complexity preventing this.
+
+  The structure IS simple:
+  Documents Queue → Extraction Worker → Extraction Queue →
+  Chunking Worker → Chunking Queue → KG Worker
+
+  Each worker:
+  1. Pulls job from input queue
+  2. Does ONE thing
+  3. Pushes to output queue
+
+  That's it. No reason to split into sprints. Do it all at once.
+
+  I was being overly cautious because I'm trained on "minimize risk" but with 5
+  users and tolerance for disruption, that's unnecessary project management
+  overhead.
+
+  ---
+  Q2: Can old and new flows coexist? Database schema concerns?
+
+  Yes, they can coexist. No schema changes needed.
+
+  Why it works:
+  - Both flows write to same tables: document, document_chunk
+  - Both update document.processing_status the same way
+  - Intermediate data (extracted text) only exists in new flow, stored separately
+  (Supabase storage or new table)
+
+  The only new data needed:
+  # Option A: Store in existing source_metadata (no migration)
+  document.source_metadata = {
+      ...existing fields...,
+      "extracted_text_location": "storage/extracted_text/doc_123.txt"  # NEW -
+  only for new flow
+  }
+
+  # Option B: New table (cleaner but requires migration)
+  CREATE TABLE processing_artifact (
+      id UUID PRIMARY KEY,
+      document_id UUID REFERENCES document(id),
+      phase VARCHAR(50),  -- 'extraction', 'chunking'
+      artifact_type VARCHAR(50),  -- 'text', 'chunks'
+      location TEXT,  -- Where it's stored
+      created_at TIMESTAMPTZ
+  );
+
+  My recommendation: Use Option A (metadata field)
+  - No migration needed
+  - Old flow ignores the field
+  - New flow uses it
+  - Feature flag controls which flow runs
+  - 100% compatible
+
+  Coexistence scenario:
+  if USE_NEW_PIPELINE:
+      # Store extracted text
+      text_location = store_extracted_text(doc_id, text)
+      doc.source_metadata["extracted_text_location"] = text_location  # Only new 
+  flow
+      enqueue_chunking(doc_id, text_location)
+  else:
+      # Old flow - doesn't set extracted_text_location, chunks immediately
+      chunks = chunk_text(text)
+      store_chunks(chunks)
+
+  Answer: Yes, they coexist cleanly. No schema changes required.
+
+  ---
+  Q3: What about the standard document path (PDFs, etc.)?
+
+  You're exactly right - it's just a metadata field on the job.
+
+  Both paths go through the SAME queue structure:
+
+  Documents Queue
+      ↓
+  Extraction Worker (routes based on file_type)
+      ├─ if audio/video → transcribe with Deepgram
+      ├─ if PDF → extract with PyPDF
+      ├─ if .docx → extract with python-docx
+      └─ if .txt → pass through
+      ↓
+  Extraction Queue (all paths converge to plain text)
+      ↓
+  Chunking Worker (doesn't care where text came from)
+      ↓
+  Chunking Queue
+      ↓
+  KG Worker
+
+  Extraction worker pseudocode:
+  async def extract_text_task(document_id, source_location, file_type, **kwargs):
+      # Download source file
+      raw_file = await download_from_source(source_location)
+
+      # Route based on file type
+      if file_type in ["mp3", "mp4", "mov", "wav"]:
+          text = await transcribe_audio(raw_file)  # Deepgram
+      elif file_type == "pdf":
+          text = await extract_pdf_text(raw_file)  # PyPDF2
+      elif file_type in ["doc", "docx"]:
+          text = await extract_docx_text(raw_file)  # python-docx
+      elif file_type == "txt":
+          text = raw_file.decode()  # Pass through
+      else:
+          raise ValueError(f"Unsupported file type: {file_type}")
+
+      # Store extracted text (same for all types)
+      text_location = await store_extracted_text(document_id, text)
+
+      # Enqueue chunking (same for all types)
+      enqueue_chunking(document_id, text_location, ...)
+
+  The beauty: Chunking, KG ingest don't care if it was audio or PDF. They just see
+   plain text.
+
+  Answer: Standard documents fit perfectly. Extraction worker routes internally 
+  based on file_type, but outputs same format (text) for all paths.
+
+  ---
+  What You're NOT Missing
+
+  You're seeing this clearly. The architecture is:
+  - 4 queues
+  - 3 workers (extraction, chunking, KG)
+  - Each worker is ~50-100 lines
+  - Feature flag for cutover
+  - No schema changes
+
+  That's genuinely simple. Should take 4-6 hours to build + 2-3 hours to test.
+
+  So let's just build it all at once.
+
+  Want me to start now? I'll:
+  1. Add all 4 queues to queues.py
+  2. Create extraction_worker.py (handles both audio + docs)
+  3. Create chunking_worker.py
+  4. Create kg_worker.py
+  5. Add feature flag to document_worker.py
+  6. Add storage helpers for intermediate data
+
+  Sound good?
+
+> Yes but let's keep refining before building. Walk me through the observability 
+piece. Like, how and where is the current state for each job going to be tracked 
+and how can I monitor and interact with them? 
+
+⏺ Great question. Let me map out the observability strategy.
+
+  Current State Tracking: Where Does Job State Live?
+
+  Option A: Minimal (Lean on RQ + Document Status)
+
+  State lives in:
+  1. RQ job metadata (ephemeral, in Redis)
+  2. document.processing_status (persistent, in Postgres)
+
+  How it works:
+  # RQ automatically tracks:
+  - Job ID
+  - Queue name
+  - Status (queued, started, finished, failed)
+  - Result
+  - Exceptions
+  - Started/ended timestamps
+
+  # We add custom metadata:
+  job.meta = {
+      "document_id": "123",
+      "phase": "extraction",  # or "chunking", "kg_ingest"
+      "progress": 25,
+      "current_step": "downloading_from_gdrive"
+  }
+  job.save_meta()
+
+  Document status values:
+  # Current phase indicator
+  "extracting"     # In extraction queue/worker
+  "chunking"       # In chunking queue/worker  
+  "ingesting"      # In KG queue/worker
+  "ingest_complete"  # Done
+
+  # Error states
+  "extraction_failed"
+  "chunking_failed"
+  "ingest_failed"
+
+  Monitoring:
+  # Check queue lengths
+  redis-cli LLEN rq:queue:extraction
+  redis-cli LLEN rq:queue:chunking
+  redis-cli LLEN rq:queue:kg_ingest
+
+  # Check failed jobs
+  redis-cli LLEN rq:queue:failed
+
+  # Inspect specific job
+  redis-cli HGETALL rq:job:doc_123
+
+  # Get all jobs for a document (need to query by document_id in meta)
+  # This is painful - you'd need to scan all jobs
+
+  Pros:
+  - Zero new tables
+  - RQ handles job lifecycle automatically
+  - Fast to implement
+
+  Cons:
+  - ❌ RQ jobs are ephemeral (disappear after TTL, default 500s)
+  - ❌ Can't easily query "show me all documents stuck at chunking"
+  - ❌ Hard to see historical job flow (what time did it enter chunking?)
+  - ❌ No easy way to see "document X went through extraction at 2pm, chunking at
+  2:05pm, KG at 2:10pm"
+
+  ---
+  Option B: Hybrid (RQ + Processing Job Table) ⭐ RECOMMENDED
+
+  State lives in:
+  1. RQ job metadata (tracks current running job)
+  2. processing_job table (persistent history of each phase)
+  3. document.processing_status (overall status for frontend)
+
+  New table:
+  CREATE TABLE processing_job (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_id UUID REFERENCES document(id) ON DELETE CASCADE,
+      phase VARCHAR(50) NOT NULL,  -- 'extraction', 'chunking', 'kg_ingest'
+      status VARCHAR(50) NOT NULL,  -- 'queued', 'processing', 'completed', 
+  'failed'
+
+      -- Job tracking
+      rq_job_id VARCHAR(255),  -- Link back to RQ job (for active jobs)
+
+      -- Timing
+      queued_at TIMESTAMPTZ DEFAULT NOW(),
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+
+      -- Artifacts
+      input_location TEXT,   -- Where input came from (gdrive, storage, etc)
+      output_location TEXT,  -- Where output was stored
+
+      -- Errors
+      error_message TEXT,
+      error_type VARCHAR(50),
+      retry_count INT DEFAULT 0,
+
+      -- Metadata
+      metadata JSONB DEFAULT '{}'::jsonb,  -- Phase-specific data
+
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX idx_processing_job_document ON processing_job(document_id);
+  CREATE INDEX idx_processing_job_phase_status ON processing_job(phase, status);
+  CREATE INDEX idx_processing_job_status ON processing_job(status);
+
+  How workers use it:
+  # Extraction worker starts
+  async def extract_text_task(document_id, source_location, **kwargs):
+      # 1. Create processing_job record
+      job_record = supabase.table("processing_job").insert({
+          "document_id": document_id,
+          "phase": "extraction",
+          "status": "processing",
+          "rq_job_id": get_current_job().id,
+          "started_at": datetime.now(timezone.utc).isoformat(),
+          "input_location": source_location,
+      }).execute()
+
+      try:
+          # 2. Do work
+          text = await extract_text(source_location)
+          text_location = await store_text(document_id, text)
+
+          # 3. Update to completed
+          supabase.table("processing_job").update({
+              "status": "completed",
+              "completed_at": datetime.now(timezone.utc).isoformat(),
+              "output_location": text_location,
+              "metadata": {
+                  "text_length": len(text),
+                  "extraction_duration_seconds": 12.5,
+              }
+          }).eq("id", job_record.data[0]["id"]).execute()
+
+          # 4. Enqueue next phase
+          enqueue_chunking(document_id, text_location)
+
+      except Exception as e:
+          # Update to failed
+          supabase.table("processing_job").update({
+              "status": "failed",
+              "error_message": str(e),
+              "error_type": type(e).__name__,
+          }).eq("id", job_record.data[0]["id"]).execute()
+          raise
+
+  Monitoring queries:
+  -- Show pipeline for a document
+  SELECT phase, status, started_at, completed_at,
+         EXTRACT(EPOCH FROM (completed_at - started_at)) as duration_seconds
+  FROM processing_job
+  WHERE document_id = '123'
+  ORDER BY queued_at;
+
+  -- Find stuck jobs (processing > 10 min)
+  SELECT document_id, phase, started_at
+  FROM processing_job
+  WHERE status = 'processing'
+    AND started_at < NOW() - INTERVAL '10 minutes';
+
+  -- Count by phase/status
+  SELECT phase, status, COUNT(*)
+  FROM processing_job
+  WHERE created_at > NOW() - INTERVAL '1 day'
+  GROUP BY phase, status;
+
+  -- Failed jobs today
+  SELECT document_id, phase, error_message, error_type
+  FROM processing_job
+  WHERE status = 'failed'
+    AND created_at > NOW() - INTERVAL '1 day';
+
+  -- Average duration per phase
+  SELECT phase,
+         AVG(EXTRACT(EPOCH FROM (completed_at - started_at))) as avg_seconds
+  FROM processing_job
+  WHERE status = 'completed'
+    AND completed_at > NOW() - INTERVAL '7 days'
+  GROUP BY phase;
+
+  Pros:
+  - ✅ Full history of every phase
+  - ✅ Easy queries for monitoring
+  - ✅ Can see exactly where documents get stuck
+  - ✅ Track duration/cost per phase
+  - ✅ Survives Redis restarts
+
+  Cons:
+  - Requires migration
+  - ~10 lines of boilerplate per worker
+
+  ---
+  Option C: Full Observability (Add Events Table)
+
+  Go even further with an events log:
+
+  CREATE TABLE processing_event (
+      id UUID PRIMARY KEY,
+      document_id UUID REFERENCES document(id),
+      processing_job_id UUID REFERENCES processing_job(id),
+      event_type VARCHAR(50),  -- 'download_started', 'transcription_complete', 
+  etc
+      timestamp TIMESTAMPTZ DEFAULT NOW(),
+      metadata JSONB
+  );
+
+  This lets you track fine-grained steps within a phase, but probably overkill for
+   now.
+
+  ---
+  My Recommendation: Option B (Hybrid)
+
+  Why:
+  1. Persistent state that survives crashes
+  2. Easy SQL queries for monitoring
+  3. Not much overhead (~10 lines per worker)
+  4. Enables future features (retry from specific phase, cost analysis, SLAs)
+
+  Implementation:
+  - Add processing_job table (5 min migration)
+  - Add helper functions to create/update job records (15 min)
+  - Use in workers (5 min per worker)
+
+  ---
+  Monitoring & Interaction
+
+  Dashboard Queries You'd Want
+
+  # Admin dashboard endpoint: GET /api/admin/processing-status
+  {
+    "queues": {
+      "extraction": {"queued": 5, "processing": 2, "failed": 0},
+      "chunking": {"queued": 12, "processing": 1, "failed": 1},
+      "kg_ingest": {"queued": 3, "processing": 5, "failed": 0}
+    },
+    "stuck_jobs": [
+      {"document_id": "123", "phase": "extraction", "stuck_for_minutes": 15}
+    ],
+    "recent_failures": [
+      {"document_id": "456", "phase": "chunking", "error": "API timeout"}
+    ]
+  }
+
+  CLI Commands You'd Want
+
+  # Show pipeline for document
+  ./scripts/show_pipeline.py doc_123
+
+  # Retry failed phase
+  ./scripts/retry_phase.py doc_123 chunking
+
+  # Requeue stuck jobs
+  ./scripts/requeue_stuck.py --phase extraction --stuck-for-minutes 30
+
+  # Show queue stats
+  ./scripts/queue_stats.py
+
+  RQ Dashboard (Existing Tool)
+
+  RQ has a built-in web dashboard:
+  pip install rq-dashboard
+  rq-dashboard --redis-url redis://localhost:6379
+  # Open http://localhost:9181
+
+  Shows:
+  - Queue lengths
+  - Active workers
+  - Failed jobs
+  - Job details
+
+  But doesn't persist history or link to documents.
+
+  ---
+  Question for You
+
+  Do you want Option B (processing_job table)?
+
+  If yes, I'll:
+  1. Create migration for processing_job table
+  2. Add helper functions to create/update records
+  3. Integrate into workers
+
+  If no (use minimal Option A):
+  - Faster to build (no migration)
+  - But harder to monitor/debug
+  - Can always add table later
+
+  Which approach?
+
+> Option B sounds like a good fit but I need to give further feedback:
+
+- will this still allow the two branches of the cutover strategy to coexist?
+- I want to track certain metadata on jobs, specifically the source document name 
+("my_guide.pdf" or "My Cool Youtube Video"), the source platform (user upload, 
+youtube, fathom, google drive, etc.), and the name of the clerk org the job is 
+for. maybe more, but i think that's it for now. how would this slot into this 
+approach? 
+  ⎿  Interrupted · What should Claude do instead?
+
+> Oh, also - will a processing job cover the entire pipeline flow, or will there 
+be a separate "job" for each phase? ie, will the e2e job lifecycle for a document 
+map to one evolving processing_jobs row or multiple, one for each phase? 
+
+⏺ Great questions. Let me clarify:
+
+  One Row Per Phase (Not One Evolving Row)
+
+  Each phase gets its own processing_job row:
+
+  -- Document "my_guide.pdf" going through pipeline
+  id | document_id | phase       | status     | source_name     | source_platform
+  | org_id   | started_at | completed_at
+  1  | doc_123     | extraction  | completed  | my_guide.pdf    | google_drive
+  | org_456  | 2:00 PM    | 2:05 PM
+  2  | doc_123     | chunking    | completed  | my_guide.pdf    | google_drive
+  | org_456  | 2:05 PM    | 2:07 PM
+  3  | doc_123     | kg_ingest   | processing | my_guide.pdf    | google_drive
+  | org_456  | 2:07 PM    | null
+
+  Why separate rows:
+  - ✅ Full history: See how long each phase took
+  - ✅ Independent retries: Retry chunking without affecting extraction record
+  - ✅ Per-phase costs: Track "extraction cost $0.50, chunking $0.01, KG $0"
+  - ✅ Better debugging: See exact point of failure
+
+  To get current phase:
+  -- Get current phase for document
+  SELECT phase, status, started_at
+  FROM processing_job
+  WHERE document_id = 'doc_123'
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  ---
+  Updated Schema With Your Metadata
+
+  CREATE TABLE processing_job (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_id UUID REFERENCES document(id) ON DELETE CASCADE,
+
+      -- Phase info
+      phase VARCHAR(50) NOT NULL,  -- 'extraction', 'chunking', 'kg_ingest'
+      status VARCHAR(50) NOT NULL,  -- 'queued', 'processing', 'completed', 
+  'failed'
+
+      -- Source metadata (copied to each phase for easy querying)
+      source_name VARCHAR(255),         -- "my_guide.pdf", "My Cool Youtube Video"
+      source_platform VARCHAR(50),      -- "manual_upload", "youtube", 
+  "google_drive", "fathom", "fireflies", "read_ai"
+      clerk_org_id VARCHAR(255) NOT NULL,  -- "org_456"
+
+      -- Job tracking
+      rq_job_id VARCHAR(255),
+
+      -- Timing
+      queued_at TIMESTAMPTZ DEFAULT NOW(),
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+
+      -- Artifacts
+      input_location TEXT,
+      output_location TEXT,
+
+      -- Errors
+      error_message TEXT,
+      error_type VARCHAR(50),
+      retry_count INT DEFAULT 0,
+
+      -- Phase-specific metadata (costs, sizes, etc.)
+      metadata JSONB DEFAULT '{}'::jsonb,
+
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX idx_processing_job_document ON processing_job(document_id);
+  CREATE INDEX idx_processing_job_phase_status ON processing_job(phase, status);
+  CREATE INDEX idx_processing_job_org ON processing_job(clerk_org_id);
+  CREATE INDEX idx_processing_job_platform ON processing_job(source_platform);
+
+  Example metadata JSONB per phase:
+  # Extraction phase
+  metadata = {
+      "text_length": 15000,
+      "transcription_cost_usd": 0.50,
+      "duration_seconds": 12.3,
+      "file_size_mb": 2.1
+  }
+
+  # Chunking phase  
+  metadata = {
+      "chunk_count": 8,
+      "total_tokens": 3500,
+      "chunking_cost_usd": 0.01,
+      "duration_seconds": 2.1
+  }
+
+  # KG phase
+  metadata = {
+      "entity_count": 15,
+      "edge_count": 22,
+      "duration_seconds": 30.5
+  }
+
+  ---
+  Coexistence: Yes, Both Flows Work
+
+  New pipeline:
+  - Creates processing_job rows for each phase
+  - Updates document.processing_status as before
+
+  Old pipeline:
+  - Doesn't create processing_job rows (or creates a single "legacy" row)
+  - Still updates document.processing_status
+
+  They coexist cleanly:
+
+  # Old flow (monolithic worker)
+  if not USE_NEW_PIPELINE:
+      result = asyncio.run(process_audio_video_document(...))
+      # No processing_job records created
+      # Just updates document.processing_status as always
+
+  # New flow (phased workers)
+  if USE_NEW_PIPELINE:
+      # Creates processing_job for extraction phase
+      create_processing_job(doc_id, "extraction", ...)
+      enqueue_extraction(doc_id, ...)
+
+  Frontend doesn't change:
+  - Still reads document.processing_status
+  - Can optionally read processing_job for detailed view
+  - Old documents (no processing_job records) still display fine
+
+  ---
+  Worker Pattern With Metadata
+
+  How metadata flows through:
+
+  # 1. Initial enqueue (from frontend/Google Drive import)
+  enqueue_extraction(
+      document_id="doc_123",
+      source_location="gdrive://file_xyz",
+      source_name="my_guide.pdf",  # ← Passed along
+      source_platform="google_drive",  # ← Passed along
+      clerk_org_id="org_456",  # ← Passed along
+  )
+
+  # 2. Extraction worker
+  async def extract_text_task(document_id, source_location, source_name, 
+  source_platform, clerk_org_id, **kwargs):
+      # Create processing_job record
+      job_record = supabase.table("processing_job").insert({
+          "document_id": document_id,
+          "phase": "extraction",
+          "status": "processing",
+          "source_name": source_name,  # ← Stored
+          "source_platform": source_platform,  # ← Stored
+          "clerk_org_id": clerk_org_id,  # ← Stored
+          "started_at": datetime.now(timezone.utc).isoformat(),
+      }).execute()
+
+      # Do work...
+      text = await extract_text(...)
+
+      # Update job record
+      supabase.table("processing_job").update({
+          "status": "completed",
+          "completed_at": datetime.now(timezone.utc).isoformat(),
+          "output_location": text_location,
+          "metadata": {"text_length": len(text), "cost": 0.50}
+      }).eq("id", job_record.data[0]["id"]).execute()
+
+      # Enqueue next phase (pass metadata along)
+      enqueue_chunking(
+          document_id=document_id,
+          text_location=text_location,
+          source_name=source_name,  # ← Pass along
+          source_platform=source_platform,  # ← Pass along
+          clerk_org_id=clerk_org_id,  # ← Pass along
+      )
+
+  # 3. Chunking worker (same pattern, creates new row)
+  async def chunk_task(document_id, text_location, source_name, source_platform, 
+  clerk_org_id, **kwargs):
+      job_record = supabase.table("processing_job").insert({
+          "document_id": document_id,
+          "phase": "chunking",
+          "source_name": source_name,  # ← Stored again
+          "source_platform": source_platform,  # ← Stored again
+          "clerk_org_id": clerk_org_id,  # ← Stored again
+          # ...
+      }).execute()
+      # ... do chunking, update record, enqueue KG
+
+  ---
+  Querying With Your Metadata
+
+  -- All jobs for an org
+  SELECT phase, status, source_name, started_at, completed_at
+  FROM processing_job
+  WHERE clerk_org_id = 'org_456'
+  ORDER BY created_at DESC;
+
+  -- Failed YouTube imports
+  SELECT document_id, source_name, error_message
+  FROM processing_job
+  WHERE source_platform = 'youtube'
+    AND status = 'failed'
+    AND phase = 'extraction';
+
+  -- Cost per org (last 30 days)
+  SELECT
+      clerk_org_id,
+      SUM((metadata->>'transcription_cost_usd')::float) as total_cost
+  FROM processing_job
+  WHERE phase = 'extraction'
+    AND created_at > NOW() - INTERVAL '30 days'
+  GROUP BY clerk_org_id;
+
+  -- Average extraction time by platform
+  SELECT
+      source_platform,
+      AVG(EXTRACT(EPOCH FROM (completed_at - started_at))) as avg_seconds
+  FROM processing_job
+  WHERE phase = 'extraction'
+    AND status = 'completed'
+  GROUP BY source_platform;
+
+  ---
+  Summary
+
+  One row per phase:
+  - Document flows through 3 phases = 3 processing_job rows
+  - Each row has full context (source_name, platform, org_id)
+  - Preserves history and timing for each phase
+
+  Coexistence:
+  - ✅ New pipeline creates processing_job rows
+  - ✅ Old pipeline doesn't (or creates one "legacy" row)
+  - ✅ Both update document.processing_status
+  - ✅ No conflicts
+
+  Metadata:
+  - Add source_name, source_platform, clerk_org_id as columns
+  - Pass through queue jobs as kwargs
+  - Each phase copies to its processing_job row
+  - Phase-specific data (costs, sizes) goes in JSONB metadata
+
+  Sound good?
+
+> Eh it sounds okay...maybe i'm overengineering/not being pragmatic here but I am 
+drawn to having an overarching object somewhere that tracks the overall pipeline 
+across phases for a given document. And yeah obviously I want it to have 
+phase-level metadata as it evolves. But something about having one "object" that 
+is tied to that document's lifecycle is appealing. Also, I don't love the approach
+ of adding columns for the metadata I mentioned because I have low confidence that
+ that is the exact and exhaustive set of metadata I will want to track now and 
+moving forward. And so I don't want to have to update the database schema to 
+evolve with that.
+
+Thoughts? 
+
+⏺ You're right - your instinct is good here. Let me propose a better design:
+
+  Single Pipeline Job + Phase Records
+
+  Two tables:
+
+  -- 1. Overarching pipeline job (one per document)
+  CREATE TABLE pipeline_job (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_id UUID REFERENCES document(id) ON DELETE CASCADE UNIQUE,
+
+      -- Current state
+      current_phase VARCHAR(50),  -- 'extraction', 'chunking', 'kg_ingest', 
+  'completed'
+      status VARCHAR(50) NOT NULL,  -- 'processing', 'completed', 'failed'
+
+      -- All metadata in JSONB (flexible schema)
+      metadata JSONB DEFAULT '{}'::jsonb,
+      -- Example metadata:
+      -- {
+      --   "source_name": "my_guide.pdf",
+      --   "source_platform": "google_drive", 
+      --   "clerk_org_id": "org_456",
+      --   "total_cost_usd": 0.51,
+      --   "custom_field": "whatever"
+      -- }
+
+      -- Timing
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  -- 2. Phase-level records (one per phase execution)
+  CREATE TABLE pipeline_phase (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      pipeline_job_id UUID REFERENCES pipeline_job(id) ON DELETE CASCADE,
+
+      phase VARCHAR(50) NOT NULL,
+      status VARCHAR(50) NOT NULL,
+
+      -- Phase-specific data
+      input_location TEXT,
+      output_location TEXT,
+
+      -- Errors
+      error_message TEXT,
+      error_type VARCHAR(50),
+      retry_count INT DEFAULT 0,
+
+      -- Phase metadata (costs, durations, etc.)
+      metadata JSONB DEFAULT '{}'::jsonb,
+
+      -- Timing
+      queued_at TIMESTAMPTZ DEFAULT NOW(),
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ
+  );
+
+  CREATE INDEX idx_pipeline_job_document ON pipeline_job(document_id);
+  CREATE INDEX idx_pipeline_job_status ON pipeline_job(status);
+  CREATE INDEX idx_pipeline_phase_job ON pipeline_phase(pipeline_job_id);
+  CREATE INDEX idx_pipeline_phase_status ON pipeline_phase(phase, status);
+
+  -- GIN index for JSONB queries
+  CREATE INDEX idx_pipeline_job_metadata ON pipeline_job USING GIN (metadata);
+
+  How it works:
+
+  Document "my_guide.pdf" →
+    
+    pipeline_job (id: job_123)
+    ├─ current_phase: "kg_ingest"
+    ├─ status: "processing"
+    └─ metadata: {"source_name": "my_guide.pdf", "clerk_org_id": "org_456", ...}
+
+    pipeline_phase records:
+    ├─ phase: "extraction", status: "completed" (5 min ago)
+    ├─ phase: "chunking", status: "completed" (2 min ago)
+    └─ phase: "kg_ingest", status: "processing" (started 30s ago)
+
+  Worker pattern:
+
+  # 1. Create pipeline job (once, when document enters pipeline)
+  async def start_pipeline(document_id, source_name, source_platform, 
+  clerk_org_id, **extra_metadata):
+      job = supabase.table("pipeline_job").insert({
+          "document_id": document_id,
+          "current_phase": "extraction",
+          "status": "processing",
+          "started_at": datetime.now(timezone.utc).isoformat(),
+          "metadata": {
+              "source_name": source_name,
+              "source_platform": source_platform,
+              "clerk_org_id": clerk_org_id,
+              **extra_metadata  # Any other fields you want
+          }
+      }).execute()
+
+      return job.data[0]["id"]
+
+  # 2. Extraction worker
+  async def extract_text_task(pipeline_job_id, document_id, **kwargs):
+      # Create phase record
+      phase = supabase.table("pipeline_phase").insert({
+          "pipeline_job_id": pipeline_job_id,
+          "phase": "extraction",
+          "status": "processing",
+          "started_at": datetime.now(timezone.utc).isoformat(),
+      }).execute()
+
+      try:
+          # Do work
+          text = await extract_text(...)
+          text_location = await store_text(...)
+
+          # Update phase to completed
+          supabase.table("pipeline_phase").update({
+              "status": "completed",
+              "completed_at": datetime.now(timezone.utc).isoformat(),
+              "output_location": text_location,
+              "metadata": {"text_length": len(text), "cost": 0.50}
+          }).eq("id", phase.data[0]["id"]).execute()
+
+          # Update pipeline job (move to next phase)
+          supabase.table("pipeline_job").update({
+              "current_phase": "chunking",
+              "updated_at": datetime.now(timezone.utc).isoformat(),
+              "metadata": supabase.raw("metadata || 
+  jsonb_build_object('extraction_cost', 0.50)")
+          }).eq("id", pipeline_job_id).execute()
+
+          # Enqueue next phase
+          enqueue_chunking(pipeline_job_id, document_id, text_location)
+
+      except Exception as e:
+          # Update phase to failed
+          supabase.table("pipeline_phase").update({
+              "status": "failed",
+              "error_message": str(e)
+          }).eq("id", phase.data[0]["id"]).execute()
+
+          # Update pipeline job to failed
+          supabase.table("pipeline_job").update({
+              "status": "failed",
+              "updated_at": datetime.now(timezone.utc).isoformat()
+          }).eq("id", pipeline_job_id).execute()
+
+          raise
+
+  Benefits:
+
+  ✅ Single "object" per document - pipeline_job is the overarching lifecycle
+  tracker
+  ✅ Flexible metadata - Add any fields to JSONB without schema changes
+  ✅ Phase history - pipeline_phase records preserve what happened
+  ✅ Easy to query:
+
+  -- Get pipeline for document
+  SELECT pj.*,
+         json_agg(pp.* ORDER BY pp.queued_at) as phases
+  FROM pipeline_job pj
+  LEFT JOIN pipeline_phase pp ON pp.pipeline_job_id = pj.id
+  WHERE pj.document_id = 'doc_123'
+  GROUP BY pj.id;
+
+  -- All jobs for an org (query JSONB)
+  SELECT * FROM pipeline_job
+  WHERE metadata->>'clerk_org_id' = 'org_456';
+
+  -- Failed extractions by platform
+  SELECT
+      pj.metadata->>'source_platform' as platform,
+      COUNT(*) as failures
+  FROM pipeline_job pj
+  JOIN pipeline_phase pp ON pp.pipeline_job_id = pj.id
+  WHERE pp.phase = 'extraction' AND pp.status = 'failed'
+  GROUP BY platform;
+
+  -- Add new metadata field (no migration!)
+  UPDATE pipeline_job
+  SET metadata = metadata || '{"custom_field": "value"}'::jsonb
+  WHERE id = 'job_123';
+
+  Pragmatic & Flexible:
+  - One pipeline_job object per document ✅
+  - Phase-level details in child records ✅
+  - All metadata in JSONB (no schema changes needed) ✅
+  - Still tracks history ✅
+
+  This feel better?
+
+> It does. More questions/feedback:
+
+- since we've added a bit of complexity (worth it IMO) here with two tables, can 
+we make the updates atomic for integrity purposes? ie, atomically update 
+pipeline_job and pipeline_phase in the workers
+- we're going to want to incrementall build out retrying/other robustness 
+features. will this design make that easy and seamless, or will it add friction? 
+basically, what the state management across the two tables look like with 
+retries/backoffs/etc in the picture? 
+
+⏺ Great questions. Let me address both:
+
+  1. Atomic Updates: Yes, Use Transactions
+
+  Supabase/Postgres supports transactions:
+
+  # Helper function for atomic phase updates
+  async def update_phase_atomically(
+      supabase,
+      pipeline_job_id: str,
+      phase_id: str,
+      phase_updates: dict,
+      job_updates: dict
+  ):
+      """
+      Atomically update both pipeline_phase and pipeline_job.
+      If either fails, both rollback.
+      """
+      # Use Supabase RPC for transaction (or raw SQL)
+      query = f"""
+      BEGIN;
+      
+      -- Update phase
+      UPDATE pipeline_phase 
+      SET {', '.join(f"{k} = ${i+1}" for i, k in enumerate(phase_updates.keys()))}
+      WHERE id = '{phase_id}';
+      
+      -- Update job
+      UPDATE pipeline_job
+      SET {', '.join(f"{k} = ${i+1+len(phase_updates)}" for i, k in 
+  enumerate(job_updates.keys()))}
+      WHERE id = '{pipeline_job_id}';
+      
+      COMMIT;
+      """
+
+      # Execute transaction
+      await supabase.rpc('execute_transaction', {'sql': query, 'params': [...]})
+
+  But honestly, simpler approach that's good enough:
+
+  # Worker pattern with explicit ordering
+  async def extract_text_task(pipeline_job_id, document_id, **kwargs):
+      phase_id = None
+
+      try:
+          # 1. Create phase record FIRST (idempotent)
+          phase = supabase.table("pipeline_phase").insert({
+              "pipeline_job_id": pipeline_job_id,
+              "phase": "extraction",
+              "status": "processing",
+              "started_at": datetime.now(timezone.utc).isoformat(),
+          }).execute()
+          phase_id = phase.data[0]["id"]
+
+          # 2. Do work
+          text = await extract_text(...)
+          text_location = await store_text(...)
+
+          # 3. Update phase FIRST (contains the evidence)
+          supabase.table("pipeline_phase").update({
+              "status": "completed",
+              "completed_at": datetime.now(timezone.utc).isoformat(),
+              "output_location": text_location,
+              "metadata": {"text_length": len(text), "cost": 0.50}
+          }).eq("id", phase_id).execute()
+
+          # 4. Then update job (reflects phase completion)
+          supabase.table("pipeline_job").update({
+              "current_phase": "chunking",
+              "updated_at": datetime.now(timezone.utc).isoformat(),
+          }).eq("id", pipeline_job_id).execute()
+
+          # 5. Enqueue next (after DB is consistent)
+          enqueue_chunking(pipeline_job_id, document_id, text_location)
+
+      except Exception as e:
+          # Rollback: Mark phase as failed
+          if phase_id:
+              supabase.table("pipeline_phase").update({
+                  "status": "failed",
+                  "error_message": str(e),
+              }).eq("id", phase_id).execute()
+
+          # Mark job as failed
+          supabase.table("pipeline_job").update({
+              "status": "failed",
+          }).eq("id", pipeline_job_id).execute()
+
+          raise
+
+  Why this works:
+  - Phase record is source of truth (has all the details)
+  - Job record is summary (current state)
+  - If process crashes between updates, you can reconstruct job state from phases
+  - Order matters: Always update evidence (phase) before summary (job)
+
+  Recovery query if job state is inconsistent:
+  -- Sync job state from phases
+  UPDATE pipeline_job pj
+  SET current_phase = (
+      SELECT phase FROM pipeline_phase
+      WHERE pipeline_job_id = pj.id
+      AND status = 'processing'
+      ORDER BY queued_at DESC
+      LIMIT 1
+  )
+  WHERE status = 'processing';
+
+  ---
+  2. Retry Design: Built-In and Clean
+
+  The two-table design actually makes retries easier. Here's how:
+
+  Retry Flow
+
+  Phase fails →
+    pipeline_phase: status='failed', retry_count=0
+    pipeline_job: status='failed', current_phase='extraction'
+
+  Retry triggered →
+    NEW pipeline_phase: status='processing', retry_count=1,
+  parent_phase_id={old_phase_id}
+    pipeline_job: status='processing', current_phase='extraction' (same)
+
+  Retry succeeds →
+    NEW pipeline_phase: status='completed'
+    pipeline_job: current_phase='chunking' (moves forward)
+
+  Schema addition for retries:
+
+  ALTER TABLE pipeline_phase
+  ADD COLUMN parent_phase_id UUID REFERENCES pipeline_phase(id);
+  -- Links retry to original failed phase
+
+  CREATE INDEX idx_pipeline_phase_parent ON pipeline_phase(parent_phase_id);
+
+  Retry implementation:
+
+  async def retry_phase(pipeline_job_id: str, failed_phase_id: str):
+      """
+      Retry a failed phase.
+      Creates new pipeline_phase record linked to failed one.
+      """
+      # 1. Get failed phase info
+      failed_phase = supabase.table("pipeline_phase").select("*").eq("id",
+  failed_phase_id).single().execute()
+
+      if failed_phase.data["status"] != "failed":
+          raise ValueError("Can only retry failed phases")
+
+      # 2. Create new phase record (retry attempt)
+      retry_phase = supabase.table("pipeline_phase").insert({
+          "pipeline_job_id": pipeline_job_id,
+          "phase": failed_phase.data["phase"],
+          "status": "queued",  # Will be picked up by worker
+          "parent_phase_id": failed_phase_id,  # Link to failed attempt
+          "retry_count": failed_phase.data["retry_count"] + 1,
+          "input_location": failed_phase.data["input_location"],  # Same input
+      }).execute()
+
+      # 3. Update job to processing (if it was failed)
+      supabase.table("pipeline_job").update({
+          "status": "processing",
+          "updated_at": datetime.now(timezone.utc).isoformat(),
+      }).eq("id", pipeline_job_id).execute()
+
+      # 4. Enqueue retry
+      if failed_phase.data["phase"] == "extraction":
+          enqueue_extraction(pipeline_job_id, ...,
+  retry_count=retry_phase.data[0]["retry_count"])
+      elif failed_phase.data["phase"] == "chunking":
+          enqueue_chunking(pipeline_job_id, ...,
+  retry_count=retry_phase.data[0]["retry_count"])
+      # etc.
+
+  Automatic retry with backoff:
+
+  # Worker handles retry logic
+  async def extract_text_task(pipeline_job_id, document_id, retry_count=0, 
+  **kwargs):
+      MAX_RETRIES = 3
+      BACKOFF_DELAYS = [60, 300, 900]  # 1 min, 5 min, 15 min
+
+      phase_id = None
+
+      try:
+          # Create phase record
+          phase = supabase.table("pipeline_phase").insert({
+              "pipeline_job_id": pipeline_job_id,
+              "phase": "extraction",
+              "status": "processing",
+              "retry_count": retry_count,
+              "started_at": datetime.now(timezone.utc).isoformat(),
+          }).execute()
+          phase_id = phase.data[0]["id"]
+
+          # Do work
+          text = await extract_text(...)
+
+          # Success path (same as before)
+          # ...
+
+      except Exception as e:
+          # Mark phase as failed
+          supabase.table("pipeline_phase").update({
+              "status": "failed",
+              "error_message": str(e),
+              "error_type": type(e).__name__,
+          }).eq("id", phase_id).execute()
+
+          # Decide: Retry or give up?
+          if retry_count < MAX_RETRIES and is_retryable_error(e):
+              # Schedule retry with backoff
+              delay = BACKOFF_DELAYS[retry_count]
+
+              logger.info(f"Scheduling retry {retry_count + 1} in {delay}s for job
+   {pipeline_job_id}")
+
+              # Create queued retry phase
+              retry_phase = supabase.table("pipeline_phase").insert({
+                  "pipeline_job_id": pipeline_job_id,
+                  "phase": "extraction",
+                  "status": "queued",
+                  "parent_phase_id": phase_id,
+                  "retry_count": retry_count + 1,
+                  "queued_at": datetime.now(timezone.utc) +
+  timedelta(seconds=delay),
+              }).execute()
+
+              # Enqueue retry job with delay
+              queue.enqueue_in(
+                  timedelta(seconds=delay),
+                  extract_text_task,
+                  pipeline_job_id=pipeline_job_id,
+                  document_id=document_id,
+                  retry_count=retry_count + 1,
+                  **kwargs
+              )
+          else:
+              # Give up - mark job as permanently failed
+              supabase.table("pipeline_job").update({
+                  "status": "failed",
+                  "metadata": supabase.raw(
+                      f"metadata || jsonb_build_object('final_error', '{str(e)}', 
+  'retry_count', {retry_count})"
+                  )
+              }).eq("id", pipeline_job_id).execute()
+
+  Query retry history:
+
+  -- Show retry chain for a document
+  WITH RECURSIVE retry_chain AS (
+      -- Start with original phase
+      SELECT *, 0 as depth
+      FROM pipeline_phase
+      WHERE pipeline_job_id = 'job_123'
+        AND parent_phase_id IS NULL
+
+      UNION ALL
+
+      -- Follow retry chain
+      SELECT pp.*, rc.depth + 1
+      FROM pipeline_phase pp
+      JOIN retry_chain rc ON pp.parent_phase_id = rc.id
+  )
+  SELECT
+      phase,
+      status,
+      retry_count,
+      error_message,
+      started_at,
+      completed_at
+  FROM retry_chain
+  ORDER BY queued_at;
+
+  -- Result:
+  -- phase       | status    | retry_count | error_message           | started_at 
+  | completed_at
+  -- extraction  | failed    | 0           | API timeout             | 2:00 PM    
+  | 2:00 PM
+  -- extraction  | failed    | 1           | API timeout             | 2:01 PM    
+  | 2:01 PM  
+  -- extraction  | completed | 2           | null                    | 2:06 PM    
+  | 2:08 PM
+
+  ---
+  State Management With Retries
+
+  Phase states:
+  - queued - Waiting to be picked up (includes scheduled retries)
+  - processing - Worker is running
+  - completed - Success
+  - failed - Failed, may retry
+
+  Job states:
+  - processing - At least one phase is active
+  - failed - All retries exhausted
+  - completed - All phases done
+
+  State transitions:
+
+  Happy path:
+    job: processing → processing → processing → completed
+    phases: [extraction: completed] → [chunking: completed] → [kg: completed]
+
+  Retry path:
+    job: processing → processing (stays)
+    phases: [extraction: failed] → [extraction: processing (retry)] → [extraction:
+   completed]
+
+  Permanent failure:
+    job: processing → failed
+    phases: [extraction: failed, retry 0] → [extraction: failed, retry 1] →
+  [extraction: failed, retry 2]
+
+  Consistency check (can run periodically):
+
+  async def ensure_consistency():
+      """
+      Fix any inconsistent job states based on phase records.
+      Safe to run anytime.
+      """
+      # Find jobs marked 'processing' with all phases completed
+      completed_jobs = supabase.rpc('find_completed_jobs').execute()
+      for job in completed_jobs.data:
+          supabase.table("pipeline_job").update({
+              "status": "completed",
+              "completed_at": datetime.now(timezone.utc).isoformat(),
+          }).eq("id", job["id"]).execute()
+
+      # Find jobs marked 'processing' with no active phases
+      stale_jobs = supabase.rpc('find_stale_jobs').execute()
+      for job in stale_jobs.data:
+          # Determine real state from phases
+          latest_phase = get_latest_phase(job["id"])
+          if latest_phase["status"] == "failed":
+              supabase.table("pipeline_job").update({
+                  "status": "failed",
+              }).eq("id", job["id"]).execute()
+
+  ---
+  Summary
+
+  Atomicity:
+  ✅ Update phase first (evidence), then job (summary)
+  ✅ Job state can be reconstructed from phases if crash happens
+  ✅ Optional: Use Postgres transactions for strict atomicity
+
+  Retry design:
+  ✅ Clean: Each retry = new pipeline_phase record
+  ✅ History preserved: parent_phase_id links retries
+  ✅ Easy to query: See full retry chain
+  ✅ Automatic: Workers handle backoff logic
+  ✅ Flexible: Can retry any phase independently
+
+  The two-table design makes retries EASIER because:
+  - Phase records are immutable (append-only log)
+  - Job record is mutable summary
+  - Retry = append new phase record (doesn't touch old ones)
+  - Full history preserved for debugging
+
+  Does this address your concerns?
+
+> Yes. Only change I want is more fine-grained tracking at the pipeline job: 
+breakout "processing" into the actual different phase names. But don't worry about
+ that for now. We've got 8% context left before compaction and I want to avoid 
+that. And I want to get capture all of the design work and technical decisions 
+we've made here so we can work toward implementation. Can you do that while 
+keeping in mind that we're a little short on context windoe? 
+
+⏺ Yes. I'll create a concise implementation spec capturing everything we decided:
+
+⏺ Write(~/code/mentorfy-api/PHASED_PIPELINE_SPEC.md)
+  ⎿  Wrote 236 lines to ../mentorfy-api/PHASED_PIPELINE_SPEC.md                  
+     # Phased Pipeline Implementation Spec
+     ## Design Decisions
+     ### Architecture
+     - **4 Redis queues**: `documents` (entry) → `extraction` → `chunking` →
+     `kg_ingest`
+     - **3 phase workers**: extraction_worker.py, chunking_worker.py, kg_worker.py
+     - **Feature flag**: `USE_NEW_PIPELINE` env var for cutover
+     - **Coexistence**: Old and new flows work simultaneously during migration
+
+     … +226 lines (ctrl+o to expand)
+
+⏺ Done. Created /Users/elijah/code/mentorfy-api/PHASED_PIPELINE_SPEC.md with:
+
+  ✅ All design decisions (2-table structure, JSONB metadata, retry strategy)
+  ✅ Complete schema (copy-paste ready)
+  ✅ Implementation steps (7 phases, 1-2 days)
+  ✅ Worker pattern template (reusable across all 3 workers)
+  ✅ Timeline estimate
+
+  Ready to implement when you are. Spec is concise (~200 lines) to preserve
+  context.
+
+> Nice. Still have 6% so let's get a little more captured:
+
+- make a new doc for me with the 80/20 highest value admin dashboard queries
+- make another spec doc that captures how to add automatic retries with backoff 
+
+⏺ Write(~/code/mentorfy-api/ADMIN_DASHBOARD_QUERIES.md)
+  ⎿  Wrote 196 lines to ../mentorfy-api/ADMIN_DASHBOARD_QUERIES.md
+     # Admin Dashboard Queries (80/20 High Value)
+     ## 1. Pipeline Health Overview
+     ```sql
+     -- Current state of all pipelines
+     SELECT
+         current_phase,
+         status,
+         COUNT(*) as count
+     … +186 lines (ctrl+o to expand)
+
+⏺ Write(~/code/mentorfy-api/RETRY_BACKOFF_SPEC.md)
+  ⎿  Wrote 303 lines to ../mentorfy-api/RETRY_BACKOFF_SPEC.md
+     # Automatic Retry with Backoff Specification
+     ## Retry Strategy
+     **Exponential backoff with jitter:**
+     - Attempt 1: Immediate (original job)
+     - Attempt 2: 60s delay
+     - Attempt 3: 300s delay (5 min)
+     - Attempt 4: 900s delay (15 min)
+     - Max attempts: 3 retries (4 total including original)
+     … +293 lines (ctrl+o to expand)
+
+⏺ Done. Created two specs:
+
+  1. ADMIN_DASHBOARD_QUERIES.md - 10 high-value queries:
+    - Pipeline health overview
+    - Failed/stuck jobs
+    - Throughput & performance metrics
+    - Cost tracking per org
+    - Failure rates by platform
+    - Queue backlogs
+    - Retry analysis
+  2. RETRY_BACKOFF_SPEC.md - Complete retry implementation:
+    - Exponential backoff strategy (60s, 5min, 15min)
+    - Retryable vs non-retryable error classification
+    - Full worker implementation with retry logic
+    - Manual retry admin tool
+    - Monitoring queries
+    - Testing approach
+
+  All ready for implementation. 3 specs total now capture the full design.

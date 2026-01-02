@@ -1,0 +1,43 @@
+[project]
+name = "mentorfy"
+version = "0.1.0"
+description = "Mentorfy API - AI-powered mentoring platform backend"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.66.0",
+    "deepgram-sdk>=5.3.0",
+    "docx>=0.2.4",
+    "docx2txt>=0.9",
+    "fastapi>=0.104.0",
+    "ffmpeg-python>=0.2.0",
+    "gdown>=5.2.0",
+    "google>=3.0.0",
+    "google-api-python-client>=2.179.0",
+    "google-auth>=2.40.3",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+    "graphiti-core>=0.20.4",
+    "langchain>=0.3.0",
+    "langchain-community>=0.3.0",
+    "langchain-unstructured>=0.1.0",
+    "neo4j>=5.0.0",
+    "openai>=1.102.0",
+    "pymupdf>=1.26.4",
+    "PyNaCl>=1.5.0",
+    "pypdf>=4.0.0",
+    "pytest>=9.0.1",
+    "python-docx>=1.1.0",
+    "python-dotenv>=1.1.1",
+    "python-multipart>=0.0.6",
+    "redis>=5.0.1",
+    "requests>=2.28.0",
+    "rich>=13.0.0",
+    "rq>=1.15.1",
+    "slack-sdk>=3.37.0",
+    "supabase>=2.0.0",
+    "supermemory>=3.4.0",
+    "unstructured[pdf,docx]>=0.15.0",
+    "uvicorn[standard]>=0.24.0",
+    "youtube-transcript-api>=0.6.0",
+]

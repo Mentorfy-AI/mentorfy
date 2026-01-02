@@ -1,0 +1,188 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { createClerkSupabaseClient } from '@/lib/supabase-clerk-server';
+import { isOrgAdmin } from '@/lib/auth-helpers';
+
+export interface MessagesResponse {
+  success: boolean;
+  messages?: any[];
+  error?: string;
+}
+
+/**
+ * GET /api/conversations/[conversationId]/messages
+ * Get all messages for a conversation
+ * Requires org admin or team member role
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { conversationId: string } }
+): Promise<NextResponse<MessagesResponse>> {
+  try {
+    const { userId, orgId } = await auth();
+    if (!userId || !orgId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check admin permissions
+    const isAdmin = await isOrgAdmin();
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const supabase = await createClerkSupabaseClient();
+    const conversationId = params.conversationId;
+
+    // Verify conversation exists and belongs to current org
+    const { data: conversation, error: convError } = await supabase
+      .from('conversation')
+      .select('id')
+      .eq('id', conversationId)
+      .eq('clerk_org_id', orgId)
+      .single();
+
+    if (!conversation) {
+      return NextResponse.json(
+        { success: false, error: 'Conversation not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get messages
+    const { data: messages, error } = await supabase
+      .from('message')
+      .select('id, role, content, created_at, metadata')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching messages:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch messages' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      messages: messages || [],
+    });
+  } catch (error) {
+    console.error('Messages API error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'An unexpected error occurred',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/conversations/[conversationId]/messages
+ * Add a new message to a conversation
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { conversationId: string } }
+) {
+  try {
+    const { userId, orgId } = await auth();
+    if (!userId || !orgId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { role, content, file_metadata } = body;
+
+    // Allow empty content if file metadata is present
+    const hasFiles = file_metadata && file_metadata.length > 0;
+    if (!role || (!content && !hasFiles)) {
+      return NextResponse.json(
+        { success: false, error: 'Role and content (or file attachment) are required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClerkSupabaseClient();
+    const conversationId = params.conversationId;
+
+    // Verify conversation belongs to user
+    const { data: conversation } = await supabase
+      .from('conversation')
+      .select('id')
+      .eq('id', conversationId)
+      .eq('clerk_user_id', userId)
+      .eq('clerk_org_id', orgId)
+      .single();
+
+    if (!conversation) {
+      return NextResponse.json(
+        { success: false, error: 'Conversation not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    // Build metadata object with file info if present
+    const metadata = hasFiles ? { files: file_metadata } : null;
+
+    // Create message
+    const { data: message, error: messageError } = await supabase
+      .from('message')
+      .insert({
+        conversation_id: conversationId,
+        role,
+        content: content || '', // Allow empty string if files present
+        metadata,
+      })
+      .select()
+      .single();
+
+    if (messageError) {
+      console.error('Error creating message:', messageError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create message' },
+        { status: 500 }
+      );
+    }
+
+    // Update conversation last_message_at
+    const { error: updateError } = await supabase
+      .from('conversation')
+      .update({
+        last_message_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conversationId);
+
+    if (updateError) {
+      console.error('Error updating conversation timestamp:', updateError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message,
+    });
+  } catch (error) {
+    console.error('Create message error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'An unexpected error occurred',
+      },
+      { status: 500 }
+    );
+  }
+}

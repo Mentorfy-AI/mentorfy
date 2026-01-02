@@ -1,0 +1,1427 @@
+⏺ Form System Implementation Plan - STREAMLINED
+
+  Week 1 Sprint: Ship Forms for DJ + Client #2
+
+  Goal: Multi-tenant form system with SMS auth, bot context integration, and
+   zero data loss.
+
+  Principles:
+  - Fail loud - no fallbacks for missing data
+  - Ship fast - pragmatic over perfect
+  - Service role for anonymous operations
+  - RLS for authenticated operations
+  - Middleware handles role-based access control
+
+  ---Day 1: Database Foundation (4-5 hours)
+
+  1.1 Create Forms Table
+
+  CREATE TABLE forms (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clerk_org_id TEXT NOT NULL REFERENCES organization(clerk_org_id) ON
+  DELETE CASCADE,
+
+    name TEXT NOT NULL,
+    description TEXT,
+    slug TEXT NOT NULL,
+
+    spec JSONB NOT NULL, -- Entire form JSON structure
+
+    bot_id UUID REFERENCES mentor_bot(id), -- Which bot uses this form
+
+    published BOOLEAN NOT NULL DEFAULT false,
+    published_at TIMESTAMPTZ,
+
+    parent_form_id UUID REFERENCES forms(id), -- Track draft lineage
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(clerk_org_id, slug)
+  );
+
+  CREATE INDEX idx_forms_org ON forms(clerk_org_id);
+  CREATE INDEX idx_forms_published ON forms(published);
+  CREATE INDEX idx_forms_slug ON forms(slug);
+
+  1.2 Create Form Submissions Table
+
+  CREATE TABLE form_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    form_id UUID NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
+    clerk_org_id TEXT NOT NULL REFERENCES organization(clerk_org_id),
+    bot_id UUID REFERENCES mentor_bot(id),
+
+    session_id UUID NOT NULL,
+
+    email TEXT,
+    phone TEXT,
+
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    -- 'in_progress' | 'completed' | 'abandoned'
+
+    current_question_id TEXT,
+    current_question_index INT,
+
+    answers JSONB NOT NULL DEFAULT '[]',
+
+    clerk_user_id TEXT, -- NULL until SMS auth completes
+
+    metadata JSONB DEFAULT '{}',
+
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+
+    UNIQUE(form_id, session_id)
+  );
+
+  CREATE INDEX idx_submissions_org ON form_submissions(clerk_org_id);
+  CREATE INDEX idx_submissions_status ON form_submissions(status);
+  CREATE INDEX idx_submissions_email ON form_submissions(email);
+  CREATE INDEX idx_submissions_phone ON form_submissions(phone);
+  CREATE INDEX idx_submissions_user ON form_submissions(clerk_user_id);
+  CREATE INDEX idx_submissions_form ON form_submissions(form_id);
+
+  1.3 RLS Policies
+
+  -- ============================================
+  -- FORMS TABLE
+  -- ============================================
+  ALTER TABLE forms ENABLE ROW LEVEL SECURITY;
+
+  -- Public can view published forms
+  CREATE POLICY "anyone_view_published"
+    ON forms FOR SELECT
+    USING (published = true);
+
+  -- Org members can view all their org's forms (published + drafts)
+  CREATE POLICY "org_members_view_all"
+    ON forms FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM user_profile
+        WHERE clerk_user_id = auth.uid()
+          AND clerk_org_id = forms.clerk_org_id
+      )
+    );
+
+  -- Org members can manage their org's forms
+  CREATE POLICY "org_members_manage"
+    ON forms FOR INSERT, UPDATE, DELETE
+    USING (
+      EXISTS (
+        SELECT 1 FROM user_profile
+        WHERE clerk_user_id = auth.uid()
+          AND clerk_org_id = forms.clerk_org_id
+      )
+    );
+
+  -- ============================================
+  -- FORM SUBMISSIONS TABLE
+  -- ============================================
+  ALTER TABLE form_submissions ENABLE ROW LEVEL SECURITY;
+
+  -- Org members can view submissions from their org
+  -- Note: Middleware blocks students from /dashboard routes
+  CREATE POLICY "org_members_view_submissions"
+    ON form_submissions FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM user_profile
+        WHERE clerk_user_id = auth.uid()
+          AND clerk_org_id = form_submissions.clerk_org_id
+      )
+    );
+
+  -- Note: No INSERT/UPDATE policies
+  -- Anonymous operations handled via service role in API routes
+
+  1.4 Seed DJ's Form
+
+  // scripts/seed-dj-form.ts
+
+  import { createServiceClient } from '@/lib/supabase-server'
+
+  const djForm = require('../data/forms/form-coaching-onboarding.json')
+
+  async function seedDJForm() {
+    const supabase = createServiceClient()
+
+    // Find DJ's org
+    const { data: djOrg } = await supabase
+      .from('organization')
+      .select('clerk_org_id')
+      .ilike('name', '%david%jacob%') // Adjust to match actual name
+      .single()
+
+    if (!djOrg) throw new Error('DJ org not found - check organization
+  table')
+
+    // Find DJ's mentor bot
+    const { data: djBot } = await supabase
+      .from('mentor_bot')
+      .select('id')
+      .eq('clerk_org_id', djOrg.clerk_org_id)
+      .single()
+
+    if (!djBot) throw new Error('DJ bot not found - check mentor_bot table')
+
+    // Insert form
+    const { error } = await supabase.from('forms').insert({
+      clerk_org_id: djOrg.clerk_org_id,
+      name: 'High-Ticket Coaching Onboarding',
+      slug: 'coaching-onboarding',
+      spec: djForm,
+      bot_id: djBot.id,
+      published: true, // Live immediately
+      published_at: new Date().toISOString(),
+    })
+
+    if (error) throw error
+
+    console.log('✅ DJ form seeded successfully')
+  }
+
+  seedDJForm()
+
+  1.5 Update Form API Route
+
+  // app/api/forms/[slug]/route.ts
+
+  import { createClient } from '@/lib/supabase-server'
+  import { NextRequest, NextResponse } from 'next/server'
+
+  export const dynamic = 'force-dynamic'
+  export const revalidate = 0
+
+  export async function GET(
+    req: NextRequest,
+    { params }: { params: { slug: string } }
+  ) {
+    const supabase = createClient() // Anon key - uses RLS
+    const { slug } = params
+
+    const { data: form, error } = await supabase
+      .from('forms')
+      .select('spec, bot_id, clerk_org_id, published')
+      .eq('slug', slug)
+      .eq('published', true) // Only serve published forms
+      .single()
+
+    if (error || !form) {
+      return NextResponse.json(
+        { error: 'Form not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      form: form.spec,
+      botId: form.bot_id,
+      orgId: form.clerk_org_id
+    })
+  }
+
+  1.6 Update Form Renderer to Query API
+
+  // app/(forms)/f/[formSlug]/page.tsx
+
+  useEffect(() => {
+    async function loadForm() {
+      try {
+        const res = await fetch(/api/forms/${formSlug})
+
+    if (!res.ok) {
+      setLoadError('Form not found')
+      return
+    }
+
+    const data = await res.json()
+
+    // Validate form structure
+    const validationResult = validateForm(data.form)
+    if (!validationResult.valid) {
+      console.error('Form validation failed:', validationResult.error)
+      setLoadError(validationResult.error || 'Form validation failed')
+      return
+    }
+
+    setForm(data.form)
+    setBotId(data.botId)
+    setOrgId(data.orgId)
+
+    // Track form view in PostHog
+    posthog?.capture('form_viewed', {
+      form_id: formSlug,
+      form_name: data.form.name,
+      session_id: sessionId,
+      referrer: document.referrer
+    })
+  } catch (error) {
+    console.error('Failed to load form:', error)
+    setLoadError('Failed to load form')
+  } finally {
+    setLoading(false)
+  }
+    }
+
+    loadForm()
+  }, [formSlug])
+
+  1.7 Delete Local JSON Files
+
+  After seeding forms to Supabase
+
+  rm -rf /Users/elijah/code/mentorfy-frontend/data/forms/
+
+  ---Day 2: Partial Submissions (4-5 hours)
+
+  2.1 Submission API - Create/Update
+
+  // app/api/forms/submission/route.ts
+
+  import { createServiceClient } from '@/lib/supabase-server'
+  import { NextRequest, NextResponse } from 'next/server'
+
+  export const dynamic = 'force-dynamic'
+  export const revalidate = 0
+
+  export async function POST(req: NextRequest) {
+    const { formSlug, sessionId, email, phone, answers, currentQuestionId,
+  currentQuestionIndex } = await req.json()
+
+    const supabase = createServiceClient() // Bypass RLS for anonymous
+
+    // Get form to derive org/bot
+    const { data: form, error: formError } = await supabase
+      .from('forms')
+      .select('id, clerk_org_id, bot_id')
+      .eq('slug', formSlug)
+      .eq('published', true)
+      .single()
+
+    if (formError || !form) {
+      return NextResponse.json(
+        { error: 'Form not found' },
+        { status: 404 }
+      )
+    }
+
+    // Upsert submission
+    const { data: submission, error: submissionError } = await supabase
+      .from('form_submissions')
+      .upsert({
+        form_id: form.id,
+        clerk_org_id: form.clerk_org_id,
+        bot_id: form.bot_id,
+        session_id: sessionId,
+        email: email || null,
+        phone: phone || null,
+        answers: answers,
+        current_question_id: currentQuestionId,
+        current_question_index: currentQuestionIndex,
+        status: 'in_progress',
+        last_updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'form_id,session_id',
+      })
+      .select()
+      .single()
+
+    if (submissionError) {
+      console.error('Failed to upsert submission:', submissionError)
+      return NextResponse.json(
+        { error: 'Failed to save submission' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ submission })
+  }
+
+  export async function PATCH(req: NextRequest) {
+    const {
+      submissionId,
+      answers,
+      currentQuestionId,
+      currentQuestionIndex,
+      status,
+      email,
+      phone,
+    } = await req.json()
+
+    if (!submissionId) {
+      return NextResponse.json(
+        { error: 'submissionId required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = createServiceClient()
+
+    const updates: any = {
+      last_updated_at: new Date().toISOString(),
+    }
+
+    if (answers) updates.answers = answers
+    if (email) updates.email = email
+    if (phone) updates.phone = phone
+    if (currentQuestionId) updates.current_question_id = currentQuestionId
+    if (currentQuestionIndex !== undefined) updates.current_question_index =
+   currentQuestionIndex
+
+    if (status) {
+      updates.status = status
+      if (status === 'completed') {
+        updates.completed_at = new Date().toISOString()
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('form_submissions')
+      .update(updates)
+      .eq('id', submissionId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Failed to update submission:', error)
+      return NextResponse.json(
+        { error: 'Failed to update submission' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ submission: data })
+  }
+
+  2.2 Update Form Renderer - Save on Progress
+
+  // app/(forms)/f/[formSlug]/page.tsx
+
+  const [submissionId, setSubmissionId] = useState<string | null>(null)
+  const [botId, setBotId] = useState<string | null>(null)
+  const [orgId, setOrgId] = useState<string | null>(null)
+
+  // Create submission on first answer
+  async function createSubmission(firstAnswer: Answer) {
+    const response = await fetch('/api/forms/submission', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        formSlug: formSlug,
+        sessionId: sessionId,
+        email: firstAnswer.questionType === 'email' ? firstAnswer.value :
+  null,
+        phone: firstAnswer.questionType === 'phone' ? firstAnswer.value :
+  null,
+        answers: [firstAnswer],
+        currentQuestionId: currentQuestion.id,
+        currentQuestionIndex: currentQuestionIndex,
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to create submission')
+    }
+
+    const { submission } = await response.json()
+    setSubmissionId(submission.id)
+  }
+
+  // Update submission on each "Next" click
+  async function updateSubmission(updatedAnswers: Answer[], nextQuestionId:
+  string, nextQuestionIndex: number) {
+    if (!submissionId) {
+      throw new Error('No submission ID - cannot save progress')
+    }
+
+    await fetch('/api/forms/submission', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        submissionId,
+        answers: updatedAnswers,
+        currentQuestionId: nextQuestionId,
+        currentQuestionIndex: nextQuestionIndex,
+      })
+    })
+  }
+
+  async function handleNext() {
+    // Validate current answer
+    const validation = validateAnswer(currentQuestion, currentAnswer)
+    if (!validation.valid) {
+      setValidationError(validation.error || 'Invalid answer')
+      return
+    }
+
+    const newAnswer: Answer = {
+      questionId: currentQuestion.id,
+      questionType: currentQuestion.type,
+      questionText: currentQuestion.text,
+      value: currentAnswer,
+      answeredAt: new Date().toISOString(),
+    }
+
+    const updatedAnswers = [...answers, newAnswer]
+    setAnswers(updatedAnswers)
+
+    // Track answer with timing
+    const timeSpent = (Date.now() - questionViewedAt.current) / 1000
+    posthog?.capture('question_answered', {
+      form_id: formSlug,
+      session_id: sessionId,
+      question_id: currentQuestion.id,
+      question_text: currentQuestion.text,
+      question_type: currentQuestion.type,
+      question_index: currentQuestionIndex,
+      time_spent_seconds: timeSpent,
+      has_answer: true
+    })
+
+    // Create or update submission
+    if (!submissionId) {
+      await createSubmission(newAnswer)
+    }
+
+    const nextIndex = await getNextQuestionIndex(currentQuestion,
+  updatedAnswers)
+
+    if (nextIndex === null) {
+      // Form complete
+      if (submissionId) {
+        await updateSubmission(updatedAnswers, currentQuestion.id,
+  currentQuestionIndex)
+        await fetch('/api/forms/submission', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            submissionId,
+            status: 'completed',
+          })
+        })
+      }
+      await submitForm(updatedAnswers)
+    } else {
+      // Progress to next question
+      const nextQuestion = form.questions[nextIndex]
+
+  if (submissionId) {
+    await updateSubmission(updatedAnswers, nextQuestion.id, nextIndex)
+  }
+
+  // Track progress
+  posthog?.capture('question_progressed', {
+    form_id: formSlug,
+    session_id: sessionId,
+    from_question_id: currentQuestion.id,
+    to_question_id: nextQuestion.id,
+    timestamp: Date.now()
+  })
+
+  setDirection(1)
+  setCurrentQuestionIndex(nextIndex)
+  setQuestionHistory([...questionHistory, nextIndex])
+  setCurrentAnswer('')
+  setValidationError('')
+    }
+  }
+
+  ---Day 3: SMS Auth Flow (6-8 hours)
+
+  3.1 Add Phone Question Type
+
+  // lib/forms/types.ts
+
+  export interface PhoneQuestion extends BaseQuestion {
+    type: 'phone';
+    placeholder?: string;
+  }
+
+  export type Question =
+    | ShortTextQuestion
+    | LongTextQuestion
+    | EmailQuestion
+    | PhoneQuestion // NEW
+    | NumberInputQuestion
+    | MultipleChoiceQuestion
+    | LikertScaleQuestion;
+
+  3.2 Add Phone Validation
+
+  // lib/forms/validators.ts
+
+  function validatePhone(
+    question: PhoneQuestion,
+    answer: AnswerValue
+  ): ValidationResult {
+    if (typeof answer !== 'string') {
+      return { valid: false, error: 'Answer must be text' }
+    }
+
+    const trimmed = answer.trim()
+
+    if (!trimmed) {
+      return { valid: false, error: 'Phone number is required' }
+    }
+
+    // Simple US phone validation (10 digits)
+    // Remove non-digits
+    const digits = trimmed.replace(/\D/g, '')
+
+    if (digits.length !== 10) {
+      return { valid: false, error: 'Please enter a valid 10-digit phone
+  number' }
+    }
+
+    return { valid: true }
+  }
+
+  // Add to validateAnswer switch statement
+  case 'phone':
+    return validatePhone(question, answer)
+
+  3.3 Add Phone Input Component
+
+  // components/form-renderer/FormInputs.tsx
+
+  export function PhoneInput({
+    value,
+    onChange,
+    onBlur,
+    placeholder = '(555) 123-4567',
+    autoFocus = false
+  }: PhoneInputProps) {
+    const [displayValue, setDisplayValue] = useState(value as string || '')
+
+    // Format as user types
+    function handleChange(e: React.ChangeEvent) {
+      const input = e.target.value
+      const digits = input.replace(/\D/g, '').slice(0, 10)
+
+  // Format: (555) 123-4567
+  let formatted = digits
+  if (digits.length >= 6) {
+    formatted = `(${digits.slice(0, 3)}) ${digits.slice(3,
+  6)}-${digits.slice(6)}`
+  } else if (digits.length >= 3) {
+    formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  } else if (digits.length > 0) {
+    formatted = `(${digits}`
+  }
+
+  setDisplayValue(formatted)
+  onChange(digits) // Store raw digits
+    }
+
+    return (
+
+    )
+  }
+
+  3.4 Render Phone Input in Form
+
+  // app/(forms)/f/[formSlug]/page.tsx
+
+  const renderInput = () => {
+    if (!currentQuestion) return null
+
+    switch (currentQuestion.type) {
+      // ... existing cases
+
+  case 'phone':
+    return (
+      <PhoneInput
+        value={(currentAnswer as string) || ''}
+        onChange={handleAnswerChange}
+        onBlur={handleBlur}
+        placeholder={currentQuestion.placeholder}
+        autoFocus
+      />
+    )
+
+  // ... rest of cases
+    }
+  }
+
+  3.5 SMS Completion Screen
+
+  // app/(forms)/f/[formSlug]/completion.tsx
+
+  'use client'
+
+  import { useState } from 'react'
+  import { useSignIn, useSignUp } from '@clerk/nextjs'
+  import { useRouter } from 'next/navigation'
+  import { Button } from '@/components/ui/button'
+  import { Input } from '@/components/ui/input'
+
+  interface CompletionScreenProps {
+    phone: string
+    submissionId: string
+    botId: string
+    orgId: string
+  }
+
+  export function CompletionScreen({ phone, submissionId, botId, orgId }:
+  CompletionScreenProps) {
+    const [code, setCode] = useState('')
+    const [isVerifying, setIsVerifying] = useState(false)
+    const [error, setError] = useState('')
+
+    const { signIn } = useSignIn()
+    const { signUp, setActive } = useSignUp()
+    const router = useRouter()
+
+    async function handleVerifyCode() {
+      if (code.length !== 6) {
+        setError('Please enter the 6-digit code')
+        return
+      }
+
+  setIsVerifying(true)
+  setError('')
+
+  try {
+    // Try sign-in first (returning user)
+    try {
+      await signIn?.prepareFirstFactor({
+        strategy: 'phone_code',
+        phoneNumber: `+1${phone}`
+      })
+
+      const result = await signIn?.attemptFirstFactor({
+        strategy: 'phone_code',
+        code
+      })
+
+      if (result?.status === 'complete') {
+        await setActive?.({ session: result.createdSessionId })
+
+        // Link submission to user
+        await linkSubmission(submissionId)
+
+        // Redirect to chat
+        router.push(`/chat/new?submissionId=${submissionId}`)
+        return
+      }
+    } catch (signInError: any) {
+      // User doesn't exist, try sign-up
+      console.log('Sign-in failed, attempting sign-up:',
+  signInError.message)
+    }
+
+    // Sign-up flow
+    await signUp?.preparePhoneNumberVerification({
+      phoneNumber: `+1${phone}`
+    })
+
+    const result = await signUp?.attemptPhoneNumberVerification({ code })
+
+    if (result?.status === 'complete') {
+      await setActive?.({ session: result.createdSessionId })
+
+      // Assign user to org
+      await assignToOrg(submissionId)
+
+      // Link submission to user
+      await linkSubmission(submissionId)
+
+      // Redirect to chat
+      router.push(`/chat/new?submissionId=${submissionId}`)
+    }
+  } catch (err: any) {
+    console.error('Verification failed:', err)
+    setError(err.errors?.[0]?.message || 'Invalid code. Please try again.')
+  } finally {
+    setIsVerifying(false)
+  }
+    }
+
+    return (
+
+
+
+            Check your phone
+
+
+            We sent a 6-digit code to {formatPhone(phone)}
+
+
+      <Input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={6}
+        value={code}
+        onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+        placeholder="000000"
+        className="text-center text-2xl tracking-widest mb-4"
+        autoFocus
+      />
+
+      {error && (
+        <p className="text-red-600 text-sm mb-4">{error}</p>
+      )}
+
+      <Button
+        onClick={handleVerifyCode}
+        disabled={isVerifying || code.length !== 6}
+        className="w-full"
+        size="lg"
+      >
+        {isVerifying ? 'Verifying...' : 'Continue to Chat'}
+      </Button>
+    </div>
+  </div>
+    )
+  }
+
+  function formatPhone(phone: string) {
+    return (${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}
+  }
+
+  async function linkSubmission(submissionId: string) {
+    await fetch('/api/forms/submission/link-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ submissionId }),
+    })
+  }
+
+  async function assignToOrg(submissionId: string) {
+    await fetch('/api/forms/submission/assign-org', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ submissionId }),
+    })
+  }
+
+  3.6 Show Completion Screen After Form Submit
+
+  // app/(forms)/f/[formSlug]/page.tsx
+
+  const [isComplete, setIsComplete] = useState(false)
+  const [completionData, setCompletionData] = useState<{
+    phone: string
+    submissionId: string
+    botId: string
+    orgId: string
+  } | null>(null)
+
+  async function submitForm(finalAnswers: Answer[]) {
+    try {
+      // Find phone answer
+      const phoneAnswer = finalAnswers.find(a => a.questionType === 'phone')
+
+  if (!phoneAnswer) {
+    throw new Error('Phone number not found in answers')
+  }
+
+  if (!submissionId) {
+    throw new Error('No submission ID')
+  }
+
+  if (!botId) {
+    throw new Error('No bot ID')
+  }
+
+  if (!orgId) {
+    throw new Error('No org ID')
+  }
+
+  setIsComplete(true)
+  setCompletionData({
+    phone: phoneAnswer.value as string,
+    submissionId,
+    botId,
+    orgId,
+  })
+
+  // Track completion
+  const totalTime = (Date.now() - formStartedAt.current) / 1000
+  posthog?.capture('form_completed', {
+    form_id: formSlug,
+    session_id: sessionId,
+    total_time_seconds: totalTime,
+    questions_answered: finalAnswers.length
+  })
+    } catch (error) {
+      console.error('Failed to submit form:', error)
+      alert('Failed to submit form. Please try again.')
+    }
+  }
+
+  // Render completion screen
+  if (isComplete && completionData) {
+    return <CompletionScreen {...completionData} />
+  }
+
+  3.7 Link Submission to User API
+
+  // app/api/forms/submission/link-user/route.ts
+
+  import { auth } from '@clerk/nextjs/server'
+  import { createServiceClient } from '@/lib/supabase-server'
+  import { NextRequest, NextResponse } from 'next/server'
+
+  export async function POST(req: NextRequest) {
+    const { submissionId } = await req.json()
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createServiceClient()
+
+    const { error } = await supabase
+      .from('form_submissions')
+      .update({ clerk_user_id: userId })
+      .eq('id', submissionId)
+
+    if (error) {
+      console.error('Failed to link submission:', error)
+      return NextResponse.json(
+        { error: 'Failed to link submission' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  3.8 Assign User to Org API
+
+  // app/api/forms/submission/assign-org/route.ts
+
+  import { auth, clerkClient } from '@clerk/nextjs/server'
+  import { createServiceClient } from '@/lib/supabase-server'
+  import { NextRequest, NextResponse } from 'next/server'
+
+  export async function POST(req: NextRequest) {
+    const { submissionId } = await req.json()
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createServiceClient()
+
+    // Get submission to find org
+    const { data: submission, error } = await supabase
+      .from('form_submissions')
+      .select('clerk_org_id')
+      .eq('id', submissionId)
+      .single()
+
+    if (error || !submission) {
+      return NextResponse.json(
+        { error: 'Submission not found' },
+        { status: 404 }
+      )
+    }
+
+    try {
+      // Add user to org with student role
+      await clerkClient.organizations.createOrganizationMembership({
+        organizationId: submission.clerk_org_id,
+        userId: userId,
+        role: 'org:student',
+      })
+
+  return NextResponse.json({ success: true })
+    } catch (err) {
+      console.error('Failed to assign user to org:', err)
+      return NextResponse.json(
+        { error: 'Failed to assign to organization' },
+        { status: 500 }
+      )
+    }
+  }
+
+  ---Day 4: Bot Context Integration (4-6 hours)
+
+  4.1 Fetch Submission API
+
+  // app/api/forms/submission/[id]/route.ts
+
+  import { auth } from '@clerk/nextjs/server'
+  import { createClerkSupabaseClient } from '@/lib/supabase-clerk-server'
+  import { NextRequest, NextResponse } from 'next/server'
+
+  export const dynamic = 'force-dynamic'
+  export const revalidate = 0
+
+  export async function GET(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+  ) {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = await createClerkSupabaseClient()
+
+    const { data: submission, error } = await supabase
+      .from('form_submissions')
+      .select('*, forms(name, bot_id, clerk_org_id)')
+      .eq('id', params.id)
+      .single()
+
+    if (error || !submission) {
+      return NextResponse.json(
+        { error: 'Submission not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify user owns this submission
+    if (submission.clerk_user_id !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
+    return NextResponse.json({ submission })
+  }
+
+  4.2 Update Chat Initialization with Form Context
+
+  // app/chat/new/page.tsx
+
+  import { auth } from '@clerk/nextjs/server'
+  import { createClerkSupabaseClient } from '@/lib/supabase-clerk-server'
+  import { redirect } from 'next/navigation'
+
+  export default async function NewChatPage({
+    searchParams
+  }: {
+    searchParams: { submissionId?: string }
+  }) {
+    const { userId } = await auth()
+
+    if (!userId) {
+      redirect('/sign-in')
+    }
+
+    const supabase = await createClerkSupabaseClient()
+
+    let botId: string | null = null
+    let formContext: string | null = null
+
+    // If coming from form submission
+    if (searchParams.submissionId) {
+      const res = await fetch(
+        ${process.env.NEXT_PUBLIC_APP_URL}/api/forms/submission/${searchPara
+  ms.submissionId},
+        {
+          headers: {
+            Cookie: req.headers.get('cookie') || '',
+          }
+        }
+      )
+
+  if (res.ok) {
+    const { submission } = await res.json()
+
+    botId = submission.forms.bot_id
+
+    // Build context from answers
+    formContext = submission.answers
+      .map((a: any) => `**${a.questionText}**: 
+  ${formatAnswerValue(a.value)}`)
+      .join('\n')
+  }
+    }
+
+    // Create conversation
+    const { data: conversation } = await supabase
+      .from('conversation')
+      .insert({
+        clerk_user_id: userId,
+        mentor_bot_id: botId,
+        title: 'New Conversation',
+      })
+      .select()
+      .single()
+
+    if (!conversation) {
+      throw new Error('Failed to create conversation')
+    }
+
+    // Redirect to chat with context
+    const contextParam = formContext
+      ? ?context=${encodeURIComponent(formContext)}
+      : ''
+
+    redirect(/chat/${conversation.id}${contextParam})
+  }
+
+  function formatAnswerValue(value: any): string {
+    if (Array.isArray(value)) return value.join(', ')
+    if (typeof value === 'object') return JSON.stringify(value)
+    return String(value)
+  }
+
+  4.3 Inject Form Context into Bot System Prompt
+
+  // app/api/chat/route.ts (or wherever you build the bot system prompt)
+
+  export async function POST(req: NextRequest) {
+    const { conversationId, message, formContext } = await req.json()
+
+    const supabase = await createClerkSupabaseClient()
+
+    // Get bot configuration
+    const { data: conversation } = await supabase
+      .from('conversation')
+      .select(', mentor_bot()')
+      .eq('id', conversationId)
+      .single()
+
+    if (!conversation) {
+      return NextResponse.json({ error: 'Conversation not found' }, {
+  status: 404 })
+    }
+
+    const bot = conversation.mentor_bot
+
+    // Build system prompt with form context
+    let systemPrompt = bot.system_prompt || 'You are a helpful mentor.'
+
+    if (formContext) {
+      systemPrompt += \n\n## User Background\n\nThe user recently shared the
+   following information:\n\n${formContext}\n\nReference this naturally in 
+  your responses to provide personalized guidance.
+    }
+
+    // Continue with chat logic...
+  }
+
+  4.4 Handle Form Resubmission - Update Memory
+
+  // app/api/forms/submission/route.ts
+
+  // When user completes form, check for existing submissions
+  export async function POST(req: NextRequest) {
+    // ... existing code ...
+
+    // After creating submission, check if user has submitted before
+    if (email) {
+      const { data: existingSubmissions } = await supabase
+        .from('form_submissions')
+        .select('id, clerk_user_id')
+        .eq('email', email)
+        .eq('bot_id', form.bot_id)
+        .eq('status', 'completed')
+        .neq('id', submission.id)
+        .not('clerk_user_id', 'is', null)
+
+  if (existingSubmissions && existingSubmissions.length > 0) {
+    // User has submitted before
+    // Mark this as an UPDATE operation
+    await supabase
+      .from('form_submissions')
+      .update({
+        metadata: { is_update: true, replaces: existingSubmissions[0].id }
+      })
+      .eq('id', submission.id)
+  }
+    }
+
+    return NextResponse.json({ submission })
+  }
+
+  Note: Actual memory update logic depends on your Zep/Supermemory
+  integration. Add webhook or background job to sync form data to user
+  memory system.
+
+  ---Day 5: Client #2 + Testing (3-4 hours)
+
+  5.1 Seed Client #2 Form
+
+  // scripts/seed-client2-form.ts
+
+  const client2Form = {
+    id: 'client2-onboarding',
+    name: 'Client #2 Onboarding Form',
+    description: 'Customized onboarding for Client #2',
+    questions: [
+      // Copy from DJ's form and customize
+      {
+        id: 'q1',
+        type: 'short_text',
+        text: 'Whats your name?',
+        required: true,
+        transitionStrategy: { type: 'simple', nextQuestionId: 'q2' },
+      },
+      {
+        id: 'q2',
+        type: 'email',
+        text: 'Whats your email?',
+        placeholder: 'you@example.com',
+        required: true,
+        transitionStrategy: { type: 'simple', nextQuestionId: 'q3' },
+      },
+      // ... customize remaining questions for Client #2
+    ]
+  }
+
+  async function seedClient2Form() {
+    const supabase = createServiceClient()
+
+    const { data: client2Org } = await supabase
+      .from('organization')
+      .select('clerk_org_id')
+      .ilike('name', '%client2%')
+      .single()
+
+    if (!client2Org) throw new Error('Client #2 org not found')
+
+    const { data: client2Bot } = await supabase
+      .from('mentor_bot')
+      .select('id')
+      .eq('clerk_org_id', client2Org.clerk_org_id)
+      .single()
+
+    if (!client2Bot) throw new Error('Client #2 bot not found')
+
+    await supabase.from('forms').insert({
+      clerk_org_id: client2Org.clerk_org_id,
+      name: 'Client #2 Onboarding',
+      slug: 'client2-onboarding',
+      spec: client2Form,
+      bot_id: client2Bot.id,
+      published: true,
+      published_at: new Date().toISOString(),
+    })
+
+    console.log('✅ Client #2 form seeded')
+  }
+
+  seedClient2Form()
+
+  5.2 Manual Testing Checklist
+
+  For DJ's form (/f/coaching-onboarding):
+  - Form loads without errors
+  - Can answer all questions
+  - Phone input formats correctly
+  - Partial submission saves on each "Next"
+  - Close browser mid-form → reopen → answers preserved
+  - Complete form → SMS code sent
+  - Enter code → authenticated
+  - Redirected to chat
+  - Bot references form answers in first message
+  - PostHog events fire (form_viewed, question_answered, form_completed)
+  - Dashboard shows submission (for DJ admin)
+  - Dashboard hidden from students (middleware blocks /dashboard routes)
+
+  For Client #2's form (/f/client2-onboarding):
+  - Same checklist as above
+  - Verify org isolation (DJ can't see Client #2 submissions, vice versa)
+
+  Send to 10 real users:
+  - 5 DJ students
+  - 5 Client #2 students
+  - Watch for errors in real-time
+  - Fix UX issues immediately
+
+  5.3 Dashboard Submissions View (Optional, if time)
+
+  // app/dashboard/submissions/page.tsx
+
+  import { auth } from '@clerk/nextjs/server'
+  import { createClerkSupabaseClient } from '@/lib/supabase-clerk-server'
+  import { SubmissionsTable } from '@/components/submissions-table'
+
+  export default async function SubmissionsPage() {
+    const { userId } = await auth()
+
+    // Note: Middleware already blocks students from /dashboard routes
+    // This page is only accessible to org:admin and org:team_member
+
+    const supabase = await createClerkSupabaseClient()
+
+    const { data: submissions } = await supabase
+      .from('form_submissions')
+      .select('*, forms(name, slug)')
+      .order('started_at', { ascending: false })
+      .limit(100)
+
+    return (
+
+        Form Submissions
+        <SubmissionsTable submissions={submissions || []} />
+
+    )
+  }
+
+  // components/submissions-table.tsx
+
+  export function SubmissionsTable({ submissions }: { submissions: any[] })
+  {
+    return (
+
+
+
+            Email
+            Phone
+            Form
+            Status
+            Progress
+            Started
+
+
+
+          {submissions.map((sub) => (
+
+              {sub.email || '-'}
+              {sub.phone || '-'}
+              {sub.forms.name}
+
+                <span className={px-2 py-1 rounded text-sm ${               
+    sub.status === 'completed' ? 'bg-green-100 text-green-800' :            
+       sub.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :     
+              'bg-gray-100 text-gray-800'               }}>
+                  {sub.status}
+
+
+
+                {sub.current_question_index !== null
+                  ? Question ${sub.current_question_index + 1}
+                  : '-'
+                }
+
+
+                {new Date(sub.started_at).toLocaleDateString()}
+
+
+          ))}
+
+
+    )
+  }
+
+  ---Bonus: Draft/Preview Functionality
+
+  Form Preview Route
+
+  // app/(forms)/f/[slug]/page.tsx
+
+  const isPreview = searchParams.get('preview') === 'true'
+
+  // If preview mode, allow staff to see drafts
+  let query = supabase
+    .from('forms')
+    .select('spec, bot_id, clerk_org_id, published')
+    .eq('slug', slug)
+
+  if (!isPreview) {
+    query = query.eq('published', true)
+  }
+
+  const { data: form } = await query.single()
+
+  // Show preview banner if in preview mode
+  {isPreview && (
+
+      Preview Mode
+
+        {form.published
+          ? 'This form is live. Students can see it.'
+          : 'This is a draft. Only you can see it.'
+        }
+
+
+  )}
+
+  Publish Button in Dashboard
+
+  // app/dashboard/forms/page.tsx
+
+  async function publishForm(formId: string) {
+    const supabase = await createClerkSupabaseClient()
+
+    await supabase
+      .from('forms')
+      .update({
+        published: true,
+        published_at: new Date().toISOString(),
+      })
+      .eq('id', formId)
+
+    revalidatePath('/dashboard/forms')
+  }
+
+  // In UI
+  <Button onClick={() => publishForm(form.id)}>
+    {form.published ? 'Published ✓' : 'Publish'}
+
+
+  ---Success Criteria
+
+  - DJ's form loads at /f/coaching-onboarding
+  - Client #2 form loads at /f/client2-onboarding
+  - Anonymous users can complete forms
+  - Partial submissions save on every "Next" click (zero data loss)
+  - SMS auth creates Clerk user with org:student role
+  - User assigned to correct organization
+  - Completion redirects to chat with bot context
+  - Bot's first message references form answers
+  - Form resubmission updates user memory (doesn't duplicate)
+  - PostHog tracks all events (form_viewed, question_answered, etc.)
+  - Dashboard shows submissions for org staff only
+  - Students cannot access dashboard (middleware blocks /dashboard routes)
+  - Org isolation verified (DJ can't see Client #2 data)
+  - Draft forms can be created and previewed
+  - Publishing a form makes it live to students
+
+  ---Post-Launch Iteration (Week 2+)
+
+  Based on PostHog data:
+  - Identify biggest drop-off questions
+  - Rewrite confusing questions
+  - Shorten form if completion rate < 40%
+  - Add form builder UI if DJ needs to self-serve edits
+
+  Based on user feedback:
+  - Add question types if requested
+  - Build resume functionality if abandonment is high
+  - Add re-engagement SMS if useful
+
+  Technical debt to address:
+  - Add form versioning (track which version user submitted)
+  - Build proper form builder UI
+  - Add form templates library
+  - Canvas view (if complex conditional routing is needed)
+
+  ---Time Breakdown
+
+  | Day | Focus                                    | Hours |
+  |-----|------------------------------------------|-------|
+  | 1   | Database + RLS + Seeding                 | 4-5   |
+  | 2   | Partial Submissions API + Form Updates   | 4-5   |
+  | 3   | SMS Auth Flow + Clerk Integration        | 6-8   |
+  | 4   | Bot Context Integration + Memory Updates | 4-6   |
+  | 5   | Client #2 Setup + Testing + Dashboard    | 3-4   |
+
+  Total: 21-28 hours
+
+  Ship date: Friday EOD

@@ -7,14 +7,24 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+apps/*/node_modules
+
+# Build outputs
 dist
 dist-ssr
-*.local
+apps/*/.next
+apps/*/out
 
-# Next.js
-.next
-out
+# Python
+__pycache__
+.venv
+.ruff_cache
+*.pyc
+
+# Local files
+*.local
 
 # Editor directories and files
 .vscode/*

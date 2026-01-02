@@ -198,8 +198,11 @@ interface ContactInfoStepContentProps {
 }
 
 function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps) {
+  const { dispatch, syncToBackend, switchToSession } = useUser()
   const [values, setValues] = useState<Record<string, string>>({})
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [returningUser, setReturningUser] = useState<{ existingSessionId: string } | null>(null)
 
   const handleChange = (key: string, value: string) => {
     setValues(prev => ({ ...prev, [key]: value }))
@@ -212,10 +215,132 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
     return val.length >= 2
   })
 
-  const handleSubmit = () => {
-    if (isValid) {
-      onAnswer(step.stateKey, values)
+  const handleSubmit = async () => {
+    if (!isValid || isSubmitting) return
+
+    setIsSubmitting(true)
+
+    // First, update state with user info
+    dispatch({ type: 'SET_ANSWER', payload: { key: step.stateKey, value: values } })
+
+    // Wait for state to settle, then sync to backend
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const result = await syncToBackend()
+
+    if (result?.returning && result.existingSessionId) {
+      // Returning user detected - show choice UI
+      setReturningUser({ existingSessionId: result.existingSessionId })
+      setIsSubmitting(false)
+      return
     }
+
+    // Not a returning user - advance to next step
+    setIsSubmitting(false)
+    onAnswer(step.stateKey, values)
+  }
+
+  const handleContinueExisting = async () => {
+    if (!returningUser) return
+    setIsSubmitting(true)
+    const success = await switchToSession(returningUser.existingSessionId)
+    setIsSubmitting(false)
+    if (success) {
+      // Session switched - state is now hydrated from existing session
+      // The user will be navigated based on their previous progress
+    }
+  }
+
+  const handleStartFresh = () => {
+    // Clear returning user state and proceed with current session
+    setReturningUser(null)
+    onAnswer(step.stateKey, values)
+  }
+
+  // Show returning user choice UI
+  if (returningUser) {
+    return (
+      <div style={{
+        maxWidth: '480px',
+        margin: '0 auto',
+        padding: '140px 24px 48px',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: '32px',
+          marginBottom: '16px',
+        }}>
+          👋
+        </div>
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: '24px',
+          fontWeight: '600',
+          color: '#000',
+          lineHeight: '1.4',
+          marginBottom: '12px',
+        }}>
+          Welcome back!
+        </div>
+        <div style={{
+          fontFamily: "'Geist', -apple-system, sans-serif",
+          fontSize: '15px',
+          color: '#666',
+          lineHeight: '1.5',
+          marginBottom: '32px',
+        }}>
+          Looks like you&apos;ve been here before. Want to pick up where you left off?
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+          <motion.button
+            onClick={handleContinueExisting}
+            disabled={isSubmitting}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              backgroundColor: COLORS.ACCENT,
+              color: '#FFFFFF',
+              padding: '16px 28px',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontWeight: '500',
+              border: 'none',
+              cursor: isSubmitting ? 'wait' : 'pointer',
+              fontFamily: "'Geist', -apple-system, sans-serif",
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+              opacity: isSubmitting ? 0.7 : 1,
+            }}
+          >
+            {isSubmitting ? 'Loading...' : 'Continue where I left off'}
+          </motion.button>
+
+          <motion.button
+            onClick={handleStartFresh}
+            disabled={isSubmitting}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              backgroundColor: 'transparent',
+              color: '#666',
+              padding: '14px 28px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '500',
+              border: '1px solid #DDD',
+              cursor: isSubmitting ? 'wait' : 'pointer',
+              fontFamily: "'Geist', -apple-system, sans-serif",
+            }}
+          >
+            Start fresh instead
+          </motion.button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -291,9 +416,9 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <motion.button
           onClick={handleSubmit}
-          disabled={!isValid}
-          whileHover={isValid ? { scale: 1.02 } : {}}
-          whileTap={isValid ? { scale: 0.98 } : {}}
+          disabled={!isValid || isSubmitting}
+          whileHover={isValid && !isSubmitting ? { scale: 1.02 } : {}}
+          whileTap={isValid && !isSubmitting ? { scale: 0.98 } : {}}
           style={{
             backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
             color: isValid ? '#FFFFFF' : '#999',
@@ -302,16 +427,17 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
             fontSize: '15px',
             fontWeight: '500',
             border: 'none',
-            cursor: isValid ? 'pointer' : 'not-allowed',
+            cursor: isValid && !isSubmitting ? 'pointer' : 'not-allowed',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             fontFamily: "'Geist', -apple-system, sans-serif",
             boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
             transition: 'all 0.15s ease',
+            opacity: isSubmitting ? 0.7 : 1,
           }}
         >
-          Continue <span>→</span>
+          {isSubmitting ? 'Checking...' : 'Continue'} <span>→</span>
         </motion.button>
       </div>
     </div>

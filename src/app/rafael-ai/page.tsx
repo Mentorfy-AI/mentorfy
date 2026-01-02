@@ -2,6 +2,7 @@
 
 import { useState, useRef, MutableRefObject } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
 import { UserProvider, useUser } from '@/context/UserContext'
 import { LandingPage } from '@/components/rafael-ai/screens/LandingPage'
 import { PhaseFlow } from '@/components/rafael-ai/screens/PhaseFlow'
@@ -305,29 +306,43 @@ function RafaelAIContent() {
                   <MentorBadge size="large" />
                 </div>
 
-                {/* Account button - dimmed */}
-                <button
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    color: '#666',
-                    background: '#F0EBE4',
-                    border: '1px solid #E8E3DC',
-                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-                    cursor: 'default',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0.35,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </button>
+                {/* Account button */}
+                <SignedIn>
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        avatarBox: {
+                          width: '32px',
+                          height: '32px',
+                        },
+                      },
+                    }}
+                  />
+                </SignedIn>
+                <SignedOut>
+                  <button
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      color: '#666',
+                      background: '#F0EBE4',
+                      border: '1px solid #E8E3DC',
+                      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                      cursor: 'default',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.35,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </button>
+                </SignedOut>
               </div>
             </div>
 

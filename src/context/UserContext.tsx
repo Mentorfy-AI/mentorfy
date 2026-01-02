@@ -10,6 +10,9 @@ const initialState = {
   sessionId: null as string | null,
   sessionLoading: true,
 
+  // Returning user detection
+  returningUser: null as { existingSessionId: string } | null,
+
   user: {
     name: "",
     email: "",
@@ -108,6 +111,8 @@ type Action =
   | { type: 'SET_SESSION'; payload: { sessionId: string; loading?: boolean } }
   | { type: 'SET_SESSION_LOADING'; payload: boolean }
   | { type: 'HYDRATE_FROM_BACKEND'; payload: any }
+  | { type: 'SET_RETURNING_USER'; payload: { existingSessionId: string } }
+  | { type: 'CLEAR_RETURNING_USER' }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -313,6 +318,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         sessionId: backendData.id,
         sessionLoading: false,
+        returningUser: null, // Clear any pending returning user state
         user: {
           ...state.user,
           name: backendData.name || state.user.name,
@@ -328,6 +334,18 @@ function reducer(state: State, action: Action): State {
       }
     }
 
+    case 'SET_RETURNING_USER':
+      return {
+        ...state,
+        returningUser: { existingSessionId: action.payload.existingSessionId }
+      }
+
+    case 'CLEAR_RETURNING_USER':
+      return {
+        ...state,
+        returningUser: null
+      }
+
     default:
       return state
   }
@@ -337,6 +355,7 @@ type ContextValue = {
   state: State
   dispatch: React.Dispatch<Action>
   syncToBackend: () => Promise<{ returning?: boolean; existingSessionId?: string } | null>
+  switchToSession: (sessionId: string) => Promise<boolean>
 }
 
 const UserContext = createContext<ContextValue | null>(null)
@@ -427,6 +446,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Switch to an existing session (for returning users)
+  const switchToSession = useCallback(async (sessionId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/session/${sessionId}`)
+      if (!res.ok) {
+        console.error('Failed to fetch existing session')
+        return false
+      }
+
+      const data = await res.json()
+
+      // Clear local state storage (will be repopulated from backend)
+      localStorage.removeItem(STORAGE_KEY)
+
+      // Update session ID in localStorage
+      localStorage.setItem(SESSION_KEY, sessionId)
+
+      // Hydrate state from backend
+      dispatch({ type: 'HYDRATE_FROM_BACKEND', payload: data })
+
+      return true
+    } catch (e) {
+      console.error('Switch session error:', e)
+      return false
+    }
+  }, [])
+
   // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -495,7 +541,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [state.sessionId, state.sessionLoading, state.user, state.progress.completedPhases, state.progress.currentPhase, syncToBackend])
 
   return (
-    <UserContext.Provider value={{ state, dispatch, syncToBackend }}>
+    <UserContext.Provider value={{ state, dispatch, syncToBackend, switchToSession }}>
       {children}
     </UserContext.Provider>
   )
@@ -527,4 +573,9 @@ export function useSessionId() {
 export function useSyncToBackend() {
   const { syncToBackend } = useUser()
   return syncToBackend
+}
+
+export function useSwitchToSession() {
+  const { switchToSession } = useUser()
+  return switchToSession
 }

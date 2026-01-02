@@ -7,42 +7,140 @@ import { LandingPage } from '@/components/rafael-ai/screens/LandingPage'
 import { PhaseFlow } from '@/components/rafael-ai/screens/PhaseFlow'
 import { MentorAvatar } from '@/components/rafael-ai/shared/MentorAvatar'
 import { MentorBadge } from '@/components/rafael-ai/shared/MentorBadge'
-
-// Timeline Shell with 3 panels (AIMemory + AIChat + PhaseFlow)
 import { TimelineShell, Panel } from '@/components/rafael-ai/layouts/TimelineShell'
-import { AIMemory } from '@/components/rafael-ai/screens/AIMemory'
 import { AIChat } from '@/components/rafael-ai/screens/AIChat'
+import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/rafael-ai'
 
-const ACCENT_COLOR = '#10B981'
+// Animated checkmark component
+function AnimatedCheckmark() {
+  return (
+    <motion.div
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{
+        type: 'spring',
+        stiffness: 200,
+        damping: 15,
+        delay: 0.2
+      }}
+      style={{
+        width: 80,
+        height: 80,
+        borderRadius: '50%',
+        backgroundColor: COLORS.ACCENT,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: `0 8px 32px ${COLORS.ACCENT_SHADOW}`,
+      }}
+    >
+      <motion.svg
+        width="40"
+        height="40"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+      >
+        <motion.path
+          d="M20 6L9 17l-5-5"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+        />
+      </motion.svg>
+    </motion.div>
+  )
+}
+
+// Level Complete interstitial screen
+function LevelCompleteScreen({ phaseNumber }: { phaseNumber: number }) {
+  const phaseName = PHASE_NAMES[phaseNumber] || `Phase ${phaseNumber}`
+
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#FAF6F0',
+        zIndex: 200,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 24,
+      }}
+    >
+      <AnimatedCheckmark />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.6 }}
+        style={{
+          textAlign: 'center',
+        }}
+      >
+        <div style={{
+          fontFamily: "'Geist', -apple-system, sans-serif",
+          fontSize: 14,
+          fontWeight: 500,
+          color: COLORS.ACCENT,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          marginBottom: 8,
+        }}>
+          Phase {phaseNumber} Complete
+        </div>
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: 24,
+          fontWeight: 600,
+          color: '#111',
+        }}>
+          {phaseName}
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
 
 function RafaelAIContent() {
   const { state, dispatch } = useUser()
-  const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null)
   const [arrowReady, setArrowReady] = useState(false)
+  const [showLevelComplete, setShowLevelComplete] = useState(false)
+  const [completedPhaseNumber, setCompletedPhaseNumber] = useState<number | null>(null)
 
   // Ref for PhaseFlow's back handler - allows stationary header to control internal navigation
   const levelFlowBackRef = useRef<(() => void) | null>(null)
 
-  // Screen states: 'welcome', 'level-flow', 'experience', 'chat'
+  // Ref for the Chat Panel's scroll container - passed to AIChat for scroll control
+  const chatPanelScrollRef = useRef<HTMLDivElement>(null)
+
+  // Screen states: 'welcome', 'level-flow', 'experience'
   const currentScreen = state.progress.currentScreen
   const currentPhaseNumber = state.progress.currentPhase
   const currentPanel = state.timeline?.currentPanel ?? 0
 
   const setPanel = (panel: number) => dispatch({ type: 'SET_PANEL', payload: panel })
 
-  // Arrow becomes ready when AIMemory typing completes or AIChat loads
+  // Arrow becomes ready when AIChat loads
   const handleArrowReady = () => setArrowReady(true)
 
-  // Handle the stationary arrow click based on current panel
-  const handleArrowClick = () => {
+  // Handle the continue button click - Chat → PhaseFlow
+  const handleContinueClick = () => {
     if (currentPanel === 0) {
-      // On Past panel → go to Present panel
-      setPanel(1)
-    } else if (currentPanel === 1) {
-      // On Present panel → go to Future panel (Level Flow)
-      setPanel(2)
+      setPanel(1) // Chat → PhaseFlow
     }
-    // No arrow action on panel 2 (Level Flow has its own flow)
   }
 
   // Welcome → Level Flow (fullscreen)
@@ -50,63 +148,78 @@ function RafaelAIContent() {
     dispatch({ type: 'SET_SCREEN', payload: 'level-flow' })
   }
 
-  // Initial Level Complete (fullscreen Level 1) → Transition to Experience Shell
+  // Initial Level Complete (fullscreen Phase 1) → Show celebration → Experience Shell
   const handleInitialLevelComplete = () => {
-    // Mark phase complete (this increments currentPhase)
-    dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
-    // Reset arrow state for the new cycle
-    setArrowReady(false)
-    // Go to Experience Shell, Past view (panel 0)
-    setPanel(0)
-    dispatch({ type: 'SET_SCREEN', payload: 'experience' })
+    // Store which phase was just completed
+    setCompletedPhaseNumber(currentPhaseNumber)
+    // Show the level complete screen
+    setShowLevelComplete(true)
+
+    // After showing the celebration, transition to experience shell
+    setTimeout(() => {
+      // Set panel to 0 FIRST before changing screen
+      setPanel(0)
+      // Mark phase complete (this increments currentPhase)
+      dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+      // Reset arrow state for the new cycle
+      setArrowReady(false)
+      // Go to Experience Shell, Chat panel (panel 0)
+      dispatch({ type: 'SET_SCREEN', payload: 'experience' })
+
+      // Hide the level complete screen after chat is ready
+      setTimeout(() => {
+        setShowLevelComplete(false)
+        setCompletedPhaseNumber(null)
+      }, TIMING.LEVEL_COMPLETE_FADE)
+    }, TIMING.LEVEL_COMPLETE_DURATION)
   }
 
-  // Panel Level Complete (Panel 2) → Stay in Experience, go to Past view
+  // Panel Level Complete (Panel 1 PhaseFlow) → Show completion screen → Chat
   const handlePanelLevelComplete = () => {
-    // Mark phase complete (this increments currentPhase)
-    dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
-    // Reset arrow state for the new cycle
-    setArrowReady(false)
-    // Go back to Past view (panel 0) - already in experience screen
-    setPanel(0)
+    // Store which phase was just completed
+    setCompletedPhaseNumber(currentPhaseNumber)
+    // Show the level complete screen
+    setShowLevelComplete(true)
+
+    // After showing the celebration, transition to chat
+    setTimeout(() => {
+      // Complete the phase (this increments currentPhase)
+      dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+      setArrowReady(false)
+      // Switch to chat panel
+      setPanel(0)
+
+      // Hide the level complete screen after chat is ready
+      setTimeout(() => {
+        setShowLevelComplete(false)
+        setCompletedPhaseNumber(null)
+      }, TIMING.LEVEL_COMPLETE_FADE)
+    }, TIMING.LEVEL_COMPLETE_DURATION)
   }
 
-  // Back from Level Flow panel → Present panel
+  // Back from PhaseFlow panel → Chat panel
   const handleBackFromPhaseFlow = () => {
-    setPanel(1)
+    setPanel(0)
   }
 
   // Stationary header back button - behavior depends on current panel
   const handleHeaderBack = () => {
     if (currentPanel === 1) {
-      setPanel(0) // Present → Past
-    } else if (currentPanel === 2) {
-      // On Level Flow - use ref to call internal back handler
+      // On PhaseFlow - use ref to call internal back handler
       if (levelFlowBackRef.current) {
         levelFlowBackRef.current()
       }
     }
-    // Panel 0 (Past) - back button is dimmed, no action
+    // Panel 0 (Chat) - back button is dimmed, no action
   }
 
   // Should the header back button be dimmed?
   const isHeaderBackDimmed = currentPanel === 0
 
-  // Navigate between panels
-  const handleNavigateToPast = () => setPanel(0)
-  const handleNavigateToPresent = () => setPanel(1)
-  const handleNavigateToFuture = () => setPanel(2)
-
-  // Chat handlers - typing from Past navigates to Present panel
-  const handleStartChatFromPast = (message: string) => {
-    setPendingChatMessage(message)
-    setPanel(1) // Go to Present panel
-  }
-
-  const handleCloseChat = () => {
-    setPendingChatMessage(null)
-    dispatch({ type: 'SET_SCREEN', payload: 'experience' })
-    setPanel(1) // Return to Present
+  // Get button text based on current phase
+  const getPhaseButtonText = (): string => {
+    if (currentPhaseNumber > 4) return 'Journey Complete'
+    return `Continue to Phase ${currentPhaseNumber}`
   }
 
   return (
@@ -129,7 +242,7 @@ function RafaelAIContent() {
           />
         )}
 
-        {/* EXPERIENCE SHELL (Past + Present + Future, 3 panels) */}
+        {/* EXPERIENCE SHELL (Chat + PhaseFlow, 2 panels) */}
         {currentScreen === 'experience' && (
           <div key="experience" style={{ position: 'relative' }}>
             {/* Stationary header - stays fixed while ALL panels slide */}
@@ -222,33 +335,22 @@ function RafaelAIContent() {
               currentPanel={currentPanel}
               onPanelChange={setPanel}
             >
-              {/* Panel 0: AIMemory (Journey) */}
-              <Panel>
-                <AIMemory
-                  onNavigateToPresent={handleNavigateToPresent}
-                  onStartChat={handleStartChatFromPast}
-                  onArrowReady={handleArrowReady}
-                  currentPhase={currentPhaseNumber}
-                />
-              </Panel>
-
-              {/* Panel 1: AIChat */}
-              <Panel>
+              {/* Panel 0: AIChat (home base) */}
+              <Panel scrollRef={chatPanelScrollRef}>
                 <AIChat
-                  onNavigateToPast={handleNavigateToPast}
-                  onStartNextLevel={handleNavigateToFuture}
-                  initialMessage={pendingChatMessage}
-                  onMessageHandled={() => setPendingChatMessage(null)}
                   onArrowReady={handleArrowReady}
                   currentPhase={currentPhaseNumber}
+                  scrollContainerRef={chatPanelScrollRef}
+                  continueReady={arrowReady}
+                  onContinue={handleContinueClick}
                 />
               </Panel>
 
-              {/* Panel 2: Future (Level Flow) - stationary header controls navigation via ref */}
-              {/* Only render PhaseFlow if there's a valid phase (1 or 2), otherwise show empty panel */}
+              {/* Panel 1: PhaseFlow (the work) */}
+              {/* Only render PhaseFlow if there's a valid phase (1-4), otherwise show placeholder */}
               <Panel>
                 <AnimatePresence mode="wait">
-                  {currentPhaseNumber <= 2 ? (
+                  {currentPhaseNumber <= 4 ? (
                     <motion.div
                       key="level-flow"
                       initial={{ opacity: 1 }}
@@ -285,89 +387,17 @@ function RafaelAIContent() {
               </Panel>
             </TimelineShell>
 
-            {/* Stationary arrow button - only visible on panels 0 and 1 */}
-            {currentPanel < 2 && (() => {
-              // Check if there are more levels (only levels 1 and 2 exist)
-              const noMoreLevels = currentPhaseNumber > 2
-              // Arrow is active unless on Chat panel with no more levels
-              const isArrowActive = arrowReady && !(currentPanel === 1 && noMoreLevels)
 
-              return (
-              <div style={{
-                position: 'fixed',
-                bottom: 130,
-                left: 0,
-                right: 0,
-                display: 'flex',
-                justifyContent: 'center',
-                pointerEvents: 'none',
-                zIndex: 50,
-              }}>
-                <div style={{
-                  width: '100%',
-                  maxWidth: '720px',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  padding: '0 20px',
-                }}>
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{
-                      opacity: isArrowActive ? 1 : 0.3,
-                      scale: 1,
-                    }}
-                    onClick={isArrowActive ? handleArrowClick : undefined}
-                    disabled={!isArrowActive}
-                    whileTap={isArrowActive ? { scale: 0.95 } : {}}
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      border: isArrowActive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #E8E3DC',
-                      background: isArrowActive ? ACCENT_COLOR : '#F0EBE4',
-                      boxShadow: isArrowActive
-                        ? '0 4px 20px rgba(16, 185, 129, 0.5), 0 2px 8px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
-                        : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-                      cursor: isArrowActive ? 'pointer' : 'default',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.4s ease',
-                      animation: isArrowActive ? 'glowPulse 2s infinite' : 'none',
-                      pointerEvents: 'auto',
-                    }}
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke={isArrowActive ? '#FFFFFF' : '#999'}
-                      strokeWidth={2.5}
-                      style={{ transition: 'stroke 0.4s ease' }}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </motion.button>
-                </div>
-              </div>
-              )
-            })()}
-
-            {/* CSS for glow animation */}
-            <style>{`
-              @keyframes glowPulse {
-                0%, 100% {
-                  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5), 0 2px 8px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-                }
-                50% {
-                  box-shadow: 0 4px 28px rgba(16, 185, 129, 0.7), 0 2px 12px rgba(16, 185, 129, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-                }
-              }
-            `}</style>
           </div>
         )}
 
+      </AnimatePresence>
+
+      {/* Level Complete interstitial - OUTSIDE screen blocks so it can show during transitions */}
+      <AnimatePresence mode="wait">
+        {showLevelComplete && completedPhaseNumber && (
+          <LevelCompleteScreen key="level-complete-overlay" phaseNumber={completedPhaseNumber} />
+        )}
       </AnimatePresence>
     </div>
   )

@@ -8,24 +8,207 @@ import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget } from 'react-calendly'
 import { useUser } from '@/context/UserContext'
 import { useAgent } from '@/hooks/useAgent'
+import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/rafael-ai'
 
-const ACCENT_COLOR = '#10B981'
+// Data formatters for dynamic messages
+const formatBookingStatus = (val: string): string => {
+  const map: Record<string, string> = {
+    'booked-3-months': 'fully booked out 3+ months',
+    'booked-1-2-months': 'booked out 1-2 months',
+    'booked-1-month': 'booked out about a month',
+    'booked-1-2-weeks': 'booked out 1-2 weeks',
+    'inconsistent': 'dealing with inconsistent bookings'
+  }
+  return map[val] || val || 'figuring out your booking situation'
+}
 
-// Level completion messages based on current phase
-const LEVEL_COMPLETE_MESSAGES: Record<number, string> = {
-  // After Phase 1 (currentPhase = 2)
-  2: `Nice work — you just finished Level 1.
+const formatDayRate = (val: string): string => {
+  const map: Record<string, string> = {
+    '4k-plus': '$4k+',
+    '3k-4k': '$3k-$4k',
+    '2k-3k': '$2k-$3k',
+    '1k-2k': '$1k-$2k',
+    '500-1k': '$500-$1k',
+    'under-500': 'under $500'
+  }
+  return map[val] || val || 'your current rate'
+}
 
-You can keep chatting with me here if you want to go deeper on anything we covered. Or tap the arrow to start Level 2.
+const formatGoal = (val: string): string => {
+  const map: Record<string, string> = {
+    '30-50k-months': 'hit $30k-$50k months consistently',
+    'booked-1-2-months': 'get booked out 1-2 months in advance',
+    'no-empty-days': 'eliminate empty chair days',
+    'full-rate-clients': 'attract clients who pay your full rate',
+    'brand-building': 'build a brand that brings clients to you'
+  }
+  return map[val] || val || 'level up your business'
+}
 
-I'm here whenever you need me.`,
+const formatBlocker = (val: string): string => {
+  const map: Record<string, string> = {
+    'unpredictable-posting': 'unpredictable results from posting',
+    'price-shoppers': 'DMs full of price shoppers who can\'t afford you',
+    'no-time': 'no time because you\'re tattooing all day',
+    'unknown-ideal-client': 'not knowing who your ideal client actually is',
+    'invisible': 'being invisible despite good work'
+  }
+  return map[val] || val || 'something holding you back'
+}
 
-  // After Phase 2 (currentPhase = 3, no more phases)
-  3: `Congratulations — you've completed Level 2.
+const formatCheckFirst = (val: string): string => {
+  const map: Record<string, string> = {
+    'views-likes': 'views and likes',
+    'follower-count': 'follower count',
+    'comments-dms': 'comments and DMs',
+    'saves-shares': 'saves and shares',
+    'avoid-looking': 'nothing — you avoid looking'
+  }
+  return map[val] || val || 'the numbers'
+}
 
-There's no next level yet, but that doesn't mean we're done. Keep chatting with me here if you want to go deeper on anything we covered.
+const formatHundredKFollowers = (val: string): string => {
+  const map: Record<string, string> = {
+    'consistent-bookings': 'you\'d finally have consistent bookings',
+    'charge-more': 'you could charge more with that social proof',
+    'brand-opportunities': 'brands would reach out with opportunities',
+    'not-much': 'honestly, not much would change',
+    'made-it': 'you\'d finally feel like you "made it"'
+  }
+  return map[val] || val || 'everything would change'
+}
 
-I'm here whenever you need me.`
+const formatHardestPart = (val: string): string => {
+  const map: Record<string, string> = {
+    'dont-know-what': 'never knowing what to post',
+    'no-time': 'not having time because you\'re tattooing all day',
+    'awkward-camera': 'feeling awkward on camera',
+    'no-conversion': 'posting but nothing converting to bookings',
+    'cant-stay-consistent': 'not being able to stay consistent'
+  }
+  return map[val] || val || 'the content struggle'
+}
+
+// Generate dynamic phase completion message
+function generatePhaseCompleteMessage(currentPhase: number, state: any): string {
+  const name = state.user?.name?.split(' ')[0] || 'there'
+  const { situation, phase2, phase3 } = state
+
+  // currentPhase is the NEXT phase (after completion, it increments)
+  // So currentPhase 2 means Phase 1 was just completed
+  switch (currentPhase) {
+    case 2: // Just completed Phase 1
+      return `${name}, I see you.
+
+You're ${formatBookingStatus(situation?.bookingStatus)}. Charging ${formatDayRate(situation?.dayRate)}. And the thing holding you back? ${formatBlocker(situation?.blocker)}.
+
+When I asked you to be honest, you said:
+
+*"${situation?.confession || 'Something real.'}"*
+
+That's the block we're going to break.
+
+**Here's what's next:**
+
+- **Phase 2**: Get booked without going viral
+- **Phase 3**: The 30-minute content system
+- **Phase 4**: Double your revenue
+
+After Phase 4, I have something to show you.
+
+Ready?`
+
+    case 3: // Just completed Phase 2
+      return `Phase 2 done. You're seeing it now — chasing views is the wrong game.
+
+You told me you check ${formatCheckFirst(phase2?.checkFirst)} after posting. And you thought if you had 100k followers, ${formatHundredKFollowers(phase2?.hundredKFollowers)}.
+
+That belief was costing you. Now you know better.
+
+**Next up:** I'm giving you the content system. 30 minutes a day, and you never run out of ideas.
+
+Questions first, or ready to keep going?`
+
+    case 4: // Just completed Phase 3
+      return `Phase 3 done. You've got the system now.
+
+You said the hardest part of content was ${formatHardestPart(phase3?.hardestPart)}. That ends today.
+
+**One phase left:** pricing. This is where everything clicks.
+
+You ready to talk about money?`
+
+    case 5: // Just completed Phase 4 (all done)
+      return `You made it through all 4 phases, ${name}.
+
+You came in ${formatBookingStatus(situation?.bookingStatus)} and charging ${formatDayRate(situation?.dayRate)}. You told me the thing holding you back was ${formatBlocker(situation?.blocker)}.
+
+Now you have the diagnosis, the content system, and the pricing framework.
+
+The question is: what are you going to do with it?
+
+I'm here if you want to talk through next steps.`
+
+    default:
+      return `Hey ${name}, good to see you back.
+
+I'm here whenever you want to chat. What's on your mind?`
+  }
+}
+
+// Phase divider component
+function PhaseDivider({ phaseNumber }: { phaseNumber: number }) {
+  const phaseName = PHASE_NAMES[phaseNumber] || `Phase ${phaseNumber}`
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        padding: '12px 0 8px',
+      }}
+    >
+      <div style={{
+        flex: 1,
+        height: 1,
+        background: 'linear-gradient(to right, transparent, #E5E0D8)',
+      }} />
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+      }}>
+        <div style={{
+          fontFamily: "'Geist', -apple-system, sans-serif",
+          fontSize: 11,
+          fontWeight: 600,
+          color: COLORS.ACCENT,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+        }}>
+          Phase {phaseNumber} Complete
+        </div>
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: 14,
+          fontWeight: 500,
+          color: '#666',
+        }}>
+          {phaseName}
+        </div>
+      </div>
+      <div style={{
+        flex: 1,
+        height: 1,
+        background: 'linear-gradient(to left, transparent, #E5E0D8)',
+      }} />
+    </motion.div>
+  )
 }
 
 interface UserBubbleProps {
@@ -42,7 +225,7 @@ function UserBubble({ children }: UserBubbleProps) {
       style={{ display: 'flex', justifyContent: 'flex-end' }}
     >
       <div style={{
-        backgroundColor: ACCENT_COLOR,
+        backgroundColor: COLORS.ACCENT,
         color: '#FFFFFF',
         padding: '14px 18px',
         borderRadius: '18px 18px 6px 18px',
@@ -133,7 +316,7 @@ function ThinkingIndicator({ onTimeUpdate }: ThinkingIndicatorProps) {
         fontWeight: '600',
         color: '#111',
         display: 'inline-block',
-        backgroundImage: `linear-gradient(90deg, #111 0%, #111 42%, ${ACCENT_COLOR} 46%, ${ACCENT_COLOR} 54%, #111 58%, #111 100%)`,
+        backgroundImage: `linear-gradient(90deg, #111 0%, #111 42%, ${COLORS.ACCENT} 46%, ${COLORS.ACCENT} 54%, #111 58%, #111 100%)`,
         backgroundSize: '300% 100%',
         backgroundClip: 'text',
         WebkitBackgroundClip: 'text',
@@ -183,7 +366,7 @@ function BlinkingCursor() {
         display: 'inline-block',
         width: '2px',
         height: '1em',
-        backgroundColor: ACCENT_COLOR,
+        backgroundColor: COLORS.ACCENT,
         marginLeft: '2px',
         verticalAlign: 'text-bottom',
       }}
@@ -243,7 +426,7 @@ function renderFormattedBlock(block: string, index: number, isFirst: boolean, is
           const isLastItem = isLastBlock && i === numberedItems.length - 1
           return (
             <li key={i} style={{ marginBottom: '10px', display: 'flex', gap: '12px' }}>
-              <span style={{ color: ACCENT_COLOR, fontWeight: '600', flexShrink: 0 }}>{i + 1}.</span>
+              <span style={{ color: COLORS.ACCENT, fontWeight: '600', flexShrink: 0 }}>{i + 1}.</span>
               <span>
                 {parseInlineMarkdown(text)}
                 {isLastItem && !isComplete && <BlinkingCursor />}
@@ -273,7 +456,7 @@ function renderFormattedBlock(block: string, index: number, isFirst: boolean, is
           const isLastItem = isLastBlock && i === bulletItems.length - 1
           return (
             <li key={i} style={{ marginBottom: '10px', display: 'flex', gap: '12px' }}>
-              <span style={{ color: ACCENT_COLOR, fontWeight: '600', flexShrink: 0 }}>•</span>
+              <span style={{ color: COLORS.ACCENT, fontWeight: '600', flexShrink: 0 }}>•</span>
               <span>
                 {parseInlineMarkdown(text)}
                 {isLastItem && !isComplete && <BlinkingCursor />}
@@ -319,7 +502,7 @@ interface StreamingRafaelMessageProps {
 function StreamingRafaelMessage({ content, onComplete }: StreamingRafaelMessageProps) {
   const [displayedText, setDisplayedText] = useState('')
   const [isComplete, setIsComplete] = useState(false)
-  const streamSpeed = 5
+  const streamSpeed = TIMING.STREAM_SPEED
 
   useEffect(() => {
     if (!content) return
@@ -427,7 +610,7 @@ function ChatCheckoutEmbed({ planId, onComplete }: ChatCheckoutEmbedProps) {
         margin: '24px 0',
         borderRadius: '16px',
         overflow: 'hidden',
-        backgroundColor: '#FAF6F0',
+        backgroundColor: COLORS.BACKGROUND,
         border: '1px solid rgba(0, 0, 0, 0.06)',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
       }}
@@ -450,7 +633,7 @@ function ChatCheckoutEmbed({ planId, onComplete }: ChatCheckoutEmbedProps) {
               width: '36px',
               height: '36px',
               borderRadius: '10px',
-              backgroundColor: ACCENT_COLOR,
+              backgroundColor: COLORS.ACCENT,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -612,7 +795,7 @@ function EmbeddedRafaelMessage({ embedData, onComplete }: EmbeddedRafaelMessageP
   const [phase, setPhase] = useState(0) // 0: before, 1: embed, 2: after, 3: complete
   const [displayedBefore, setDisplayedBefore] = useState('')
   const [displayedAfter, setDisplayedAfter] = useState('')
-  const streamSpeed = 5
+  const streamSpeed = TIMING.STREAM_SPEED
 
   // Stream before text
   useEffect(() => {
@@ -740,29 +923,28 @@ function uid() {
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'divider'
   content: string
   _placeholder?: boolean
   embedData?: any
   thinkingTime?: number
+  phaseNumber?: number
 }
 
 interface AIChatProps {
-  onNavigateToPast?: () => void
-  onStartNextLevel?: () => void
-  initialMessage?: string
-  onMessageHandled?: () => void
   onArrowReady?: () => void
   currentPhase: number
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>
+  continueReady?: boolean
+  onContinue?: () => void
 }
 
 export function AIChat({
-  onNavigateToPast,
-  onStartNextLevel,
-  initialMessage,
-  onMessageHandled,
   onArrowReady,
-  currentPhase
+  currentPhase,
+  scrollContainerRef: externalScrollRef,
+  continueReady,
+  onContinue
 }: AIChatProps) {
   const { state, dispatch } = useUser()
   const { getResponse } = useAgent()
@@ -771,12 +953,15 @@ export function AIChat({
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [focusMessageId, setFocusMessageId] = useState<string | null>(null)
   const [turnFillPx, setTurnFillPx] = useState(0)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  // Use external scroll ref (Panel) if provided, otherwise fallback to internal
+  const internalScrollRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = externalScrollRef || internalScrollRef
   const messageNodeMapRef = useRef(new Map<string, HTMLDivElement>())
-  const initialMessageSent = useRef(false)
-  const pendingMessageHandled = useRef(false)
   const thinkingTimeRef = useRef(0)
-  const lastPhaseRef = useRef(currentPhase)
+
+  // Track which phase completion messages we've already added
+  const addedPhaseMessagesRef = useRef<Set<number>>(new Set())
+  const initializedRef = useRef(false)
 
   // Ref callback for message nodes
   const handleMessageRef = useCallback((id: string, node: HTMLDivElement | null) => {
@@ -787,51 +972,124 @@ export function AIChat({
     }
   }, [])
 
-  // Initialize with level completion message - resets when level changes
+  // Initialize once on mount - load existing conversation
   useEffect(() => {
-    // Check if level changed - reset the message
-    if (lastPhaseRef.current !== currentPhase) {
-      lastPhaseRef.current = currentPhase
-      initialMessageSent.current = false
-    }
+    if (initializedRef.current) return
+    initializedRef.current = true
 
-    if (initialMessageSent.current) return
-    initialMessageSent.current = true
-
-    const existingMessages = (state.conversation || []).map((msg: any, i: number) => ({
+    // Load any existing messages from conversation history
+    const existingMessages: Message[] = (state.conversation || []).map((msg: any, i: number) => ({
       id: `existing-${i}`,
       role: msg.role,
       content: msg.content
     }))
 
-    // Get message based on current level (defaults to level 2 message)
-    const levelMessage = LEVEL_COMPLETE_MESSAGES[currentPhase] || LEVEL_COMPLETE_MESSAGES[2]
+    setMessages(existingMessages)
+  }, [])
 
+  // Handle phase completion - add divider and streaming message when phase changes
+  useEffect(() => {
+    // Skip if we've already added a message for this phase
+    if (addedPhaseMessagesRef.current.has(currentPhase)) {
+      return
+    }
+
+    // Mark this phase as handled
+    addedPhaseMessagesRef.current.add(currentPhase)
+
+    // Reset turn filler from any previous user interaction
+    // This prevents white space from appearing above the phase completion
+    setTurnFillPx(0)
+    setFocusMessageId(null)
+
+    // The completed phase is currentPhase - 1 (since currentPhase is already incremented)
+    const completedPhaseNumber = currentPhase - 1
+
+    // Generate unique IDs upfront (capture in closure for scroll later)
+    const timestamp = Date.now()
+    const dividerId = `divider-${currentPhase}-${timestamp}`
+    const messageId = `level-complete-${currentPhase}-${timestamp}`
+
+    // Generate the completion message content
+    const levelMessage = generatePhaseCompleteMessage(currentPhase, state)
+
+    // Create divider message (only show if there are existing messages, i.e., not the first phase)
+    const dividerMessage: Message = {
+      id: dividerId,
+      role: 'divider',
+      content: '',
+      phaseNumber: completedPhaseNumber
+    }
+
+    // Add placeholder message and start "thinking"
     const completionMessage: Message = {
-      id: `level-complete-${currentPhase}`,
+      id: messageId,
       role: 'assistant',
-      content: levelMessage
+      content: '',
+      _placeholder: true
     }
 
-    setMessages([...existingMessages, completionMessage])
-    setTimeout(() => onArrowReady?.(), 1500)
-  }, [state.conversation, onArrowReady, currentPhase])
+    // Add divider + completion message for all phases (including Phase 1 for consistency)
+    setMessages(prev => {
+      if (completedPhaseNumber >= 1) {
+        return [...prev, dividerMessage, completionMessage]
+      }
+      return [...prev, completionMessage]
+    })
 
-  // Handle incoming message from PastView
-  useEffect(() => {
-    if (initialMessage && !pendingMessageHandled.current) {
-      pendingMessageHandled.current = true
-      handleSendMessage(initialMessage)
-      onMessageHandled?.()
-    }
-  }, [initialMessage])
+    setStreamingMessageId(messageId)
+    setIsTyping(true)
 
-  // Reset pending flag when initialMessage clears
-  useEffect(() => {
-    if (!initialMessage) {
-      pendingMessageHandled.current = false
+    // After brief thinking delay, start streaming the content
+    setTimeout(() => {
+      setIsTyping(false)
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, content: levelMessage, _placeholder: false }
+          : msg
+      ))
+    }, TIMING.THINKING_DELAY)
+
+    // Arrow ready after streaming would complete
+    setTimeout(() => onArrowReady?.(), TIMING.ARROW_READY_DELAY)
+
+    // Scroll to show the new divider at the TOP
+    // Scroll while Level Complete is still showing so chat is ready when it fades
+    const scrollToNewContent = (retryCount = 0) => {
+      // Safety limit to prevent infinite loops
+      if (retryCount >= TIMING.SCROLL_MAX_RETRIES) {
+        console.warn('Scroll retry limit reached')
+        return
+      }
+
+      const container = scrollContainerRef.current
+      const targetElement = messageNodeMapRef.current.get(dividerId)
+        || messageNodeMapRef.current.get(messageId)
+
+      if (!container || !targetElement) {
+        // Retry if refs not ready yet
+        setTimeout(() => scrollToNewContent(retryCount + 1), TIMING.SCROLL_RETRY_INTERVAL)
+        return
+      }
+
+      const elementRect = targetElement.getBoundingClientRect()
+
+      // Check if element has rendered (has height)
+      if (elementRect.height === 0) {
+        setTimeout(() => scrollToNewContent(retryCount + 1), TIMING.SCROLL_RETRY_INTERVAL)
+        return
+      }
+
+      // Scroll even if panel is off-screen - it will be in position when Level Complete fades
+      targetElement.scrollIntoView({
+        block: 'start',
+        behavior: 'instant' as ScrollBehavior
+      })
     }
-  }, [initialMessage])
+
+    // Start scroll early so it's ready before Level Complete fades
+    setTimeout(scrollToNewContent, TIMING.SCROLL_INITIAL_DELAY)
+  }, [currentPhase, state, onArrowReady])
 
   // Effect A: Compute filler height after DOM commit
   useLayoutEffect(() => {
@@ -889,7 +1147,7 @@ export function AIChat({
       dispatch({ type: 'ADD_MESSAGE', payload: userMessage })
 
       // Short thinking delay for demo commands
-      await new Promise(resolve => setTimeout(resolve, 1200))
+      await new Promise(resolve => setTimeout(resolve, TIMING.DEMO_THINKING_DELAY))
       const finalThinkingTime = thinkingTimeRef.current
       setIsTyping(false)
 
@@ -927,7 +1185,7 @@ export function AIChat({
     setIsTyping(true)
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage })
 
-    await new Promise(resolve => setTimeout(resolve, 2300))
+    await new Promise(resolve => setTimeout(resolve, TIMING.RESPONSE_DELAY))
 
     const response = await getResponse('chat', state, content)
     const finalThinkingTime = thinkingTimeRef.current
@@ -959,21 +1217,22 @@ export function AIChat({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
-      overflow: 'hidden',
-      backgroundColor: '#FAF6F0',
+      height: externalScrollRef ? 'auto' : '100%',
+      minHeight: externalScrollRef ? '100%' : undefined,
+      overflow: externalScrollRef ? 'visible' : 'hidden',
+      backgroundColor: COLORS.BACKGROUND,
     }}>
       {/* Header is now stationary in parent - no header here */}
 
-      {/* Messages - with scroll behavior from ActiveChat */}
+      {/* Messages - scroll is handled by Panel (external ref) or this div (internal fallback) */}
       <div
-        ref={scrollContainerRef}
+        ref={externalScrollRef ? undefined : internalScrollRef}
         style={{
           flex: 1,
-          overflowY: 'auto',
+          overflowY: externalScrollRef ? 'visible' : 'auto',
         }}
       >
-        <div style={{ padding: '85px 20px 160px' }}>
+        <div style={{ padding: '85px 20px 0' }}>
           <div style={{
             maxWidth: '720px',
             margin: '0 auto',
@@ -985,6 +1244,7 @@ export function AIChat({
               const isStreaming = message.id === streamingMessageId
               const isPlaceholder = message._placeholder
               const isFocusedUser = message.role === 'user' && message.id === focusMessageId
+              const isDivider = message.role === 'divider'
 
               return (
                 <div
@@ -996,11 +1256,13 @@ export function AIChat({
                     minHeight: isPlaceholder && turnFillPx > 0 ? turnFillPx : undefined,
                     // Add top margin for focused user message
                     marginTop: isFocusedUser ? 8 : undefined,
-                    // CSS scroll-margin so scrollIntoView leaves space at top
-                    scrollMarginTop: isFocusedUser ? 80 : undefined,
+                    // CSS scroll-margin so scrollIntoView leaves space at top for header (header is ~70px)
+                    scrollMarginTop: (isFocusedUser || isDivider) ? LAYOUT.SCROLL_MARGIN_TOP : undefined,
                   }}
                 >
-                  {message.role === 'user' ? (
+                  {message.role === 'divider' ? (
+                    <PhaseDivider phaseNumber={message.phaseNumber || 1} />
+                  ) : message.role === 'user' ? (
                     <UserBubble>{message.content}</UserBubble>
                   ) : isStreaming ? (
                     isTyping ? (
@@ -1029,6 +1291,10 @@ export function AIChat({
                 </div>
               )
             })}
+
+            {/* Spacer to ensure content can always scroll to top */}
+            {/* Height = viewport - header - chatbar buffer to allow last item to reach top */}
+            <div style={{ height: 'calc(100vh - 200px)', flexShrink: 0 }} />
           </div>
         </div>
       </div>
@@ -1038,6 +1304,9 @@ export function AIChat({
         placeholder="Message Rafael..."
         onSend={handleSendMessage}
         disabled={isTyping}
+        continuePhase={currentPhase <= 4 ? currentPhase : undefined}
+        continueReady={continueReady}
+        onContinue={onContinue}
       />
     </div>
   )

@@ -245,10 +245,20 @@ interface ChatBarProps {
   placeholder?: string
   onSend: (message: string) => void
   disabled?: boolean
+  continuePhase?: number
+  onContinue?: () => void
+  continueReady?: boolean
 }
 
 // Chat input bar with liquid glass style
-export function ChatBar({ placeholder = "Message Rafael...", onSend, disabled }: ChatBarProps) {
+export function ChatBar({
+  placeholder = "Message Rafael...",
+  onSend,
+  disabled,
+  continuePhase,
+  onContinue,
+  continueReady = false
+}: ChatBarProps) {
   const [value, setValue] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
@@ -372,10 +382,22 @@ export function ChatBar({ placeholder = "Message Rafael...", onSend, disabled }:
     stopRecording()
   }
 
+  // Cleanup audio resources on unmount
   useEffect(() => {
     return () => {
-      if (isRecording) {
-        stopRecording()
+      // Clean up media recorder
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
+      // Clean up media stream tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+      }
+      // Clean up audio context
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+        audioContextRef.current = null
       }
     }
   }, [])
@@ -404,9 +426,76 @@ export function ChatBar({ placeholder = "Message Rafael...", onSend, disabled }:
             padding: '12px 20px 24px',
             background: 'transparent',
             display: 'flex',
-            justifyContent: 'center',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
           }}
         >
+          {/* Continue button - positioned above chat bar */}
+          {continuePhase && (
+            <div style={{
+              width: '100%',
+              maxWidth: '720px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              pointerEvents: 'none',
+            }}>
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={continueReady ? {
+                  opacity: 1,
+                  y: 0,
+                  boxShadow: [
+                    `0 4px 20px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(16, 185, 129, 0.2)`,
+                    `0 4px 32px rgba(16, 185, 129, 0.6), 0 2px 16px rgba(16, 185, 129, 0.35)`,
+                    `0 4px 20px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(16, 185, 129, 0.2)`,
+                  ],
+                } : {
+                  opacity: 0.3,
+                  y: 0,
+                }}
+                transition={continueReady ? {
+                  opacity: { duration: 0.3 },
+                  y: { duration: 0.3 },
+                  boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+                } : {
+                  duration: 0.3,
+                }}
+                onClick={continueReady ? onContinue : undefined}
+                disabled={!continueReady}
+                whileHover={continueReady ? { scale: 1.02 } : {}}
+                whileTap={continueReady ? { scale: 0.98 } : {}}
+                style={{
+                  padding: '14px 24px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  background: continueReady ? ACCENT_COLOR : '#D4CFC7',
+                  cursor: continueReady ? 'pointer' : 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  pointerEvents: 'auto',
+                  fontFamily: "'Geist', -apple-system, sans-serif",
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: continueReady ? '#FFFFFF' : '#999',
+                }}
+              >
+                Continue to Phase {continuePhase}
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 12h15" />
+                </svg>
+              </motion.button>
+            </div>
+          )}
+
           <div style={{
             width: '100%',
             maxWidth: '720px',

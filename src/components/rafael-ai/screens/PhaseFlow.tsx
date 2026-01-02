@@ -11,9 +11,7 @@ import { phases } from '@/data/rafael-ai/phases'
 import { mentor } from '@/data/rafael-ai/mentor'
 import { useUser } from '@/context/UserContext'
 import { useAgent } from '@/hooks/useAgent'
-
-const ACCENT_COLOR = '#10B981'
-const BACKGROUND_COLOR = '#FAF6F0'
+import { COLORS, TIMING } from '@/config/rafael-ai'
 
 interface MultipleChoiceStepContentProps {
   step: any
@@ -68,7 +66,7 @@ function MultipleChoiceStepContent({ step, onAnswer }: MultipleChoiceStepContent
               padding: '18px 20px',
               borderRadius: '14px',
               backgroundColor: selected === option.value ? 'rgba(16, 185, 129, 0.12)' : '#F0EBE4',
-              border: selected === option.value ? `2px solid ${ACCENT_COLOR}` : '1px solid #E8E3DC',
+              border: selected === option.value ? `2px solid ${COLORS.ACCENT}` : '1px solid #E8E3DC',
               cursor: 'pointer',
               fontFamily: "'Lora', Charter, Georgia, serif",
               fontSize: '17px',
@@ -77,7 +75,7 @@ function MultipleChoiceStepContent({ step, onAnswer }: MultipleChoiceStepContent
               textAlign: 'left',
               transition: 'all 0.15s ease',
               boxShadow: selected === option.value
-                ? `0 0 0 2px ${ACCENT_COLOR}, 0 4px 12px rgba(16, 185, 129, 0.25)`
+                ? `0 0 0 2px ${COLORS.ACCENT}, 0 4px 12px rgba(16, 185, 129, 0.25)`
                 : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
             }}
           >
@@ -132,7 +130,7 @@ function LongAnswerStepContent({ step, onAnswer }: LongAnswerStepContentProps) {
       {/* Text Area - Inner shadow styling (typing into the page) */}
       <div style={{
         backgroundColor: '#E8E3DC',
-        border: isFocused ? `2px solid ${ACCENT_COLOR}` : '1px solid #DDD8D0',
+        border: isFocused ? `2px solid ${COLORS.ACCENT}` : '1px solid #DDD8D0',
         borderRadius: '14px',
         padding: '16px',
         minHeight: '160px',
@@ -171,7 +169,7 @@ function LongAnswerStepContent({ step, onAnswer }: LongAnswerStepContentProps) {
           whileHover={isValid ? { scale: 1.02 } : {}}
           whileTap={isValid ? { scale: 0.98 } : {}}
           style={{
-            backgroundColor: isValid ? ACCENT_COLOR : 'rgba(0, 0, 0, 0.06)',
+            backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
             color: isValid ? '#FFFFFF' : '#999',
             padding: '14px 28px',
             borderRadius: '12px',
@@ -274,7 +272,7 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
               width: '100%',
               padding: '18px 20px',
               backgroundColor: '#E8E3DC',
-              border: focusedField === field.key ? `2px solid ${ACCENT_COLOR}` : '1px solid #DDD8D0',
+              border: focusedField === field.key ? `2px solid ${COLORS.ACCENT}` : '1px solid #DDD8D0',
               borderRadius: '14px',
               fontSize: '16px',
               fontFamily: "'Lora', Charter, Georgia, serif",
@@ -297,7 +295,7 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
           whileHover={isValid ? { scale: 1.02 } : {}}
           whileTap={isValid ? { scale: 0.98 } : {}}
           style={{
-            backgroundColor: isValid ? ACCENT_COLOR : 'rgba(0, 0, 0, 0.06)',
+            backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
             color: isValid ? '#FFFFFF' : '#999',
             padding: '14px 28px',
             borderRadius: '12px',
@@ -404,6 +402,16 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
     const paragraphs = lines.slice(1)
     return { headline, paragraphs }
   }, [response])
+
+  // Parse text with bold markers (**text**)
+  const parseTextWithBold = (text: string) => {
+    return text.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} style={{ fontWeight: '600', color: '#000' }}>{part.slice(2, -2)}</strong>
+      }
+      return part
+    })
+  }
 
   // Thinking + Streaming animation
   useEffect(() => {
@@ -653,7 +661,7 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               style={{
-                backgroundColor: ACCENT_COLOR,
+                backgroundColor: COLORS.ACCENT,
                 color: '#FFFFFF',
                 padding: '14px 28px',
                 borderRadius: '12px',
@@ -907,7 +915,7 @@ function VideoStepContent({ step, onContinue }: VideoStepContentProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 style={{
-                  backgroundColor: ACCENT_COLOR,
+                  backgroundColor: COLORS.ACCENT,
                   color: '#FFFFFF',
                   padding: '14px 28px',
                   borderRadius: '12px',
@@ -1297,7 +1305,7 @@ One session at your new rate pays for it 10x over. And you'll get there faster t
                 margin: '24px 0',
                 borderRadius: '16px',
                 overflow: 'hidden',
-                backgroundColor: isCalendlyVariant ? 'transparent' : '#FAF6F0',
+                backgroundColor: isCalendlyVariant ? 'transparent' : COLORS.BACKGROUND,
                 border: isCalendlyVariant ? 'none' : '1px solid rgba(0, 0, 0, 0.06)',
                 boxShadow: isCalendlyVariant ? '0 4px 20px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04)' : '0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
               }}
@@ -1335,7 +1343,7 @@ One session at your new rate pays for it 10x over. And you'll get there faster t
                           width: '36px',
                           height: '36px',
                           borderRadius: '10px',
-                          backgroundColor: ACCENT_COLOR,
+                          backgroundColor: COLORS.ACCENT,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1439,14 +1447,14 @@ One session at your new rate pays for it 10x over. And you'll get there faster t
                 gap: '10px',
                 marginBottom: '8px',
               }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={ACCENT_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={COLORS.ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 <span style={{
                   fontFamily: "'Lora', Charter, Georgia, serif",
                   fontSize: '18px',
                   fontWeight: '600',
-                  color: ACCENT_COLOR,
+                  color: COLORS.ACCENT,
                 }}>
                   {isCalendlyVariant ? 'Call booked!' : 'Payment successful!'}
                 </span>
@@ -1558,6 +1566,11 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
   const level = phases.find(l => l.id === levelId)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
+  // Reset step index when levelId changes (new phase)
+  useEffect(() => {
+    setCurrentStepIndex(0)
+  }, [levelId])
+
   // Expose back handler to parent via ref (for stationary header control)
   // Must be before any early returns to satisfy React hooks rules
   useEffect(() => {
@@ -1584,6 +1597,11 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
 
   const currentStep = level.steps[currentStepIndex]
   const totalSteps = level.steps.length
+
+  // Guard against undefined step (can happen briefly during phase transition)
+  if (!currentStep) {
+    return <div style={{ backgroundColor: COLORS.BACKGROUND, minHeight: '100vh' }} />
+  }
 
   // Current step number for progress indicator (0-indexed)
   const currentStepNumber = currentStepIndex
@@ -1690,7 +1708,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
   }
 
   return (
-    <div style={{ backgroundColor: BACKGROUND_COLOR, minHeight: '100vh', position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>
+    <div style={{ backgroundColor: COLORS.BACKGROUND, minHeight: '100vh', position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>
       {/* Persistent Header - uses absolute positioning when inside a panel */}
       {!hideHeader && (
         <GlassHeader

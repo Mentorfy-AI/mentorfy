@@ -54,6 +54,11 @@ export const mentor = {
       url: VIDEO_URL,
       title: "Building Unshakeable Confidence",
       context: "When user expresses self-doubt"
+    },
+    "final-vsl": {
+      url: VIDEO_URL,
+      title: "The Full Picture",
+      context: "Final VSL before call booking"
     }
   }
 }

@@ -18,13 +18,40 @@ const initialState = {
   },
 
   situation: {
+    bookingStatus: "",
+    dayRate: "",
+    goal: "",
+    blocker: "",
+    confession: "",
+    // Legacy fields
     experience: "",
     currentIncome: "",
     biggestChallenge: "",
-    goal: "",
     longAnswer: ""
   },
 
+  // Phase 2: Views Don't Matter
+  phase2: {
+    checkFirst: "",
+    hundredKFollowers: "",
+    postWorked: ""
+  },
+
+  // Phase 3: Content Creation
+  phase3: {
+    timeOnContent: "",
+    hardestPart: "",
+    contentCreatorIdentity: ""
+  },
+
+  // Phase 4: Pricing
+  phase4: {
+    lastPriceRaise: "",
+    tooExpensiveResponse: "",
+    pricingFear: ""
+  },
+
+  // Legacy fields for backwards compatibility
   level2: {
     pricingFeeling: "",
     raisedPrices: "",
@@ -88,10 +115,18 @@ function reducer(state: State, action: Action): State {
     case 'SET_ANSWER': {
       const { key, value } = action.payload
       const [section, field] = key.split('.')
+
+      // Validate that section exists and is an object
+      const currentSection = (state as any)[section]
+      if (!currentSection || typeof currentSection !== 'object') {
+        console.warn(`SET_ANSWER: Invalid section "${section}" for key "${key}"`)
+        return state
+      }
+
       return {
         ...state,
         [section]: {
-          ...(state as any)[section],
+          ...currentSection,
           [field]: value
         }
       }

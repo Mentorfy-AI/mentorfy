@@ -344,13 +344,9 @@ export function ChatBar({
   const transcribeAudio = async (audioBlob: Blob) => {
     const formData = new FormData()
     formData.append('file', audioBlob, 'recording.webm')
-    formData.append('model', 'whisper-1')
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const response = await fetch('/api/transcribe', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
-      },
       body: formData,
     })
 
@@ -359,7 +355,10 @@ export function ChatBar({
     }
 
     const data = await response.json()
-    return data.text
+    if (!data.success) {
+      throw new Error(data.error || 'Transcription failed')
+    }
+    return data.transcription
   }
 
   const handleSendRecording = () => {

@@ -1,5 +1,7 @@
 # Agent Instructions
 
+**Note:** `CLAUDE.md` is symlinked to this file for Claude Code compatibility.
+
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
 ## Quick Reference
@@ -14,7 +16,9 @@ bd sync               # Sync with git
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+A **work session** is when you are working on one or more **bd** issues. 
+
+**When ending a work session** (ie, when completing the one ore more **bd** issues), you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
@@ -38,4 +42,20 @@ bd sync               # Sync with git
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
-Use 'bd' for task tracking
+---
+
+# Mentorfy
+
+## Stack
+- Next.js (App Router)
+- React 19
+- TypeScript (loose - use `any` liberally)
+- Tailwind CSS
+- framer-motion
+- pnpm
+
+## Conventions
+- Use `'use client'` for components with interactivity
+- Import paths use `@/` alias
+- Inline styles preferred over CSS classes
+- framer-motion ease arrays need `as const` for TypeScript

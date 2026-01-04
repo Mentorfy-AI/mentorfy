@@ -2,7 +2,7 @@
 
 import { useState, useRef, MutableRefObject } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
+import { UserButton, SignedIn, SignedOut, useClerk } from '@clerk/nextjs'
 import { UserProvider, useUser } from '@/context/UserContext'
 import { LandingPage } from '@/components/rafael-ai/screens/LandingPage'
 import { PhaseFlow } from '@/components/rafael-ai/screens/PhaseFlow'
@@ -11,6 +11,7 @@ import { MentorBadge } from '@/components/rafael-ai/shared/MentorBadge'
 import { TimelineShell, Panel } from '@/components/rafael-ai/layouts/TimelineShell'
 import { AIChat } from '@/components/rafael-ai/screens/AIChat'
 import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/rafael-ai'
+import { useAuthGate } from '@/hooks/useAuthGate'
 
 // Animated checkmark component
 function AnimatedCheckmark() {
@@ -117,6 +118,8 @@ function LevelCompleteScreen({ phaseNumber }: { phaseNumber: number }) {
 
 function RafaelAIContent() {
   const { state, dispatch } = useUser()
+  const { gatePhaseTransition } = useAuthGate()
+  const { openSignIn } = useClerk()
   const [arrowReady, setArrowReady] = useState(false)
   const [showLevelComplete, setShowLevelComplete] = useState(false)
   const [completedPhaseNumber, setCompletedPhaseNumber] = useState<number | null>(null)
@@ -151,51 +154,55 @@ function RafaelAIContent() {
 
   // Initial Level Complete (fullscreen Phase 1) → Show celebration → Experience Shell
   const handleInitialLevelComplete = () => {
-    // Store which phase was just completed
-    setCompletedPhaseNumber(currentPhaseNumber)
-    // Show the level complete screen
-    setShowLevelComplete(true)
+    gatePhaseTransition(currentPhaseNumber, () => {
+      // Store which phase was just completed
+      setCompletedPhaseNumber(currentPhaseNumber)
+      // Show the level complete screen
+      setShowLevelComplete(true)
 
-    // After showing the celebration, transition to experience shell
-    setTimeout(() => {
-      // Set panel to 0 FIRST before changing screen
-      setPanel(0)
-      // Mark phase complete (this increments currentPhase)
-      dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
-      // Reset arrow state for the new cycle
-      setArrowReady(false)
-      // Go to Experience Shell, Chat panel (panel 0)
-      dispatch({ type: 'SET_SCREEN', payload: 'experience' })
-
-      // Hide the level complete screen after chat is ready
+      // After showing the celebration, transition to experience shell
       setTimeout(() => {
-        setShowLevelComplete(false)
-        setCompletedPhaseNumber(null)
-      }, TIMING.LEVEL_COMPLETE_FADE)
-    }, TIMING.LEVEL_COMPLETE_DURATION)
+        // Set panel to 0 FIRST before changing screen
+        setPanel(0)
+        // Mark phase complete (this increments currentPhase)
+        dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+        // Reset arrow state for the new cycle
+        setArrowReady(false)
+        // Go to Experience Shell, Chat panel (panel 0)
+        dispatch({ type: 'SET_SCREEN', payload: 'experience' })
+
+        // Hide the level complete screen after chat is ready
+        setTimeout(() => {
+          setShowLevelComplete(false)
+          setCompletedPhaseNumber(null)
+        }, TIMING.LEVEL_COMPLETE_FADE)
+      }, TIMING.LEVEL_COMPLETE_DURATION)
+    })
   }
 
   // Panel Level Complete (Panel 1 PhaseFlow) → Show completion screen → Chat
   const handlePanelLevelComplete = () => {
-    // Store which phase was just completed
-    setCompletedPhaseNumber(currentPhaseNumber)
-    // Show the level complete screen
-    setShowLevelComplete(true)
+    gatePhaseTransition(currentPhaseNumber, () => {
+      // Store which phase was just completed
+      setCompletedPhaseNumber(currentPhaseNumber)
+      // Show the level complete screen
+      setShowLevelComplete(true)
 
-    // After showing the celebration, transition to chat
-    setTimeout(() => {
-      // Complete the phase (this increments currentPhase)
-      dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
-      setArrowReady(false)
-      // Switch to chat panel
-      setPanel(0)
-
-      // Hide the level complete screen after chat is ready
+      // After showing the celebration, transition to chat
       setTimeout(() => {
-        setShowLevelComplete(false)
-        setCompletedPhaseNumber(null)
-      }, TIMING.LEVEL_COMPLETE_FADE)
-    }, TIMING.LEVEL_COMPLETE_DURATION)
+        // Complete the phase (this increments currentPhase)
+        dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+        setArrowReady(false)
+        // Switch to chat panel
+        setPanel(0)
+
+        // Hide the level complete screen after chat is ready
+        setTimeout(() => {
+          setShowLevelComplete(false)
+          setCompletedPhaseNumber(null)
+        }, TIMING.LEVEL_COMPLETE_FADE)
+      }, TIMING.LEVEL_COMPLETE_DURATION)
+    })
   }
 
   // Back from PhaseFlow panel → Chat panel
@@ -321,6 +328,7 @@ function RafaelAIContent() {
                 </SignedIn>
                 <SignedOut>
                   <button
+                    onClick={() => openSignIn({})}
                     style={{
                       width: '32px',
                       height: '32px',
@@ -329,11 +337,10 @@ function RafaelAIContent() {
                       background: '#F0EBE4',
                       border: '1px solid #E8E3DC',
                       boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-                      cursor: 'default',
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      opacity: 0.35,
                       transition: 'all 0.15s ease',
                     }}
                   >

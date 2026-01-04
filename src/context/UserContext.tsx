@@ -4,7 +4,7 @@ import { createContext, useContext, useReducer, useEffect, ReactNode, useCallbac
 
 const STORAGE_KEY = 'mentorfy-rafael-ai-state'
 const SESSION_KEY = 'mentorfy-session-id'
-const CLERK_ORG_ID = 'rafael-tatts' // MVP hardcode
+const CLERK_ORG_ID = 'org_35wDDMLUgC1nZZLkDLtZ3A8TbJY' // MVP hardcode
 
 const initialState = {
   sessionId: null as string | null,

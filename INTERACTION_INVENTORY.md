@@ -1,13 +1,13 @@
 # Mentorfy App - Complete Interaction Inventory
 
-Generated: 2026-01-03
+Generated: 2026-01-05
 
 ## Routes
 
 | Route | Purpose | Status |
 |-------|---------|--------|
 | `/` | Redirects to `/rafael-ai` | Working |
-| `/rafael-ai` | Main app (landing + chat) | Working |
+| `/rafael-ai` | Main app (landing + quiz + chat) | Working |
 
 ## API Endpoints
 
@@ -16,28 +16,14 @@ Generated: 2026-01-03
 | `/api/session` | Create/manage user sessions |
 | `/api/session/[id]` | Get/update specific session |
 | `/api/session/[id]/link` | Session linking |
-| `/api/chat` | AI chat messages |
+| `/api/chat` | AI chat messages (with tool support) |
 | `/api/generate/[type]` | Generate content (diagnosis, etc) |
 | `/api/transcribe` | Voice-to-text |
 | `/api/upload` | File uploads |
 
 ---
 
-## View 1: Landing Page (`/rafael-ai`)
-
-| Element | Interaction | Status |
-|---------|-------------|--------|
-| Mentor avatar + name | Display only | Working |
-| Verification badge | Display only | Working |
-| Headline/subheadline | Display only | Working |
-| Video thumbnail | Click -> Opens Wistia embed | Working |
-| "Show Me How" button | Click -> Starts quiz funnel | Working |
-| Trust indicator (stars) | Display only | Working |
-| "Mentorfy AI Experience" footer | Display only | Working |
-
----
-
-## View 2: Quiz Funnel (Multi-step)
+## Phase 1: The Diagnosis
 
 ### Question 1: Business Stage
 
@@ -75,7 +61,7 @@ Options:
 Options:
 - Posting but results are unpredictable
 - DMs are all price shoppers
-- No time - tattooing all day
+- No time — tattooing all day
 - Good work but invisible
 
 ### Question 4: Contact Form
@@ -87,115 +73,282 @@ Options:
 | Phone textbox | Type input | Working |
 | Continue button (disabled until filled) | Click -> Next | Working |
 
-### Question 5: Open-ended
+### Question 5: Open-ended (Confession)
 
 | Element | Interaction | Status |
 |---------|-------------|--------|
-| Free text textarea | Type input | Working |
-| Continue button | Click -> Generate diagnosis | Working |
+| Free text textarea ("No wrong answer...") | Type input | Working |
+| Continue button | Click -> Trigger AI diagnosis | Working |
 
----
-
-## View 3: AI Diagnosis Screen
+### Phase 1 AI Moment
 
 | Element | Interaction | Status |
 |---------|-------------|--------|
-| Streaming AI response | Auto-generates personalized content | Working |
-| Markdown rendering | Displays headers, lists, bold, emojis | Working |
-| Continue button | Click -> Enter chat | Working |
+| Streaming AI diagnosis | Auto-generates personalized content | Working |
+| Markdown rendering | Headers, lists, bold, emojis | Working |
+| Continue button | Click -> Phase 2 (triggers auth modal) | Working |
 
-### Diagnosis Content Sections
+AI Diagnosis Sections:
 - Current Position analysis
 - Key Blockers identified
-- Quick Wins (This Week) recommendations
+- Quick Wins (This Week)
 - Growth Path guidance
-- Bottom Line summary
+- Real Talk summary
 
 ---
 
-## View 4: Main Chat Interface
+## Phase 2: Get Booked Without Going Viral
 
-### Header
-
-| Element | Interaction | Status |
-|---------|-------------|--------|
-| Back button | Click -> Goes to previous step | Working |
-| Mentor avatar/name | Display only | Working |
-| Menu button | Click -> No visible effect | NOT IMPLEMENTED |
-
-### Chat Content
+### Question 1: Check First After Posting
 
 | Element | Interaction | Status |
 |---------|-------------|--------|
-| Phase summary card | Display only | Working |
-| Phase roadmap list | Display only | Working |
-| Continue to Phase X button | Click -> Advances phase | Working |
+| 4 multiple choice buttons | Click -> Next question | Working |
 
-### Input Area
+Options:
+- Views and likes
+- Follower count
+- Comments and DMs
+- Saves and shares
 
-| Element | Interaction | Status |
-|---------|-------------|--------|
-| Text input ("Message Rafael...") | Type free-form message | Code exists |
-| Voice record button | Click -> Record audio | Code exists |
-| Audio waveform visualizer | Displays during recording | Code exists |
-| File upload button | Click -> Upload files | API exists |
-
-### Quick Reply System
+### Question 2: 100k Followers
 
 | Element | Interaction | Status |
 |---------|-------------|--------|
-| Multiple choice buttons | Click -> Sends answer, shows next question | Working |
-| Open-ended text inputs | Type -> Continue | Working |
+| 4 multiple choice buttons | Click -> Next question | Working |
 
-### Sample Quick Reply Questions Observed
-- "What do you check first after posting?" (4 options)
-- "If you had 100k followers, what would change?" (4 options)
-- "When does a post feel like it worked?" (4 options)
-- "What would change if views didn't matter?" (open-ended)
+Options:
+- Finally be consistently booked
+- Charge more
+- Probably not much
+- Feel like I made it
+
+### Question 3: Post Success
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- Gets over 10k views
+- Gets lots of comments
+- Someone DMs about booking
+- Nothing feels consistent
+
+### Question 4: Open-ended (Views Reflection)
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Free text textarea ("Think about it...") | Type input | Working |
+| Continue button | Click -> Trigger AI moment | Working |
+
+### Phase 2 AI Moment
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Streaming AI response | Auto-generates content | Working |
+| Continue button | Click -> Phase 3 | Working |
 
 ---
 
-## Authentication
+## Phase 3: The 30-Minute Content System
 
-| Component | Status |
-|-----------|--------|
-| ClerkProvider | Configured in layout.tsx |
-| Sign-in page | NOT IMPLEMENTED |
-| Sign-up page | NOT IMPLEMENTED |
-| Protected routes | NOT IMPLEMENTED |
-| User profile | NOT IMPLEMENTED |
+### Question 1: Time on Content
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- Almost none
+- 1-2 hours
+- 3-5 hours
+- 5+ hours
+
+### Question 2: Hardest Part
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- Don't know what to post
+- No time
+- Awkward on camera
+- Nothing converts
+
+### Question 3: Content Creator Identity
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- No, I'm an artist
+- Kind of
+- Yeah, part of the game
+- Never thought about it
+
+### Question 4: Open-ended (Extra Time)
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Free text textarea ("Be specific...") | Type input | Working |
+| Continue button | Click -> Trigger AI moment | Working |
+
+### Phase 3 AI Moment
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Streaming AI response | Auto-generates content | Working |
+| Continue button | Click -> Phase 4 | Working |
 
 ---
 
-## Missing/Incomplete Features
+## Phase 4: Double Your Revenue
 
-| Feature | Current State | Priority | Notes |
-|---------|---------------|----------|-------|
-| Menu/sidebar | Button exists, no action | High | Need settings/navigation |
-| Auth/Sign-in | ClerkProvider only | High | No protected routes or sign-in UI |
-| User profile | Not visible | Medium | Account management needed |
-| Session persistence | API exists | Medium | Test if sessions restore on refresh |
-| Phase 2-4 content | Partially explored | Medium | Need to complete full flow |
-| Offer/checkout | Unknown | High | "After Phase 4" - not explored |
-| Voice input testing | Code exists | Low | Works but untested in headless |
-| File upload testing | API exists | Low | Not tested via UI |
+### Question 1: Last Price Raise
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- Within 3 months
+- 6 months ago
+- Over a year
+- Never
+
+### Question 2: "Too Expensive" Response
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- Offer a discount
+- Explain why I'm worth it
+- Let them walk
+- Panic and give in
+
+### Question 3: Pricing Fear
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| 4 multiple choice buttons | Click -> Next question | Working |
+
+Options:
+- Lose clients
+- Look greedy
+- Not worth more yet
+- No fear, just don't know how
+
+### Question 4: Open-ended (Double Revenue)
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Free text textarea ("Dream big...") | Type input | Working |
+| Continue button | Click -> Trigger AI moment | Working |
+
+### Phase 4 AI Moment
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Streaming AI response | Auto-generates content | Working |
+| Continue button | Click -> Sales page | Working |
+
+---
+
+## Sales Page (After Phase 4)
+
+| Element | Interaction | Status |
+|---------|-------------|--------|
+| Headline "You're a great fit for 1-on-1" | Display only | Working |
+| Copy sections (how it works, no pressure) | Display only | Working |
+| Calendly iframe embed | Interactive booking widget | Working |
+| "Continue without purchasing" option | Display only | Working |
+| Continue button | Click -> Should enter chat | **BUG** |
+
+---
+
+## Authentication (Clerk)
+
+| Component | Trigger | Status |
+|-----------|---------|--------|
+| Sign-in modal | After Phase 1 complete | Working |
+| Sign-in modal | After Phase 2 complete | Working |
+| Sign-in modal | After Phase 3 complete | Working |
+| Sign-in modal | After Phase 4 complete | Working |
+| Close modal button | Click -> Dismiss modal | Working |
+| Email input | Type email | Working |
+| "Use phone" link | Switch to phone auth | Visible |
+| Continue button | Submit auth | Visible |
+| Sign up link | Navigate to sign up | Visible |
+| Development mode indicator | Display only | Working |
+
+---
+
+## Chat Interface (Tool-Based Embeds)
+
+### Backend Changes (New)
+
+| Component | Purpose | Status |
+|-----------|---------|--------|
+| Dynamic tool generation | Tools created based on completed phases | Implemented |
+| `showCheckout` tool | Display checkout embed | Implemented |
+| `showVideo` tool | Display video embed | Implemented |
+| `showBooking` tool | Display Calendly embed | Implemented |
+| Server-side URL resolution | URLs resolved from phase data | Implemented |
+
+### Frontend Changes (New)
+
+| Component | Purpose | Status |
+|-----------|---------|--------|
+| `useChat` hook (AI SDK v6) | Chat communication | Implemented |
+| Tool invocation rendering | Display embeds from tools | Implemented |
+| `getMessageText()` helper | Extract text from message parts | Implemented |
+| `getEmbedFromMessage()` helper | Extract embed data from tool results | Implemented |
+
+---
+
+## Known Issues / Bugs
+
+| Issue | Description | Priority |
+|-------|-------------|----------|
+| "Level not found" after Phase 4 | After completing all phases and sales page, clicking Continue shows "Level not found" | High |
+| Auth modal on every phase | Sign-in modal appears at start of each phase (can be dismissed) | Medium |
+| Session sync errors in console | "Failed to validate session" / "Sync error" on initial load | Low |
+
+---
+
+## Embed Types Available
+
+| Embed Type | Source | Trigger |
+|------------|--------|---------|
+| Checkout (Whop) | `checkoutPlanId` from sales-page step | AI tool call |
+| Video (Wistia) | `videoUrl` from video step | AI tool call |
+| Booking (Calendly) | `calendlyUrl` from sales-page step | AI tool call + Phase 4 sales page |
 
 ---
 
 ## Technical Notes
 
-- App uses Next.js App Router with React 19
-- Clerk configured for auth (not yet implemented)
+- App uses Next.js 15 App Router with React 19
+- Clerk configured for auth (modal-based sign-in)
+- AI SDK v6 with tool support for embeds
 - Wistia for video embeds
+- Whop for checkout embeds
+- Calendly for booking embeds
 - Framer Motion for animations
-- AI responses stream in real-time
-- Session management via API routes
-- Voice transcription endpoint available
+- AI responses stream in real-time via `toUIMessageStreamResponse()`
+- Session management via Supabase
+- Supermemory for conversation context
 
 ---
 
 ## Test Environment
 
-- Tested using Playwright MCP in headless mode
-- Ubuntu server without GUI
+- Tested using Playwright MCP
+- Ubuntu server
 - Dev server at localhost:3000
+- Bun package manager

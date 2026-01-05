@@ -1,14 +1,86 @@
 import { streamText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 import { searchMemories, writeMemory, getContainerId } from '@/lib/supermemory'
 import { getAgent } from '@/agents/registry'
 import { createTrace, flushLangfuse } from '@/lib/langfuse'
 import { chatLimiter, checkRateLimit, rateLimitResponse, getIdentifier } from '@/lib/ratelimit'
+import { getAvailableEmbeds, type AvailableEmbeds } from '@/lib/embed-resolver'
+import { phases } from '@/data/rafael-ai/phases'
+import { getRafaelChatPrompt } from '@/agents/rafael/chat'
+import type { EmbedData } from '@/types'
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
+
+/**
+ * Build embed tools dynamically based on what's available from user's journey
+ */
+function buildEmbedTools(availableEmbeds: AvailableEmbeds) {
+  const tools: Record<string, any> = {}
+
+  if (availableEmbeds.checkoutPlanId) {
+    tools.showCheckout = {
+      description: 'Show checkout embed when user is ready to purchase',
+      parameters: z.object({
+        beforeText: z.string().describe('Natural lead-in text before the embed'),
+        afterText: z.string().describe('Follow-up text after the embed'),
+      }),
+      execute: async ({ beforeText, afterText }: { beforeText: string; afterText: string }): Promise<EmbedData> => ({
+        embedType: 'checkout',
+        beforeText,
+        afterText,
+        checkoutPlanId: availableEmbeds.checkoutPlanId,
+      }),
+    }
+  }
+
+  if (availableEmbeds.videoUrl) {
+    tools.showVideo = {
+      description: 'Show video embed when sharing a key insight',
+      parameters: z.object({
+        beforeText: z.string().describe('Natural lead-in text before the embed'),
+        afterText: z.string().describe('Follow-up text after the embed'),
+      }),
+      execute: async ({ beforeText, afterText }: { beforeText: string; afterText: string }): Promise<EmbedData> => ({
+        embedType: 'video',
+        beforeText,
+        afterText,
+        videoUrl: availableEmbeds.videoUrl,
+      }),
+    }
+  }
+
+  if (availableEmbeds.calendlyUrl) {
+    tools.showBooking = {
+      description: 'Show booking calendar when user is ready to schedule a call',
+      parameters: z.object({
+        beforeText: z.string().describe('Natural lead-in text before the embed'),
+        afterText: z.string().describe('Follow-up text after the embed'),
+      }),
+      execute: async ({ beforeText, afterText }: { beforeText: string; afterText: string }): Promise<EmbedData> => ({
+        embedType: 'booking',
+        beforeText,
+        afterText,
+        calendlyUrl: availableEmbeds.calendlyUrl,
+      }),
+    }
+  }
+
+  return tools
+}
+
+/**
+ * Build prompt section describing available tools
+ */
+function buildEmbedSection(toolNames: string[]): string {
+  if (toolNames.length === 0) {
+    return 'No embed tools are available yet.'
+  }
+  return `You have these embed tools: ${toolNames.join(', ')}. Use when contextually appropriate.`
+}
 
 export async function POST(req: Request) {
   const startTime = Date.now()
@@ -63,12 +135,27 @@ export async function POST(req: Request) {
       })
     }
 
+    // Get completed phases from session context
+    // Hardcoded for Rafael - swap when mentor #2 comes
+    const completedPhases: number[] = sessionData.context?.progress?.completedPhases || []
+    const availableEmbeds = getAvailableEmbeds(completedPhases, phases as any)
+
+    // Build dynamic tools based on user's journey
+    const embedTools = buildEmbedTools(availableEmbeds)
+    const toolNames = Object.keys(embedTools)
+
+    // Build dynamic prompt section
+    const embedSection = buildEmbedSection(toolNames)
+    const basePrompt = agentId === 'rafael-chat'
+      ? getRafaelChatPrompt(embedSection)
+      : agent.systemPrompt
+
     // Create Langfuse trace
     const trace = createTrace({
       name: 'chat',
       sessionId,
       userId: sessionData.clerk_user_id || undefined,
-      metadata: { agentId, orgId: sessionData.clerk_org_id },
+      metadata: { agentId, orgId: sessionData.clerk_org_id, availableTools: toolNames },
     })
 
     const generation = trace.generation({
@@ -95,8 +182,8 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = contextParts.length > 0
-      ? `${agent.systemPrompt}\n\n${contextParts.join('\n\n')}`
-      : agent.systemPrompt
+      ? `${basePrompt}\n\n${contextParts.join('\n\n')}`
+      : basePrompt
 
     // First chat: write session context to Supermemory
     if (messages.length === 1 && Object.keys(sessionData.context).length > 0) {
@@ -106,11 +193,12 @@ export async function POST(req: Request) {
       )
     }
 
-    // Stream response
+    // Stream response with dynamic tools
     const result = streamText({
       model: anthropic(agent.model),
       system: systemPrompt,
       messages,
+      tools: Object.keys(embedTools).length > 0 ? embedTools : undefined,
       maxOutputTokens: agent.maxTokens,
       temperature: agent.temperature,
       onFinish: ({ text, usage }) => {
@@ -142,7 +230,7 @@ export async function POST(req: Request) {
       },
     })
 
-    return result.toTextStreamResponse()
+    return result.toUIMessageStreamResponse()
   } catch (err) {
     console.error('Chat error:', err)
     return new Response(JSON.stringify({ error: 'Internal error' }), {

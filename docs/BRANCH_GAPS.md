@@ -211,8 +211,8 @@ Located in `src/data/rafael-ai/mentor.ts` (fresh-build) or hardcoded (main):
 
 ### To restore full functionality:
 
-- [ ] **DEMO_COMMANDS in chat** - Add back to `AIChat.tsx` with streaming fallback
-- [ ] **Sales page after Phase 4** - Add `sales-page` step to `phases.ts`
+- [x] **Embedded content in chat** - Agent outputs `[[CHECKOUT]]`, `[[VIDEO]]`, `[[BOOKING]]` markers
+- [x] **Sales page after Phase 4** - Added `sales-page` step to `phases.ts`
 - [ ] **Mock responses fallback** - Consider restoring `mockResponses.ts` for offline/error cases
 
 ### Already working in fresh-build:

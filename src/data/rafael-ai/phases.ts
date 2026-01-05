@@ -247,6 +247,26 @@ export const phases = [
         type: "ai-moment",
         promptKey: "phase-4-relief",
         skipThinking: true
+      },
+      {
+        type: "sales-page",
+        variant: "calendly",
+        headline: "You're a great fit for 1-on-1.",
+        copyAboveVideo: `Based on everything you've shared, I think you'd benefit from working with me directly.
+
+This isn't for everyone. But you've done the work. You understand the framework. Now you need someone to look at your specific situation and tell you exactly what to do.
+
+That's what these calls are for.`,
+        copyBelowVideo: `Here's how it works:
+
+Book a 30-minute call with my team. We'll look at where you are, where you want to be, and whether working together makes sense.
+
+**No pressure.** If it's not the right fit, we'll tell you — and point you in the right direction.
+
+**If it is the right fit**, we'll map out exactly what working together would look like.
+
+This is for artists who are serious about making the jump. If that's you, grab a time:`,
+        calendlyUrl: "https://calendly.com/brady-mentorfy/30min"
       }
     ],
 

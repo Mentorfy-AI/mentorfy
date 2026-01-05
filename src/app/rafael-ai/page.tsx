@@ -2,7 +2,7 @@
 
 import { useState, useRef, MutableRefObject } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { UserButton, SignedIn, SignedOut, useClerk } from '@clerk/nextjs'
+import { UserButton, SignedIn, SignedOut, SignIn, useClerk } from '@clerk/nextjs'
 import { UserProvider, useUser } from '@/context/UserContext'
 import { LandingPage } from '@/components/rafael-ai/screens/LandingPage'
 import { PhaseFlow } from '@/components/rafael-ai/screens/PhaseFlow'
@@ -118,7 +118,7 @@ function LevelCompleteScreen({ phaseNumber }: { phaseNumber: number }) {
 
 function RafaelAIContent() {
   const { state, dispatch } = useUser()
-  const { gatePhaseTransition } = useAuthGate()
+  const { gatePhaseTransition, showAuthWall } = useAuthGate()
   const { openSignIn } = useClerk()
   const [arrowReady, setArrowReady] = useState(false)
   const [showLevelComplete, setShowLevelComplete] = useState(false)
@@ -419,6 +419,76 @@ function RafaelAIContent() {
       <AnimatePresence mode="wait">
         {showLevelComplete && completedPhaseNumber && (
           <LevelCompleteScreen key="level-complete-overlay" phaseNumber={completedPhaseNumber} />
+        )}
+      </AnimatePresence>
+
+      {/* Auth Wall - Blocking overlay that requires sign-in to continue */}
+      <AnimatePresence>
+        {showAuthWall && (
+          <motion.div
+            key="auth-wall"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 300,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              style={{
+                backgroundColor: '#FAF6F0',
+                borderRadius: 24,
+                padding: '32px 24px',
+                maxWidth: 420,
+                width: '100%',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{
+                marginBottom: 24,
+                fontFamily: "'Lora', Charter, Georgia, serif",
+              }}>
+                <h2 style={{
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: '#111',
+                  marginBottom: 8,
+                }}>
+                  Sign in to continue
+                </h2>
+                <p style={{
+                  fontSize: 15,
+                  color: '#666',
+                  lineHeight: 1.5,
+                }}>
+                  Create an account to save your progress and unlock the next phase.
+                </p>
+              </div>
+              <SignIn
+                routing="hash"
+                appearance={{
+                  elements: {
+                    rootBox: { width: '100%' },
+                    card: { boxShadow: 'none', backgroundColor: 'transparent' },
+                  },
+                }}
+              />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

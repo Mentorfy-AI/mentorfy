@@ -2,13 +2,47 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import { useChat, UIMessage } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
 import { ChatBar } from '../shared/ChatBar'
 import { VideoEmbed } from '../shared/VideoEmbed'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget } from 'react-calendly'
 import { useUser, useSessionId } from '@/context/UserContext'
-import { useAgent } from '@/hooks/useAgent'
 import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/rafael-ai'
+import type { EmbedData } from '@/types'
+
+// Hardcoded for Rafael - swap when mentor #2 comes
+const AGENT_ID = 'rafael-chat'
+
+/**
+ * Extract text content from UIMessage parts
+ */
+function getMessageText(message: UIMessage): string {
+  return message.parts
+    .map(part => (part.type === 'text' ? part.text : ''))
+    .join('')
+}
+
+/**
+ * Extract embed data from tool invocations in a message
+ * Tool parts have type 'tool-{toolName}' with state and output properties
+ */
+function getEmbedFromMessage(message: UIMessage): EmbedData | null {
+  for (const part of message.parts) {
+    // Check for tool parts (showCheckout, showVideo, showBooking)
+    if (
+      (part.type === 'tool-showCheckout' ||
+       part.type === 'tool-showVideo' ||
+       part.type === 'tool-showBooking') &&
+      part.state === 'output-available'
+    ) {
+      // Tool output is already in EmbedData format from server
+      return part.output as EmbedData
+    }
+  }
+  return null
+}
 
 // Data formatters for dynamic messages
 const formatBookingStatus = (val: string): string => {
@@ -894,8 +928,21 @@ export function AIChat({
 }: AIChatProps) {
   const { state, dispatch } = useUser()
   const sessionId = useSessionId()
-  const { sendMessage } = useAgent()
-  const [messages, setMessages] = useState<Message[]>([])
+
+  // useChat for API communication with tool support
+  const {
+    messages: chatMessages,
+    sendMessage,
+    status,
+    setMessages: setChatMessages,
+  } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat' }),
+  })
+
+  const isChatLoading = status === 'streaming' || status === 'submitted'
+
+  // Local messages state for custom UI (dividers, phase messages, etc.)
+  const [localMessages, setLocalMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [focusMessageId, setFocusMessageId] = useState<string | null>(null)
@@ -931,8 +978,50 @@ export function AIChat({
       content: msg.content
     }))
 
-    setMessages(existingMessages)
+    setLocalMessages(existingMessages)
   }, [])
+
+  // Sync streaming content from useChat to local messages
+  useEffect(() => {
+    if (!streamingMessageId || chatMessages.length === 0) return
+
+    // Find the latest assistant message from useChat
+    const latestAssistant = [...chatMessages].reverse().find(m => m.role === 'assistant')
+    if (!latestAssistant) return
+
+    // Check for tool invocations (embeds)
+    const embedData = getEmbedFromMessage(latestAssistant)
+
+    // Update the streaming local message with content/embed from useChat
+    const textContent = getMessageText(latestAssistant)
+    setLocalMessages(prev => prev.map(msg =>
+      msg.id === streamingMessageId
+        ? {
+            ...msg,
+            content: textContent,
+            embedData: embedData || msg.embedData,
+          }
+        : msg
+    ))
+  }, [chatMessages, streamingMessageId])
+
+  // Persist completed assistant messages to reducer
+  const lastPersistedCountRef = useRef(0)
+  useEffect(() => {
+    // Only persist when we have new completed messages
+    const assistantMessages = chatMessages.filter(m => m.role === 'assistant')
+    if (assistantMessages.length <= lastPersistedCountRef.current) return
+
+    const newMessages = assistantMessages.slice(lastPersistedCountRef.current)
+    lastPersistedCountRef.current = assistantMessages.length
+
+    // Only persist when not loading (i.e., streaming is complete)
+    if (!isChatLoading) {
+      for (const msg of newMessages) {
+        dispatch({ type: 'ADD_MESSAGE', payload: { role: 'assistant', content: getMessageText(msg) } })
+      }
+    }
+  }, [chatMessages, isChatLoading, dispatch])
 
   // Handle phase completion - add divider and streaming message when phase changes
   useEffect(() => {
@@ -977,7 +1066,7 @@ export function AIChat({
     }
 
     // Add divider + completion message for all phases (including Phase 1 for consistency)
-    setMessages(prev => {
+    setLocalMessages(prev => {
       if (completedPhaseNumber >= 1) {
         return [...prev, dividerMessage, completionMessage]
       }
@@ -990,7 +1079,7 @@ export function AIChat({
     // After brief thinking delay, start streaming the content
     setTimeout(() => {
       setIsTyping(false)
-      setMessages(prev => prev.map(msg =>
+      setLocalMessages(prev => prev.map(msg =>
         msg.id === messageId
           ? { ...msg, content: levelMessage, _placeholder: false }
           : msg
@@ -1050,7 +1139,7 @@ export function AIChat({
     const promptH = promptNode.getBoundingClientRect().height
     const filler = Math.max(0, viewportH - promptH - 24)
     setTurnFillPx(filler)
-  }, [focusMessageId, streamingMessageId, messages.length])
+  }, [focusMessageId, streamingMessageId, localMessages.length])
 
   // Effect B: Scroll user message to top after filler is applied
   useLayoutEffect(() => {
@@ -1067,57 +1156,55 @@ export function AIChat({
   const handleSendMessage = useCallback(async (content: string) => {
     setTurnFillPx(0)
 
-    const userMessage: Message = { id: uid(), role: 'user', content }
+    const userMessageId = uid()
+    const assistantMessageId = uid()
 
-    // Message handling
+    const userMessage: Message = { id: userMessageId, role: 'user', content }
     const assistantTurn: Message = {
-      id: uid(),
+      id: assistantMessageId,
       role: 'assistant',
       content: '',
       _placeholder: true
     }
 
-    setMessages(prev => [
+    // Add to local state
+    setLocalMessages(prev => [
       ...prev.map(msg => msg._placeholder ? { ...msg, _placeholder: false } : msg),
       userMessage,
       assistantTurn
     ])
-    setFocusMessageId(userMessage.id)
-    setStreamingMessageId(assistantTurn.id)
+    setFocusMessageId(userMessageId)
+    setStreamingMessageId(assistantMessageId)
     setIsTyping(true)
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage })
 
     await new Promise(resolve => setTimeout(resolve, TIMING.RESPONSE_DELAY))
 
     try {
-      const finalText = await sendMessage(content, (streamedText) => {
-        // Update message content as chunks arrive
-        setMessages(prev => prev.map(msg =>
-          msg.id === assistantTurn.id
-            ? { ...msg, content: streamedText }
-            : msg
-        ))
-      })
+      // Use useChat's sendMessage - it handles streaming and tool invocations
+      await sendMessage(
+        { text: content },
+        { body: { sessionId, agentId: AGENT_ID } }
+      )
 
-      const finalThinkingTime = thinkingTimeRef.current
       setIsTyping(false)
 
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantTurn.id
-          ? { ...msg, content: finalText, thinkingTime: finalThinkingTime }
+      // The sync effect will handle updating localMessages with content/embed data
+      // Mark streaming as complete
+      setLocalMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? { ...msg, _placeholder: false, thinkingTime: thinkingTimeRef.current }
           : msg
       ))
-
-      dispatch({ type: 'ADD_MESSAGE', payload: { role: 'assistant', content: finalText } })
     } catch (err: any) {
       setIsTyping(false)
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantTurn.id
-          ? { ...msg, content: err.message || 'Something went wrong. Please try again.' }
+      setLocalMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? { ...msg, content: err.message || 'Something went wrong. Please try again.', _placeholder: false }
           : msg
       ))
     }
-  }, [state, dispatch, sendMessage])
+  }, [dispatch, sendMessage])
 
   const handleStreamingComplete = useCallback(() => {
     setStreamingMessageId(null)
@@ -1155,7 +1242,7 @@ export function AIChat({
             flexDirection: 'column',
             gap: '28px',
           }}>
-            {messages.map((message) => {
+            {localMessages.map((message) => {
               const isStreaming = message.id === streamingMessageId
               const isPlaceholder = message._placeholder
               const isFocusedUser = message.role === 'user' && message.id === focusMessageId

@@ -70,9 +70,11 @@ export interface VideoStep extends BaseStep {
 // Sales page step
 export interface SalesPageStep extends BaseStep {
   type: 'sales-page'
+  variant: 'checkout' | 'calendly'
   headline: string
-  subheadline?: string
-  videoUrl?: string
+  copyAboveVideo: string
+  copyBelowVideo: string
+  videoKey?: string
   checkoutPlanId?: string
   calendlyUrl?: string
 }

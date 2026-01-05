@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
-import { useAuth, useClerk } from '@clerk/nextjs'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { AUTH_CONFIG } from '@/config/rafael-ai'
 import { useSessionId } from '@/context/UserContext'
 
@@ -11,7 +11,7 @@ type PendingAction = () => void
  * Hook that gates phase transitions behind authentication.
  *
  * When a user completes a phase that requires auth (per AUTH_CONFIG),
- * it opens the sign-in modal and stores the pending action.
+ * it shows a blocking auth wall (can't be dismissed).
  * After sign-in, it links the session to the user and executes the action.
  *
  * Note: Pending actions are stored in a ref and don't survive page refresh.
@@ -19,15 +19,18 @@ type PendingAction = () => void
  * URL-based flow instead. Current approach is simpler for most cases.
  */
 export function useAuthGate() {
-  const { isSignedIn, userId } = useAuth()
-  const { openSignIn } = useClerk()
+  const { isSignedIn, isLoaded, userId } = useAuth()
   const sessionId = useSessionId()
+
+  // Whether to show the blocking auth wall
+  const [showAuthWall, setShowAuthWall] = useState(false)
 
   // Store pending action to execute after sign-in
   const pendingActionRef = useRef<PendingAction | null>(null)
 
   // Track if we were signed out before (to detect sign-in completion)
-  const wasSignedOutRef = useRef(!isSignedIn)
+  // Only set initial value after Clerk has loaded
+  const wasSignedOutRef = useRef<boolean | null>(null)
 
   // Link session to authenticated user
   const linkSession = useCallback(async () => {
@@ -48,10 +51,22 @@ export function useAuthGate() {
 
   // Detect sign-in completion and execute pending action
   useEffect(() => {
+    // Don't do anything until Clerk has loaded
+    if (!isLoaded) return
+
     const handleSignInComplete = async () => {
+      // Initialize wasSignedOut tracking once Clerk loads
+      if (wasSignedOutRef.current === null) {
+        wasSignedOutRef.current = !isSignedIn
+        return
+      }
+
       if (isSignedIn && wasSignedOutRef.current && pendingActionRef.current) {
         // User just signed in and we have a pending action
         await linkSession()
+
+        // Hide the auth wall
+        setShowAuthWall(false)
 
         // Execute the pending action
         const action = pendingActionRef.current
@@ -63,7 +78,7 @@ export function useAuthGate() {
     }
 
     handleSignInComplete()
-  }, [isSignedIn, linkSession])
+  }, [isLoaded, isSignedIn, linkSession])
 
   /**
    * Gate a phase transition behind authentication.
@@ -83,16 +98,24 @@ export function useAuthGate() {
       return
     }
 
+    // Wait for Clerk to load before making auth decision
+    // If not loaded yet, allow through (better UX than blocking)
+    // The auth check will happen on next phase if needed
+    if (!isLoaded) {
+      onAllowed()
+      return
+    }
+
     // Already signed in - allow immediately
     if (isSignedIn) {
       onAllowed()
       return
     }
 
-    // Store action and open sign-in modal
+    // Store action and show blocking auth wall
     pendingActionRef.current = onAllowed
-    openSignIn()
-  }, [isSignedIn, openSignIn])
+    setShowAuthWall(true)
+  }, [isLoaded, isSignedIn])
 
-  return { gatePhaseTransition }
+  return { gatePhaseTransition, showAuthWall }
 }

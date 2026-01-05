@@ -1129,61 +1129,8 @@ function SalesPageStepContent({ step, onContinue, onSkip }: SalesPageStepContent
     },
   })
 
-  // Copy content based on variant
-  const getContent = () => {
-    if (isCalendlyVariant) {
-      return {
-        headline: "You're a great fit for 1-on-1.",
-        copyAboveVideo: `Based on everything you've shared, I think you'd benefit from working with me directly.
-
-This isn't for everyone. But you've done the work. You understand the framework. Now you need someone to look at your specific situation and tell you exactly what to do.
-
-That's what these calls are for.`,
-        copyBelowVideo: `Here's how it works:
-
-Book a 30-minute call with my team. We'll look at where you are, where you want to be, and whether working together makes sense.
-
-**No pressure.** If it's not the right fit, we'll tell you — and point you in the right direction.
-
-**If it is the right fit**, we'll map out exactly what working together would look like.
-
-This is for artists who are serious about making the jump. If that's you, grab a time:`
-      }
-    }
-    return {
-      headline: "Here's what I see.",
-      copyAboveVideo: `You're not here because you're lazy. You're not here because your work isn't good enough.
-
-You're here because you've been playing a game nobody taught you the rules to.
-
-You've been doing what you thought you were supposed to do — posting, grinding, hoping the right people notice. And sometimes they do. But it's inconsistent. Unpredictable.
-
-You can't build a life on unpredictable.
-
-The artists who are booked out 6+ months with $5k-$10k clients? They're not more talented than you. They just figured out something most artists never learn.
-
-And that's exactly what I'm going to show you.`,
-      copyBelowVideo: `Here's what happens in Level 2:
-
-I'm going to break down the exact pricing framework that took me from $500 tattoos to $10k sessions. Not theory — the actual mental shifts and positioning moves that make premium clients seek you out.
-
-You'll walk away knowing:
-
-**Why you've been undercharging** — and it's not what you think. It's not confidence. It's not your skill level. It's a positioning problem, and it's fixable.
-
-**How to set prices that attract better clients** — not by "charging your worth" (that advice is useless). By understanding what premium clients actually pay for.
-
-**The conversation shift** — what to say when someone asks your rate so they stop comparing you to cheaper artists.
-
-This is $100.
-
-One session at your new rate pays for it 10x over. And you'll get there faster than you think.`
-    }
-  }
-
-  const content = getContent()
-  const fullTextAbove = content.headline + '\n\n' + content.copyAboveVideo
-  const fullTextBelow = content.copyBelowVideo
+  const fullTextAbove = step.headline + '\n\n' + step.copyAboveVideo
+  const fullTextBelow = step.copyBelowVideo
 
   // Streaming animation effect
   useEffect(() => {

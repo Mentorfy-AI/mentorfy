@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, MutableRefObject, use } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { UserButton, SignedIn, SignedOut, SignIn, useClerk } from '@clerk/nextjs'
-import { UserProvider, useUser } from '@/context/UserContext'
+import { UserProvider, useUser, useUserState } from '@/context/UserContext'
 import { LandingPage } from '@/components/flow/screens/LandingPage'
 import { PhaseFlow } from '@/components/flow/screens/PhaseFlow'
 import { MentorAvatar } from '@/components/flow/shared/MentorAvatar'
@@ -119,7 +119,8 @@ function LevelCompleteScreen({ phaseNumber, flow }: { phaseNumber: number; flow:
 }
 
 function FlowContent({ flow }: { flow: FlowDefinition }) {
-  const { state, dispatch } = useUser()
+  const { dispatch, completeStep, sessionLoading } = useUser()
+  const state = useUserState()
   const { gatePhaseTransition, showAuthWall } = useAuthGate()
   const { openSignIn } = useClerk()
   const [arrowReady, setArrowReady] = useState(false)
@@ -133,7 +134,7 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
   const chatPanelScrollRef = useRef<HTMLDivElement>(null)
 
   // Wait for session to load before rendering - prevents flash of welcome screen
-  if (state.sessionLoading) {
+  if (sessionLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading...</div>
@@ -173,11 +174,11 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
       setShowLevelComplete(true)
 
       // After showing the celebration, transition to experience shell
-      setTimeout(() => {
+      setTimeout(async () => {
         // Set panel to 0 FIRST before changing screen
         setPanel(0)
-        // Mark phase complete (this increments currentPhase)
-        dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+        // Mark phase complete via server (server-as-truth)
+        await completeStep(`phase-${currentPhaseNumber}-complete`)
         // Reset arrow state for the new cycle
         setArrowReady(false)
         // Go to Experience Shell, Chat panel (panel 0)
@@ -201,9 +202,9 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
       setShowLevelComplete(true)
 
       // After showing the celebration, transition to chat
-      setTimeout(() => {
-        // Complete the phase (this increments currentPhase)
-        dispatch({ type: 'COMPLETE_PHASE', payload: currentPhaseNumber })
+      setTimeout(async () => {
+        // Complete the phase via server (server-as-truth)
+        await completeStep(`phase-${currentPhaseNumber}-complete`)
         setArrowReady(false)
         // Switch to chat panel
         setPanel(0)

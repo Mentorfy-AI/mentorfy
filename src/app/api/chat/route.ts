@@ -176,7 +176,6 @@ export async function POST(req: Request) {
       completedPhases,
       availableEmbeds,
       registeredTools: toolNames,
-      sessionContext: sessionData.context
     })
 
     // Build dynamic prompt section

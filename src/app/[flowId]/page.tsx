@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, MutableRefObject } from 'react'
+import { useState, useEffect, useRef, MutableRefObject, use } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { UserButton, SignedIn, SignedOut, SignIn, useClerk } from '@clerk/nextjs'
 import { UserProvider, useUser } from '@/context/UserContext'
@@ -10,8 +10,9 @@ import { MentorAvatar } from '@/components/flow/shared/MentorAvatar'
 import { MentorBadge } from '@/components/flow/shared/MentorBadge'
 import { TimelineShell, Panel } from '@/components/flow/layouts/TimelineShell'
 import { AIChat } from '@/components/flow/screens/AIChat'
-import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/rafael-ai'
+import { COLORS, TIMING, LAYOUT } from '@/config/rafael-ai'
 import { useAuthGate } from '@/hooks/useAuthGate'
+import type { FlowDefinition } from '@/data/flows/types'
 
 // Animated checkmark component
 function AnimatedCheckmark() {
@@ -61,8 +62,9 @@ function AnimatedCheckmark() {
 }
 
 // Level Complete interstitial screen
-function LevelCompleteScreen({ phaseNumber }: { phaseNumber: number }) {
-  const phaseName = PHASE_NAMES[phaseNumber] || `Phase ${phaseNumber}`
+function LevelCompleteScreen({ phaseNumber, flow }: { phaseNumber: number; flow: FlowDefinition }) {
+  const phase = flow.phases.find(p => p.id === phaseNumber)
+  const phaseName = phase?.name || `Phase ${phaseNumber}`
 
   return (
     <motion.div
@@ -116,7 +118,7 @@ function LevelCompleteScreen({ phaseNumber }: { phaseNumber: number }) {
   )
 }
 
-function RafaelAIContent() {
+function FlowContent({ flow }: { flow: FlowDefinition }) {
   const { state, dispatch } = useUser()
   const { gatePhaseTransition, showAuthWall } = useAuthGate()
   const { openSignIn } = useClerk()
@@ -143,6 +145,7 @@ function RafaelAIContent() {
   const currentScreen = state.progress.currentScreen
   const currentPhaseNumber = state.progress.currentPhase
   const currentPanel = state.timeline?.currentPanel ?? 0
+  const totalPhases = flow.phases.length
 
   const setPanel = (panel: number) => dispatch({ type: 'SET_PANEL', payload: panel })
 
@@ -232,12 +235,6 @@ function RafaelAIContent() {
 
   // Should the header back button be dimmed?
   const isHeaderBackDimmed = currentPanel === 0
-
-  // Get button text based on current phase
-  const getPhaseButtonText = (): string => {
-    if (currentPhaseNumber > 4) return 'Journey Complete'
-    return `Continue to Phase ${currentPhaseNumber}`
-  }
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Geist', sans-serif" }}>
@@ -378,10 +375,10 @@ function RafaelAIContent() {
               </Panel>
 
               {/* Panel 1: PhaseFlow (the work) */}
-              {/* Only render PhaseFlow if there's a valid phase (1-4), otherwise show placeholder */}
+              {/* Only render PhaseFlow if there's a valid phase, otherwise show placeholder */}
               <Panel>
                 <AnimatePresence mode="wait">
-                  {currentPhaseNumber <= 4 ? (
+                  {currentPhaseNumber <= totalPhases ? (
                     <motion.div
                       key="level-flow"
                       initial={{ opacity: 1 }}
@@ -427,7 +424,7 @@ function RafaelAIContent() {
       {/* Level Complete interstitial - OUTSIDE screen blocks so it can show during transitions */}
       <AnimatePresence mode="wait">
         {showLevelComplete && completedPhaseNumber && (
-          <LevelCompleteScreen key="level-complete-overlay" phaseNumber={completedPhaseNumber} />
+          <LevelCompleteScreen key="level-complete-overlay" phaseNumber={completedPhaseNumber} flow={flow} />
         )}
       </AnimatePresence>
 
@@ -504,10 +501,45 @@ function RafaelAIContent() {
   )
 }
 
-export default function RafaelAI() {
+function FlowPageLoader({ flowId }: { flowId: string }) {
+  const [flow, setFlow] = useState<FlowDefinition | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/flow/${flowId}`)
+      .then(r => {
+        if (!r.ok) throw new Error('Flow not found')
+        return r.json()
+      })
+      .then(setFlow)
+      .catch(e => setError(e.message))
+  }, [flowId])
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    )
+  }
+
+  if (!flow) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading...</div>
+      </div>
+    )
+  }
+
+  return <FlowContent flow={flow} />
+}
+
+export default function FlowPage({ params }: { params: Promise<{ flowId: string }> }) {
+  const { flowId } = use(params)
+
   return (
     <UserProvider>
-      <RafaelAIContent />
+      <FlowPageLoader flowId={flowId} />
     </UserProvider>
   )
 }

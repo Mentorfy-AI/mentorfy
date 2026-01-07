@@ -11,6 +11,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'clerk_org_id required' }, { status: 400 })
     }
 
+    if (!flow_id) {
+      return NextResponse.json({ error: 'flow_id required' }, { status: 400 })
+    }
+
     const sessionId = crypto.randomUUID()
     const supermemoryContainer = getContainerId(clerk_org_id, sessionId)
 
@@ -20,9 +24,9 @@ export async function POST(req: Request) {
         id: sessionId,
         clerk_org_id,
         clerk_user_id: clerk_user_id || null,
+        flow_id,
         supermemory_container: supermemoryContainer,
         status: 'active',
-        flow_id: flow_id || null,
         current_step_id: 'phase-1-start',
         answers: {},
         context: context || {},

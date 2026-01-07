@@ -2,12 +2,12 @@ import { streamText, convertToModelMessages } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { searchMemories, writeMemory, getContainerId } from '@/lib/supermemory'
+import { searchMemories, writeMemory } from '@/lib/supermemory'
 import { getAgent } from '@/agents/registry'
 import { createTrace, flushLangfuse } from '@/lib/langfuse'
 import { chatLimiter, checkRateLimit, rateLimitResponse, getIdentifier } from '@/lib/ratelimit'
-import { getAvailableEmbeds, type AvailableEmbeds } from '@/lib/embed-resolver'
-import { phases } from '@/data/rafael-ai/phases'
+import { getAvailableEmbedsFromConfig, type AvailableEmbeds } from '@/lib/embed-resolver'
+import { getFlow } from '@/data/flows'
 import { getRafaelChatPrompt } from '@/agents/rafael/chat'
 import type { EmbedData } from '@/types'
 
@@ -162,7 +162,8 @@ export async function POST(req: Request) {
     const completedPhases: number[] = deriveCompletedPhases(sessionData.current_step_id)
       || sessionData.context?.progress?.completedPhases
       || []
-    const availableEmbeds = getAvailableEmbeds(completedPhases, phases as any)
+    const flow = getFlow(sessionData.flow_id || 'rafael-tats')
+    const availableEmbeds = getAvailableEmbedsFromConfig(completedPhases, flow.embeds)
 
     // Build dynamic tools based on user's journey
     const embedTools = buildEmbedTools(availableEmbeds)

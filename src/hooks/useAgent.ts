@@ -92,11 +92,12 @@ export function useAgent() {
   const getResponse = useCallback(async (
     promptKey: string,
     state: any,
-    userMessage: string | null = null
+    userMessage: string | null = null,
+    onChunk?: (text: string) => void
   ): Promise<{ message: string }> => {
     // For chat, use the new sendMessage
     if (promptKey === 'chat' && userMessage) {
-      const text = await sendMessage(userMessage)
+      const text = await sendMessage(userMessage, onChunk)
       return { message: text }
     }
 
@@ -121,9 +122,24 @@ export function useAgent() {
         throw new Error('Generation failed')
       }
 
-      const { content } = await res.json()
+      // Parse text stream
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No response stream')
+
+      const decoder = new TextDecoder()
+      let fullText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        fullText += chunk
+        onChunk?.(fullText)
+      }
+
       setIsLoading(false)
-      return { message: content }
+      return { message: fullText }
     } catch (err) {
       setIsLoading(false)
       console.error('Generation error:', err)

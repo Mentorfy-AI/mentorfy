@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, MutableRefObject } from 'react'
+import { useState, useEffect, useRef, MutableRefObject } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { GlassHeader } from '../shared/GlassHeader'
@@ -12,7 +12,7 @@ import { phases } from '@/data/rafael-ai/phases'
 import { mentor } from '@/data/rafael-ai/mentor'
 import { useUser } from '@/context/UserContext'
 import { useAgent } from '@/hooks/useAgent'
-import { COLORS, TIMING } from '@/config/rafael-ai'
+import { COLORS } from '@/config/rafael-ai'
 
 interface MultipleChoiceStepContentProps {
   step: any
@@ -375,10 +375,7 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
   // If skipThinking is true, start directly in 'waiting' phase (wait for response, then stream)
   const [phase, setPhase] = useState<'typing' | 'pausing' | 'deleting' | 'transitioning' | 'waiting' | 'streaming'>(step.skipThinking ? 'waiting' : 'typing')
 
-  // Streaming state
-  const [streamedHeadline, setStreamedHeadline] = useState('')
-  const [streamedParagraphs, setStreamedParagraphs] = useState<string[]>([])
-  const [currentStreamParagraph, setCurrentStreamParagraph] = useState(0)
+  // Streaming state - now driven by real streaming from API
   const [streamingComplete, setStreamingComplete] = useState(false)
 
   const thinkingMessages = [
@@ -389,40 +386,24 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
 
   const typeSpeed = 45
   const deleteSpeed = 12
-  const streamSpeed = 30
 
-  // Fetch response in background (once per mount)
+  // Fetch response with real streaming (once per mount)
   useEffect(() => {
     if (fetchedRef.current) return
     fetchedRef.current = true
 
     async function fetchResponse() {
-      const result = await getResponse(step.promptKey, state)
-      setResponse(result.message)
+      await getResponse(step.promptKey, state, null, (text) => {
+        // Update response as chunks arrive
+        setResponse(text)
+      })
+      // Mark streaming complete when done
+      setStreamingComplete(true)
     }
     fetchResponse()
   }, [step.promptKey, state, getResponse])
 
-  // Parse response into headline and paragraphs
-  const parsedResponse = useCallback(() => {
-    if (!response) return { headline: '', paragraphs: [] as string[] }
-    const lines = response.split('\n').filter((l: string) => l.trim())
-    const headline = lines[0] || ''
-    const paragraphs = lines.slice(1)
-    return { headline, paragraphs }
-  }, [response])
-
-  // Parse text with bold markers (**text**)
-  const parseTextWithBold = (text: string) => {
-    return text.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} style={{ fontWeight: '600', color: '#000' }}>{part.slice(2, -2)}</strong>
-      }
-      return part
-    })
-  }
-
-  // Thinking + Streaming animation
+  // Thinking animation (typing/pausing/deleting phases only)
   useEffect(() => {
     let timeout: NodeJS.Timeout
 
@@ -460,40 +441,11 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
           setPhase('streaming')
         }
       }, 400)
-    } else if (phase === 'streaming' && response) {
-      const { headline, paragraphs } = parsedResponse()
-
-      // Stream headline first
-      if (streamedHeadline.length < headline.length) {
-        timeout = setTimeout(() => {
-          const chunkSize = Math.floor(Math.random() * 3) + 2
-          setStreamedHeadline(headline.slice(0, streamedHeadline.length + chunkSize))
-        }, streamSpeed)
-      }
-      // Then stream paragraphs
-      else if (currentStreamParagraph < paragraphs.length) {
-        const currentPara = paragraphs[currentStreamParagraph]
-        const streamedPara = streamedParagraphs[currentStreamParagraph] || ''
-
-        if (streamedPara.length < currentPara.length) {
-          timeout = setTimeout(() => {
-            const chunkSize = Math.floor(Math.random() * 4) + 3
-            setStreamedParagraphs(prev => {
-              const newParagraphs = [...prev]
-              newParagraphs[currentStreamParagraph] = currentPara.slice(0, streamedPara.length + chunkSize)
-              return newParagraphs
-            })
-          }, streamSpeed)
-        } else {
-          setCurrentStreamParagraph(currentStreamParagraph + 1)
-        }
-      } else {
-        setStreamingComplete(true)
-      }
     }
+    // Streaming phase is now driven by real API streaming - no client-side animation needed
 
     return () => clearTimeout(timeout)
-  }, [displayText, phase, currentMessageIndex, response, streamedHeadline, streamedParagraphs, currentStreamParagraph, parsedResponse])
+  }, [displayText, phase, currentMessageIndex, response])
 
   // If transitioning or waiting but no response yet, wait
   useEffect(() => {
@@ -635,7 +587,7 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
               }
             `}</style>
             <ReactMarkdown>
-              {streamedHeadline + (streamedParagraphs.length > 0 ? '\n\n' + streamedParagraphs.join('\n\n') : '')}
+              {response || ''}
             </ReactMarkdown>
             {/* Blinking cursor while streaming */}
             {!streamingComplete && (

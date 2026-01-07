@@ -1,4 +1,4 @@
-import { generateText } from 'ai'
+import { streamText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { db } from '@/lib/db'
 import { getAgent } from '@/agents/registry'
@@ -90,41 +90,36 @@ export async function POST(req: Request, context: RouteContext) {
 
     const userMessage = `User context:\n${contextStr}${historyStr}\n\nGenerate the ${type} based on this information.`
 
-    const result = await generateText({
+    const result = streamText({
       model: anthropic(agent.model),
       system: agent.systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
       maxOutputTokens: agent.maxTokens,
       temperature: agent.temperature,
-    })
+      onFinish: ({ text, usage }) => {
+        // Complete Langfuse generation
+        generation.end({
+          output: text,
+          usage: {
+            input: usage?.inputTokens,
+            output: usage?.outputTokens,
+          },
+        })
 
-    // Complete Langfuse generation
-    generation.end({
-      output: result.text,
-      usage: {
-        input: result.usage?.inputTokens,
-        output: result.usage?.outputTokens,
+        trace.update({
+          metadata: {
+            latencyMs: Date.now() - startTime,
+            inputTokens: usage?.inputTokens,
+            outputTokens: usage?.outputTokens,
+          },
+        })
+
+        // Flush traces to Langfuse
+        flushLangfuse()
       },
     })
 
-    trace.update({
-      metadata: {
-        latencyMs: Date.now() - startTime,
-        inputTokens: result.usage?.inputTokens,
-        outputTokens: result.usage?.outputTokens,
-      },
-    })
-
-    // Flush traces to Langfuse
-    await flushLangfuse()
-
-    return new Response(JSON.stringify({
-      content: result.text,
-      type,
-      usage: result.usage,
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return result.toTextStreamResponse()
   } catch (err) {
     console.error(`Generate ${type} error:`, err)
     return new Response(JSON.stringify({ error: 'Internal error' }), {

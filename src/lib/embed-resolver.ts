@@ -1,4 +1,5 @@
 import type { Phase, Step, SalesPageStep, VideoStep } from '@/types'
+import type { EmbedConfig } from '@/data/flows/types'
 
 export interface AvailableEmbeds {
   checkoutPlanId?: string
@@ -58,4 +59,27 @@ function isSalesPageStep(step: Step): step is SalesPageStep {
 
 function isVideoStep(step: Step): step is VideoStep {
   return step.type === 'video'
+}
+
+/**
+ * Get available embeds from FlowDefinition's EmbedConfig.
+ * Simpler approach: embed config directly specifies after which phase each embed unlocks.
+ */
+export function getAvailableEmbedsFromConfig(
+  completedPhaseIds: number[],
+  embedConfig: EmbedConfig
+): AvailableEmbeds {
+  const result: AvailableEmbeds = {}
+
+  const maxCompletedPhase = Math.max(...completedPhaseIds, 0)
+
+  if (embedConfig.checkoutAfterPhase && maxCompletedPhase >= embedConfig.checkoutAfterPhase) {
+    result.checkoutPlanId = embedConfig.checkoutPlanId
+  }
+
+  if (embedConfig.bookingAfterPhase && maxCompletedPhase >= embedConfig.bookingAfterPhase) {
+    result.calendlyUrl = embedConfig.calendlyUrl
+  }
+
+  return result
 }

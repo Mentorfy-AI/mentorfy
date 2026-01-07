@@ -23,6 +23,7 @@ export const rafaelTatsFlow: FlowDefinition = {
   embeds: {
     checkoutPlanId: 'plan_joNwbFAIES0hH',
     calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
+    bookingAfterPhase: 4,
   },
 
   phases: [

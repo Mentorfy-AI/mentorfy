@@ -6,8 +6,8 @@ import { searchMemories, writeMemory, getContainerId } from '@/lib/supermemory'
 import { getAgent } from '@/agents/registry'
 import { createTrace, flushLangfuse } from '@/lib/langfuse'
 import { chatLimiter, checkRateLimit, rateLimitResponse, getIdentifier } from '@/lib/ratelimit'
-import { getAvailableEmbeds, type AvailableEmbeds } from '@/lib/embed-resolver'
-import { phases } from '@/data/rafael-ai/phases'
+import { getAvailableEmbedsFromConfig, type AvailableEmbeds } from '@/lib/embed-resolver'
+import { getFlow } from '@/data/flows'
 import { getRafaelChatPrompt } from '@/agents/rafael/chat'
 import type { EmbedData } from '@/types'
 
@@ -136,9 +136,9 @@ export async function POST(req: Request) {
     }
 
     // Get completed phases from session context
-    // Hardcoded for Rafael - swap when mentor #2 comes
     const completedPhases: number[] = sessionData.context?.progress?.completedPhases || []
-    const availableEmbeds = getAvailableEmbeds(completedPhases, phases as any)
+    const flow = getFlow(sessionData.flow_id || 'rafael-tats')
+    const availableEmbeds = getAvailableEmbedsFromConfig(completedPhases, flow.embeds)
 
     // Build dynamic tools based on user's journey
     const embedTools = buildEmbedTools(availableEmbeds)

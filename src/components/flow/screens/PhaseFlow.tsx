@@ -8,11 +8,10 @@ import { StepProgress } from '../shared/StepProgress'
 import { ThinkingAnimation } from '../shared/ThinkingAnimation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
-import { phases } from '@/data/rafael-ai/phases'
-import { mentor } from '@/data/rafael-ai/mentor'
+import { getFlow } from '@/data/flows'
 import { useUser } from '@/context/UserContext'
 import { useAgent } from '@/hooks/useAgent'
-import { COLORS } from '@/config/rafael-ai'
+import { COLORS } from '@/config/flow'
 
 interface MultipleChoiceStepContentProps {
   step: any
@@ -645,10 +644,12 @@ function AIMomentStepContent({ step, state, onContinue }: AIMomentStepContentPro
 interface VideoStepContentProps {
   step: any
   onContinue: () => void
+  flowId?: string
 }
 
-function VideoStepContent({ step, onContinue }: VideoStepContentProps) {
-  const video = (mentor.videos as any)[step.videoKey]
+function VideoStepContent({ step, onContinue, flowId = 'rafael-tats' }: VideoStepContentProps) {
+  const flow = getFlow(flowId)
+  const video = (flow.mentor as any).videos?.[step.videoKey]
 
   // Sequential animation states
   const [streamedText, setStreamedText] = useState('')
@@ -901,10 +902,12 @@ interface SalesPageStepContentProps {
   step: any
   onContinue: () => void
   onSkip?: () => void
+  flowId?: string
 }
 
 // Sales Page Step Content - Dynamic sales page with typing animation
-function SalesPageStepContent({ step, onContinue, onSkip }: SalesPageStepContentProps) {
+function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats' }: SalesPageStepContentProps) {
+  const flow = getFlow(flowId)
   const [isPlaying, setIsPlaying] = useState(false)
   const [actionComplete, setActionComplete] = useState(false)
   const bookingConfirmationSentRef = useRef(false)
@@ -931,7 +934,7 @@ function SalesPageStepContent({ step, onContinue, onSkip }: SalesPageStepContent
     return null
   }
 
-  const video = step.videoKey ? (mentor.videos as any)[step.videoKey] : null
+  const video = step.videoKey ? (flow.mentor as any).videos?.[step.videoKey] : null
   const videoInfo = video ? getVideoInfo(video.url) : null
   const thumbnailUrl = videoInfo?.provider === 'youtube'
     ? `https://img.youtube.com/vi/${videoInfo.id}/maxresdefault.jpg`
@@ -1216,7 +1219,7 @@ function SalesPageStepContent({ step, onContinue, onSkip }: SalesPageStepContent
               {isCalendlyVariant ? (
                 /* Calendly embed */
                 <InlineWidget
-                  url={step.calendlyUrl || mentor.calendlyUrl}
+                  url={step.calendlyUrl || flow.embeds.calendlyUrl}
                   styles={{ height: '700px', minWidth: '100%' }}
                   pageSettings={{
                     backgroundColor: 'FAF6F0',
@@ -1290,7 +1293,7 @@ function SalesPageStepContent({ step, onContinue, onSkip }: SalesPageStepContent
                   {/* Checkout embed */}
                   <div style={{ backgroundColor: '#FFFFFF', padding: '4px' }}>
                     <WhopCheckoutEmbed
-                      planId={step.checkoutPlanId || mentor.whopPlanId}
+                      planId={step.checkoutPlanId || flow.embeds.checkoutPlanId}
                       theme="light"
                       skipRedirect={true}
                       onComplete={handleCheckoutComplete}
@@ -1462,10 +1465,13 @@ interface PhaseFlowProps {
   onBack?: () => void
   hideHeader?: boolean
   backHandlerRef?: MutableRefObject<(() => void) | null>
+  flowId?: string
 }
 
-export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, backHandlerRef }: PhaseFlowProps) {
+export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, backHandlerRef, flowId = 'rafael-tats' }: PhaseFlowProps) {
   const { state, dispatch } = useUser()
+  const flow = getFlow(flowId)
+  const phases = flow.phases
   const level = phases.find(l => l.id === levelId)
 
   // Initialize step from persisted state if we're on the same phase, otherwise start at 0
@@ -1606,6 +1612,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
             key={currentStepIndex}
             step={currentStep}
             onContinue={goToNextStep}
+            flowId={flowId}
           />
         )
 
@@ -1616,6 +1623,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
             step={currentStep}
             onContinue={goToNextStep}
             onSkip={goToNextStep}
+            flowId={flowId}
           />
         )
 

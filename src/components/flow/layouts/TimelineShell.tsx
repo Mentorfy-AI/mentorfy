@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useState, ReactNode } from 'react'
-import { TIMING } from '@/config/rafael-ai'
+import { TIMING } from '@/config/flow'
 
 interface TimelineShellProps {
   children: ReactNode

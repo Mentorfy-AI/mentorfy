@@ -8,8 +8,9 @@ export const rafaelTatsFlow: FlowDefinition = {
     handle: '@rafaeltats',
     avatar: '/rafael.jpg',
     welcome: {
-      title: "Steal The Method That Seems Invisible To YOU But Keeps Me Booked Out All Year With $2k-$10k Sessions...",
-      subtitle: 'Without Spending More Than 30 Minutes A Day On Content',
+      headline: "Steal The Method That Seems Invisible To YOU But Keeps Me Booked Out All Year With $2k-$10k Sessions...",
+      subheadline: 'Without Spending More Than 30 Minutes A Day On Content',
+      buttonText: 'Start Your Diagnosis',
       videoUrl: 'https://rafaeltats.wistia.com/medias/4i06zkj7fg',
     },
   },

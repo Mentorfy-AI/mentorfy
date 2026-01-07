@@ -9,7 +9,7 @@ import { VideoEmbed } from '../shared/VideoEmbed'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget } from 'react-calendly'
 import { useUser, useSessionId } from '@/context/UserContext'
-import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/rafael-ai'
+import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/flow'
 import type { EmbedData } from '@/types'
 
 // Hardcoded for Rafael - swap when mentor #2 comes

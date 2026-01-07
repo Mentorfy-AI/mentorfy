@@ -1,9 +1,9 @@
 /**
- * Rafael AI Configuration
+ * Flow Configuration
  * Central source of truth for all magic numbers, colors, and layout values
  */
 
-import { mentor } from '@/data/rafael-ai/mentor'
+import { getFlow } from '@/data/flows'
 
 // Timing constants (in milliseconds)
 export const TIMING = {
@@ -143,13 +143,18 @@ export const TYPOGRAPHY = {
   LINE_HEIGHT_RELAXED: 1.7,
 } as const
 
-// Phase names (single source of truth)
-export const PHASE_NAMES: Record<number, string> = {
-  1: 'The Diagnosis',
-  2: 'Get Booked Without Going Viral',
-  3: 'The 30-Minute Content System',
-  4: 'Double Your Revenue',
-} as const
+// Helper to get phase names from a flow
+export function getPhaseNames(flowId: string): Record<number, string> {
+  const flow = getFlow(flowId)
+  const names: Record<number, string> = {}
+  for (const phase of flow.phases) {
+    names[phase.id] = phase.name
+  }
+  return names
+}
+
+// Default phase names for rafael-tats (legacy compatibility)
+export const PHASE_NAMES: Record<number, string> = getPhaseNames('rafael-tats')
 
 // Authentication configuration
 export const AUTH_CONFIG = {
@@ -158,18 +163,24 @@ export const AUTH_CONFIG = {
   requireAuthAfterPhase: null as number | null,
 } as const
 
-// Demo commands configuration
-export const DEMO_COMMANDS = {
-  'sell me': {
-    embedType: 'checkout' as const,
-    checkoutPlanId: mentor.whopPlanId,
-  },
-  'video': {
-    embedType: 'video' as const,
-    videoUrl: mentor.videos['welcome-vsl'].url,
-  },
-  'book me': {
-    embedType: 'booking' as const,
-    calendlyUrl: mentor.calendlyUrl,
-  },
+// Helper to get demo commands from a flow
+export function getDemoCommands(flowId: string) {
+  const flow = getFlow(flowId)
+  return {
+    'sell me': {
+      embedType: 'checkout' as const,
+      checkoutPlanId: flow.embeds.checkoutPlanId,
+    },
+    'video': {
+      embedType: 'video' as const,
+      videoUrl: flow.mentor.welcome.videoUrl,
+    },
+    'book me': {
+      embedType: 'booking' as const,
+      calendlyUrl: flow.embeds.calendlyUrl,
+    },
+  }
 }
+
+// Default demo commands for rafael-tats (legacy compatibility)
+export const DEMO_COMMANDS = getDemoCommands('rafael-tats')

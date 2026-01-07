@@ -1,16 +1,18 @@
 'use client'
 
-import { mentor } from '@/data/rafael-ai/mentor'
+import { getFlow } from '@/data/flows'
 
 const ACCENT_COLOR = '#10B981'
 
 interface Props {
   size?: 'large' | 'small'
+  flowId?: string
 }
 
 // Mentor name with verified badge
-export function MentorBadge({ size = 'large' }: Props) {
+export function MentorBadge({ size = 'large', flowId = 'rafael-tats' }: Props) {
   const isLarge = size === 'large'
+  const flow = getFlow(flowId)
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
       <span style={{
@@ -19,7 +21,7 @@ export function MentorBadge({ size = 'large' }: Props) {
         color: '#111',
         fontFamily: "'Lora', Charter, Georgia, serif",
       }}>
-        {mentor.name}
+        {flow.mentor.name}
       </span>
       <svg width={isLarge ? 20 : 16} height={isLarge ? 20 : 16} viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
         <g fill={ACCENT_COLOR}>

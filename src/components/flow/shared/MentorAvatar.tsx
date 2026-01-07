@@ -1,16 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { mentor } from '@/data/rafael-ai/mentor'
+import { getFlow } from '@/data/flows'
 
 interface Props {
   size?: number
+  flowId?: string
 }
 
 // MentorAvatar component with black glow
-export function MentorAvatar({ size = 32 }: Props) {
+export function MentorAvatar({ size = 32, flowId = 'rafael-tats' }: Props) {
   const [imgError, setImgError] = useState(false)
   const rgb = { r: 0, g: 0, b: 0 }
+  const flow = getFlow(flowId)
 
   return (
     <div
@@ -27,11 +29,11 @@ export function MentorAvatar({ size = 32 }: Props) {
       }}
     >
       {imgError ? (
-        <span style={{ color: '#FFFFFF', fontSize: size * 0.4, fontWeight: '500' }}>R</span>
+        <span style={{ color: '#FFFFFF', fontSize: size * 0.4, fontWeight: '500' }}>{flow.mentor.name[0]}</span>
       ) : (
         <img
-          src={mentor.avatar}
-          alt="Rafael"
+          src={flow.mentor.avatar}
+          alt={flow.mentor.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={() => setImgError(true)}
         />

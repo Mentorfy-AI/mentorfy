@@ -5,7 +5,7 @@ import { VideoEmbed } from '../shared/VideoEmbed'
 import { MentorAvatar } from '../shared/MentorAvatar'
 import { MentorBadge } from '../shared/MentorBadge'
 import { MentorfyWatermark } from '../shared/MentorfyWatermark'
-import { mentor } from '@/data/rafael-ai/mentor'
+import { getFlow } from '@/data/flows'
 
 const ACCENT_COLOR = '#10B981'
 const BACKGROUND_COLOR = '#FAF6F0'
@@ -37,9 +37,12 @@ function HeadlineWithAccent({ text }: HeadlineWithAccentProps) {
 
 interface LandingPageProps {
   onStart: () => void
+  flowId?: string
 }
 
-export function LandingPage({ onStart }: LandingPageProps) {
+export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProps) {
+  const flow = getFlow(flowId)
+  const mentor = flow.mentor
   return (
     <div style={{
       minHeight: '100vh',

@@ -11,8 +11,9 @@ export interface MentorConfig {
   handle: string
   avatar: string
   welcome: {
-    title: string
-    subtitle: string
+    headline: string
+    subheadline: string
+    buttonText: string
     videoUrl?: string
   }
 }
@@ -24,7 +25,7 @@ export interface PhaseConfig {
 }
 
 export interface StepConfig {
-  type: 'question' | 'ai-moment' | 'sales-page'
+  type: 'question' | 'ai-moment' | 'sales-page' | 'video' | 'thinking'
   question?: string
   questionType?: 'multiple-choice' | 'long-answer' | 'contact-info'
   options?: { label: string; value: string }[]

@@ -10,7 +10,7 @@ import { MentorAvatar } from '@/components/flow/shared/MentorAvatar'
 import { MentorBadge } from '@/components/flow/shared/MentorBadge'
 import { TimelineShell, Panel } from '@/components/flow/layouts/TimelineShell'
 import { AIChat } from '@/components/flow/screens/AIChat'
-import { COLORS, TIMING, LAYOUT } from '@/config/rafael-ai'
+import { COLORS, TIMING, LAYOUT } from '@/config/flow'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import type { FlowDefinition } from '@/data/flows/types'
 

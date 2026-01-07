@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { AUTH_CONFIG } from '@/config/rafael-ai'
+import { AUTH_CONFIG } from '@/config/flow'
 
 type PendingAction = () => void
 

@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages } from 'ai'
+import { streamText, convertToModelMessages, tool } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 import { db } from '@/lib/db'
@@ -45,51 +45,51 @@ function buildEmbedTools(availableEmbeds: AvailableEmbeds) {
   const tools: Record<string, any> = {}
 
   if (availableEmbeds.checkoutPlanId) {
-    tools.showCheckout = {
+    tools.showCheckout = tool({
       description: 'Show checkout embed when user is ready to purchase',
-      parameters: z.object({
+      inputSchema: z.object({
         beforeText: z.string().describe('Natural lead-in text before the embed'),
         afterText: z.string().describe('Follow-up text after the embed'),
       }),
-      execute: async ({ beforeText, afterText }: { beforeText: string; afterText: string }): Promise<EmbedData> => ({
+      execute: async ({ beforeText, afterText }): Promise<EmbedData> => ({
         embedType: 'checkout',
         beforeText,
         afterText,
         checkoutPlanId: availableEmbeds.checkoutPlanId,
       }),
-    }
+    })
   }
 
   if (availableEmbeds.videoUrl) {
-    tools.showVideo = {
+    tools.showVideo = tool({
       description: 'Show video embed when sharing a key insight',
-      parameters: z.object({
+      inputSchema: z.object({
         beforeText: z.string().describe('Natural lead-in text before the embed'),
         afterText: z.string().describe('Follow-up text after the embed'),
       }),
-      execute: async ({ beforeText, afterText }: { beforeText: string; afterText: string }): Promise<EmbedData> => ({
+      execute: async ({ beforeText, afterText }): Promise<EmbedData> => ({
         embedType: 'video',
         beforeText,
         afterText,
         videoUrl: availableEmbeds.videoUrl,
       }),
-    }
+    })
   }
 
   if (availableEmbeds.calendlyUrl) {
-    tools.showBooking = {
+    tools.showBooking = tool({
       description: 'Show booking calendar when user is ready to schedule a call',
-      parameters: z.object({
+      inputSchema: z.object({
         beforeText: z.string().describe('Natural lead-in text before the embed'),
         afterText: z.string().describe('Follow-up text after the embed'),
       }),
-      execute: async ({ beforeText, afterText }: { beforeText: string; afterText: string }): Promise<EmbedData> => ({
+      execute: async ({ beforeText, afterText }): Promise<EmbedData> => ({
         embedType: 'booking',
         beforeText,
         afterText,
         calendlyUrl: availableEmbeds.calendlyUrl,
       }),
-    }
+    })
   }
 
   return tools

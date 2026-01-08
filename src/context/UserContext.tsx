@@ -90,7 +90,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const res = await fetch('/api/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clerk_org_id: CLERK_ORG_ID, flow_id: 'rafael-ai' })
+          body: JSON.stringify({ clerk_org_id: CLERK_ORG_ID, flow_id: 'rafael-tats' })
         })
         if (res.ok) {
           const { sessionId } = await res.json()

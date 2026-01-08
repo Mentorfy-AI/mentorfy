@@ -60,12 +60,12 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
       }}>
         {/* Avatar */}
         <div style={{ marginBottom: '10px' }}>
-          <MentorAvatar size={64} />
+          <MentorAvatar size={64} flowId={flowId} />
         </div>
 
         {/* Name + Badge */}
         <div style={{ marginBottom: '14px' }}>
-          <MentorBadge />
+          <MentorBadge flowId={flowId} />
         </div>
 
         {/* Headline - $2k-$10k in green */}

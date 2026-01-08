@@ -1673,6 +1673,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
           showBackButton={currentStepIndex > 0 || !!onBack}
           dimBackButton={shouldDimBackButton}
           useAbsolutePosition={!!onBack}
+          flowId={flowId}
         />
       )}
 

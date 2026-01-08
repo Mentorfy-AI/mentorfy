@@ -247,6 +247,7 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
           <LandingPage
             key="welcome"
             onStart={handleStartFromWelcome}
+            flowId={flow.id}
           />
         )}
 
@@ -256,6 +257,7 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
             key={`level-${currentPhaseNumber}`}
             levelId={currentPhaseNumber}
             onComplete={handleInitialLevelComplete}
+            flowId={flow.id}
           />
         )}
 
@@ -318,8 +320,8 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
                   justifyContent: 'center',
                   gap: '10px',
                 }}>
-                  <MentorAvatar size={40} />
-                  <MentorBadge size="large" />
+                  <MentorAvatar size={40} flowId={flow.id} />
+                  <MentorBadge size="large" flowId={flow.id} />
                 </div>
 
                 {/* Spacer for layout balance */}
@@ -359,6 +361,7 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
                         onBack={handleBackFromPhaseFlow}
                         backHandlerRef={levelFlowBackRef as MutableRefObject<(() => void) | null>}
                         hideHeader={true}
+                        flowId={flow.id}
                       />
                     </motion.div>
                   ) : (

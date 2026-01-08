@@ -4,14 +4,14 @@ export const growthoperatorFlow: FlowDefinition = {
   id: 'growthoperator',
 
   mentor: {
-    name: 'Rafael Tats',
-    handle: '@rafaeltats',
-    avatar: '/rafael.jpg',
+    name: 'Growth Operator',
+    handle: '@growthoperator',
+    avatar: '/brady.jpg',
     welcome: {
-      headline: "Steal The Method That Seems Invisible To YOU But Keeps Me Booked Out All Year With $2k-$10k Sessions...",
+      headline: "Discover The System That Keeps My Calendar Booked With High-Ticket Clients All Year...",
       subheadline: 'Without Spending More Than 30 Minutes A Day On Content',
       buttonText: 'Start Your Diagnosis',
-      videoUrl: 'https://rafaeltats.wistia.com/medias/4i06zkj7fg',
+      videoUrl: '',
     },
   },
 
@@ -35,7 +35,7 @@ export const growthoperatorFlow: FlowDefinition = {
         {
           type: 'question',
           questionType: 'multiple-choice',
-          question: 'What stage is your tattoo business at now?',
+          question: 'What stage is your business at now?',
           options: [
             { value: 'booked-3-months', label: 'Fully booked out 3+ months' },
             { value: 'booked-1-2-months', label: 'Booked out 1-2 months' },
@@ -48,16 +48,16 @@ export const growthoperatorFlow: FlowDefinition = {
         {
           type: 'question',
           questionType: 'multiple-choice',
-          question: "What's your day rate?",
+          question: "What's your average project value?",
           options: [
-            { value: '4k-plus', label: '$4k+' },
-            { value: '3k-4k', label: '$3k - $4k' },
-            { value: '2k-3k', label: '$2k - $3k' },
+            { value: '10k-plus', label: '$10k+' },
+            { value: '5k-10k', label: '$5k - $10k' },
+            { value: '2k-5k', label: '$2k - $5k' },
             { value: '1k-2k', label: '$1k - $2k' },
             { value: '500-1k', label: '$500 - $1k' },
             { value: 'under-500', label: 'Under $500' },
           ],
-          stateKey: 'situation.dayRate',
+          stateKey: 'situation.projectValue',
         },
         {
           type: 'question',
@@ -65,8 +65,8 @@ export const growthoperatorFlow: FlowDefinition = {
           question: "What's stopping you from being booked out?",
           options: [
             { value: 'unpredictable-posting', label: 'Posting but results are unpredictable' },
-            { value: 'price-shoppers', label: 'DMs are all price shoppers' },
-            { value: 'no-time', label: 'No time — tattooing all day' },
+            { value: 'price-shoppers', label: 'Leads are all price shoppers' },
+            { value: 'no-time', label: 'No time — working all day' },
             { value: 'invisible', label: 'Good work but invisible' },
           ],
           stateKey: 'situation.blocker',
@@ -183,7 +183,7 @@ export const growthoperatorFlow: FlowDefinition = {
           questionType: 'multiple-choice',
           question: 'Do you see yourself as a content creator?',
           options: [
-            { value: 'not-really', label: "No, I'm an artist" },
+            { value: 'not-really', label: "No, I just run my business" },
             { value: 'kind-of', label: 'Kind of' },
             { value: 'accepted', label: 'Yeah, part of the game' },
             { value: 'never-thought', label: 'Never thought about it' },
@@ -273,7 +273,7 @@ Book a 30-minute call with my team. We'll look at where you are, where you want 
 
 **If it is the right fit**, we'll map out exactly what working together would look like.
 
-This is for artists who are serious about making the jump. If that's you, grab a time:`,
+This is for business owners who are serious about making the jump. If that's you, grab a time:`,
           calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
         },
       ],

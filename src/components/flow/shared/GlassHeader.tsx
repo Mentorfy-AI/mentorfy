@@ -8,11 +8,12 @@ interface Props {
   showBackButton?: boolean
   dimBackButton?: boolean
   useAbsolutePosition?: boolean
+  flowId?: string
 }
 
 // Glass Header
 // useAbsolutePosition: true for panels in TimelineShell to avoid overlap
-export function GlassHeader({ onBack, showBackButton = true, dimBackButton = false, useAbsolutePosition = false }: Props) {
+export function GlassHeader({ onBack, showBackButton = true, dimBackButton = false, useAbsolutePosition = false, flowId }: Props) {
   return (
     <div style={{
       position: useAbsolutePosition ? 'absolute' : 'fixed',
@@ -71,8 +72,8 @@ export function GlassHeader({ onBack, showBackButton = true, dimBackButton = fal
             gap: '10px',
           }}
         >
-          <MentorAvatar size={40} />
-          <MentorBadge size="large" />
+          <MentorAvatar size={40} flowId={flowId} />
+          <MentorBadge size="large" flowId={flowId} />
         </div>
 
         {/* Spacer for layout balance */}

@@ -151,6 +151,18 @@ Click continue/submit.
 
 **CRITICAL ASSERT:** No Calendly booking widget should appear at this stage.
 
+**Markdown Rendering Verification:**
+1. **Take screenshot** of the AI diagnosis area
+2. **Assert proper markdown rendering:**
+   - `## headers` render as visually distinct section headers (larger font, bold)
+   - `**bold text**` renders as bold (not showing asterisks)
+   - Paragraphs have visible spacing between them (blank lines respected)
+   - No raw markdown syntax visible in the rendered output
+3. **Inspect DOM** to verify markdown is converted to HTML elements:
+   - Headers should be `<h2>` elements
+   - Bold should be `<strong>` or `<b>` elements
+   - Paragraphs should be `<p>` elements or have `<br>` spacing
+
 **Action:** Click continue button.
 
 ---
@@ -200,6 +212,18 @@ Click continue/submit.
 2. Connect to the opportunity (pull from "why this" answer)
 3. Provide honest assessment of fit (pull from "why you" answer)
 4. Make a clear decision
+
+**Markdown Rendering Verification:**
+1. **Take screenshot** of the final AI diagnosis area
+2. **Assert proper markdown rendering:**
+   - `## headers` render as visually distinct section headers (larger font, bold)
+   - `**bold text**` renders as bold (not showing asterisks)
+   - Paragraphs have visible spacing between them (blank lines respected)
+   - No raw markdown syntax visible in the rendered output
+3. **Inspect DOM** to verify markdown is converted to HTML elements:
+   - Headers should be `<h2>` elements
+   - Bold should be `<strong>` or `<b>` elements
+   - Paragraphs should be `<p>` elements or have `<br>` spacing
 
 **CONDITIONAL BEHAVIOR - Two possible outcomes:**
 
@@ -285,9 +309,28 @@ When an assertion fails, report using this format:
 | Checkpoint | Step | Expected Behavior |
 |------------|------|-------------------|
 | Landing Page | 0 | Headline, subheadline, button, disclaimer all visible |
-| First Diagnosis | 7 | AI reflects MC answers, explains model, NO booking widget |
-| Final Diagnosis (Qualified) | 11 | AI makes decision, Calendly widget appears inline |
-| Final Diagnosis (Unqualified) | 11 | AI makes decision, NO widget, kind rejection |
+| First Diagnosis | 7 | AI reflects MC answers, explains model, NO booking widget, markdown renders correctly |
+| Final Diagnosis (Qualified) | 11 | AI makes decision, Calendly widget appears inline, markdown renders correctly |
+| Final Diagnosis (Unqualified) | 11 | AI makes decision, NO widget, kind rejection, markdown renders correctly |
+
+## Markdown Rendering Failure Examples
+
+**FAIL - Raw syntax visible:**
+```
+## Your Growth Operator Diagnosis  ← raw ## visible
+**Bold text** not rendered        ← asterisks visible
+```
+
+**FAIL - No visual hierarchy:**
+- Headers same size as body text
+- No spacing between paragraphs
+- All text runs together
+
+**PASS - Proper rendering:**
+- Headers are larger/bolder than body text
+- Bold text appears bold without asterisks
+- Clear paragraph separation
+- Professional, readable formatting
 
 ---
 

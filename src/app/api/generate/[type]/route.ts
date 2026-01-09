@@ -128,7 +128,7 @@ export async function POST(req: Request, context: RouteContext) {
       name: `generate-${type}`,
       sessionId,
       userId: session.clerk_user_id || undefined,
-      metadata: { flowId, agentId, orgId: session.clerk_org_id, type, promptKey, hasTools: !!tools },
+      metadata: { flowId, agentId, orgId: session.clerk_org_id, type, promptKey, hasTools: !!tools, toolNames: tools ? Object.keys(tools) : [] },
     })
 
     const generation = trace.generation({

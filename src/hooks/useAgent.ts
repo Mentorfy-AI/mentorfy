@@ -154,9 +154,9 @@ export function useAgent() {
                 // AI SDK v6 tool output format
                 embedData = data.output
                 onChunk?.(fullText, embedData)
-              } else if (data.type === 'tool-result' && data.result?.embedType) {
-                // Legacy tool result format
-                embedData = data.result
+              } else if (data.type === 'tool-result' && data.output?.embedType) {
+                // AI SDK v6 tool result format
+                embedData = data.output
                 onChunk?.(fullText, embedData)
               }
             } catch {

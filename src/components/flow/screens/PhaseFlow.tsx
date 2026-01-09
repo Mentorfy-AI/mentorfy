@@ -909,8 +909,8 @@ interface SalesPageStepContentProps {
 // Sales Page Step Content - Dynamic sales page with typing animation
 function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats' }: SalesPageStepContentProps) {
   const flow = getFlow(flowId)
-  const { state } = useUser()
-  const analytics = useAnalytics({ sessionId: state.sessionId || undefined, flowId })
+  const { session } = useUser()
+  const analytics = useAnalytics({ sessionId: session?.id || undefined, flowId })
   const [isPlaying, setIsPlaying] = useState(false)
   const [actionComplete, setActionComplete] = useState(false)
   const bookingConfirmationSentRef = useRef(false)

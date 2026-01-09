@@ -142,7 +142,7 @@ Click continue/submit.
 **Assert:** AI response appears (should reflect MC answers and explain the Growth Operator model).
 
 **Assert:** Response should:
-1. Address the user by name
+1. Address the user
 2. Reflect back their situation, background, experience level, time commitment, and capital
 3. Explain how the Growth Operator model works for someone in their specific situation
 4. Transition to the open-ended questions

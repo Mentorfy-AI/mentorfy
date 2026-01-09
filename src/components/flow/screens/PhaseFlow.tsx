@@ -1015,6 +1015,14 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
       if (bookingConfirmationSentRef.current) return
       bookingConfirmationSentRef.current = true
       console.log('Call booked:', e.data.payload)
+
+      // Track booking completion
+      analytics.trackBookingClicked({
+        source: 'sales_page',
+        phasesCompleted: state.progress.completedPhases,
+        stepId: step.stateKey || `sales-page-${step.variant || 'default'}`,
+      })
+
       setActionComplete(true)
     },
   })

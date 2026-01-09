@@ -12,8 +12,8 @@
 |---|-----|----------|
 | 1 | `flow_id` missing from chat events (AIChat doesn't pass flowId to hook) | Critical |
 | 2 | Property names are camelCase, spec requires snake_case | Critical |
-| 3 | `chat_message_sent` missing `phases_completed`, `chat_version` | Critical |
-| 4 | `chat_version` sent as string (`"post-phase-1"`), should be number | Medium |
+| 3 | `chat_message_sent` missing `phases_completed`, `chat_after_phase` | Critical |
+| 4 | `chat_version` sent as string (`"post-phase-1"`), should be `chat_after_phase` (number) | Medium |
 | 5 | `step_completed` missing `step_id`, `phase_step_index`, `time_on_step_ms`, `answer_key`, `answer_length` | High |
 | 6 | `embed_shown` missing `phases_completed` | Medium |
 | 7 | `booking_clicked` never called | High |
@@ -135,11 +135,11 @@ export function useAnalytics(context: AnalyticsContext) {
   // chat_opened
   // ─────────────────────────────────────────────────────────────
   const trackChatOpened = useCallback(
-    (props: { phasesCompleted: number[] }) => {
+    (props: { phasesCompleted: number[]; chatAfterPhase: number }) => {
       posthog?.capture('chat_opened', {
         ...baseProps,
         phases_completed: props.phasesCompleted,
-        chat_version: props.phasesCompleted.length,  // Number, not string
+        chat_after_phase: props.chatAfterPhase,  // Which phase was just completed
       })
     },
     [posthog, baseProps]
@@ -153,11 +153,12 @@ export function useAnalytics(context: AnalyticsContext) {
       messageIndex: number
       messageLength: number
       phasesCompleted: number[]
+      chatAfterPhase: number
     }) => {
       posthog?.capture('chat_message_sent', {
         ...baseProps,
         phases_completed: props.phasesCompleted,
-        chat_version: props.phasesCompleted.length,
+        chat_after_phase: props.chatAfterPhase,
         message_index: props.messageIndex,
         message_length: props.messageLength,
       })
@@ -239,7 +240,7 @@ export function useAnalytics(context: AnalyticsContext) {
 - Context requires both `session_id` and `flow_id` (not optional)
 - All property names are snake_case
 - `baseProps` spread ensures every event has `session_id` and `flow_id`
-- `chat_version` is now a number (length of phasesCompleted array)
+- `chat_after_phase` is now a number (which phase was just completed)
 - `step_completed` has all required properties including `step_id`, `phase_step_index`, `time_on_step_ms`
 - Timers implemented via refs
 
@@ -290,7 +291,8 @@ messageCountRef.current += 1
 analytics.trackChatMessage({
   messageIndex: messageCountRef.current,
   messageLength: content.length,
-  phasesCompleted: phasesCompleted,  // ADD
+  phasesCompleted: phasesCompleted,      // ADD
+  chatAfterPhase: currentPhase,          // ADD (from props)
 })
 ```
 
@@ -333,7 +335,7 @@ In `src/app/[flowId]/page.tsx`, fix both `trackChatOpened` calls:
 ```typescript
 analytics.trackChatOpened({
   phasesCompleted: [...state.progress.completedPhases, currentPhaseNumber],
-  // REMOVE: chatVersion: `post-phase-${currentPhaseNumber}`
+  chatAfterPhase: currentPhaseNumber,
 })
 ```
 
@@ -341,7 +343,7 @@ analytics.trackChatOpened({
 ```typescript
 analytics.trackChatOpened({
   phasesCompleted: [...state.progress.completedPhases, currentPhaseNumber],
-  // REMOVE: chatVersion: `post-phase-${currentPhaseNumber}`
+  chatAfterPhase: currentPhaseNumber,
 })
 ```
 
@@ -536,8 +538,8 @@ After implementation, verify in PostHog Live Events:
 - [ ] `flow_started` has `utm_source`, `utm_campaign` (or null)
 - [ ] `step_completed` has `step_id`, `phase_step_index`, `time_on_step_ms`, `answer_key`, `answer_length`
 - [ ] `phase_completed` has `time_in_phase_ms`
-- [ ] `chat_opened` has `chat_version` as number (not string)
-- [ ] `chat_message_sent` has `phases_completed`, `chat_version` as number
+- [ ] `chat_opened` has `chat_after_phase` as number
+- [ ] `chat_message_sent` has `phases_completed`, `chat_after_phase` as number
 - [ ] `embed_shown` has `phases_completed`
 - [ ] `booking_clicked` fires when Calendly booking completes
 - [ ] User is identified when contact info submitted
@@ -552,9 +554,9 @@ After code is fixed, update/recreate insights:
 | Insight | Filter to Add |
 |---------|---------------|
 | All funnels | Add `flow_id = X` filter |
-| User Funnel: Start to Chat | Use `chat_version` (number) for breakdown, not string |
+| User Funnel: Start to Chat | Use `chat_after_phase` for breakdown |
 | Step Drop-off | Use `step_index` for ordered funnel steps |
-| Chat by Phase | Breakdown by `chat_version` (number) |
+| Chat by Phase | Breakdown by `chat_after_phase` |
 
 ---
 

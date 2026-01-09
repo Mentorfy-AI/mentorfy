@@ -789,6 +789,7 @@ function RenderEmbed({ embedData, onCheckoutComplete, onBookingComplete, onEmbed
 interface EmbeddedRafaelMessageProps {
   embedData: any
   onComplete?: () => void
+  onBookingComplete?: () => void
   onEmbedShown?: (embedType: 'checkout' | 'booking' | 'video') => void
   onBookingComplete?: () => void
 }
@@ -1300,6 +1301,7 @@ export function AIChat({
                       <EmbeddedRafaelMessage
                         embedData={message.embedData}
                         onComplete={handleStreamingComplete}
+                        onBookingComplete={handleBookingComplete}
                         onEmbedShown={handleEmbedShown}
                         onBookingComplete={handleBookingComplete}
                       />
@@ -1313,6 +1315,7 @@ export function AIChat({
                     <CompletedEmbeddedMessage
                       embedData={message.embedData}
                       thinkingTime={message.thinkingTime}
+                      onBookingComplete={handleBookingComplete}
                       onEmbedShown={handleEmbedShown}
                       onBookingComplete={handleBookingComplete}
                     />

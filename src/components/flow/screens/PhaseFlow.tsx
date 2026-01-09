@@ -14,8 +14,7 @@ import { ThinkingAnimation } from '../shared/ThinkingAnimation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
 import { getFlow } from '@/data/flows'
-import { useUser, useUserState } from '@/context/UserContext'
-import { useAgent } from '@/hooks/useAgent'
+import { useUser, useUserState, useSessionId } from '@/context/UserContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { COLORS } from '@/config/flow'
 
@@ -379,7 +378,7 @@ interface AIMomentStepContentProps {
 }
 
 function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }: AIMomentStepContentProps) {
-  const { getResponse } = useAgent()
+  const sessionId = useSessionId()
   const [response, setResponse] = useState<string | null>(null)
   const [embedData, setEmbedData] = useState<any>(null)
   const fetchedRef = useRef(false)
@@ -402,22 +401,58 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
   const typeSpeed = 45
   const deleteSpeed = 12
 
-  // Fetch response with real streaming (once per mount)
+  // Fetch diagnosis with streaming - uses AI SDK UI message stream format
   useEffect(() => {
-    if (fetchedRef.current) return
+    if (fetchedRef.current || !sessionId) return
     fetchedRef.current = true
 
-    async function fetchResponse() {
-      await getResponse(step.promptKey, state, null, (text, embed) => {
-        // Update response as chunks arrive
-        setResponse(text)
-        if (embed) setEmbedData(embed)
-      })
-      // Mark streaming complete when done
-      setStreamingComplete(true)
+    async function fetchDiagnosis() {
+      try {
+        const res = await fetch('/api/generate/diagnosis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, promptKey: step.promptKey })
+        })
+
+        if (!res.ok) return
+
+        const reader = res.body?.getReader()
+        if (!reader) return
+
+        const decoder = new TextDecoder()
+        let fullText = ''
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const data = JSON.parse(line.slice(6))
+              // AI SDK UI message stream format
+              if (data.type === 'text-delta' && data.delta) {
+                fullText += data.delta
+                setResponse(fullText)
+              } else if (data.type === 'tool-result' && data.output?.embedType) {
+                setEmbedData(data.output)
+              }
+            } catch { /* skip invalid JSON */ }
+          }
+        }
+
+        setStreamingComplete(true)
+      } catch (err) {
+        console.error('Diagnosis fetch error:', err)
+      }
     }
-    fetchResponse()
-  }, [step.promptKey, state, getResponse])
+    fetchDiagnosis()
+  }, [sessionId, step.promptKey])
 
   // Thinking animation (typing/pausing/deleting phases only)
   useEffect(() => {

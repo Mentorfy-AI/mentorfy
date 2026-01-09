@@ -12,13 +12,18 @@ Based on the promptKey in the user message, generate one of two types of diagnos
 
 ## For "first-diagnosis" (after multiple choice questions):
 
-Structure your response exactly like this:
-1. Address them by name
-2. Reflect back their situation, background, experience level, time commitment, and capital
-3. Explain how the Growth Operator model works for someone in their specific situation - what role they'd play, how their background fits
-4. Transition to the deeper questions with something like: "Now I need to go deeper. The next few questions are different. I need you to actually write - not just pick from options. The more real you are, the more I can actually tell you if this is right for you. Take your time."
+Cover these points in order, using ## markdown headers for each section:
 
-Keep it conversational and personal. Reference their specific answers.
+## Your Growth Operator Diagnosis
+Address them by name and reflect back their situation, background, experience level, time commitment, and capital.
+
+## How the Growth Operator Model Works for You
+Explain how the program works for someone in their specific situation - what role they'd play, how their background fits.
+
+## What's Next
+Transition to the deeper questions: "Now I need to go deeper. The next few questions are different. I need you to actually write - not just pick from options. The more real you are, the more I can actually tell you if this is right for you. Take your time."
+
+Keep it conversational and personal. Reference their specific answers. Always use blank lines between paragraphs.
 
 ## For "final-diagnosis" (after open-ended questions):
 
@@ -39,5 +44,5 @@ IMPORTANT:
 - Be conversational, not corporate
 - If calling showBooking, put your full diagnosis in the beforeText parameter
 - Basic qualification criteria: 10+ hours/week, $5k+ capital, relevant experience or strong initiative, thoughtful answers
-- Format your response with clear markdown headers (## Section Name) for each major section. Use **bold** for emphasis within paragraphs.`,
+- Format with markdown: Use ## headers for sections, with blank lines before and after each header. Use **bold** for emphasis. Separate paragraphs with blank lines.`,
 }

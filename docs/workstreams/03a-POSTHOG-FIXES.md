@@ -16,7 +16,7 @@
 | 4 | `chat_version` sent as string (`"post-phase-1"`), should be `chat_after_phase` (number) | Medium |
 | 5 | `step_completed` missing `step_id`, `phase_step_index`, `time_on_step_ms`, `answer_key`, `answer_length` | High |
 | 6 | `embed_shown` missing `phases_completed` | Medium |
-| 7 | `booking_clicked` never called | High |
+| 7 | `booking_clicked` never called | High (chat: DONE, sales page: TODO) |
 | 8 | `identify()` never called on contact submission | Medium |
 | 9 | Step/phase timers not implemented | Low |
 | 10 | `flow_started` missing UTM params | Low |
@@ -408,7 +408,14 @@ useEffect(() => {
 
 ## Fix 6: Track booking_clicked
 
-### In SalesPageStepContent (PhaseFlow.tsx)
+### In AIChat (for chat-based bookings) - DONE
+
+Chat-based booking tracking is implemented:
+- `ChatBookingEmbed` uses `useCalendlyEventListener` to detect booking completion
+- `onBookingComplete` callback is threaded through `RenderEmbed`, `EmbeddedRafaelMessage`, and `CompletedEmbeddedMessage`
+- `handleBookingComplete` in `AIChat` calls `analytics.trackBookingClicked({ source: 'chat' })`
+
+### In SalesPageStepContent (PhaseFlow.tsx) - TODO
 
 Add tracking when Calendly widget fires `onEventScheduled`:
 
@@ -432,10 +439,6 @@ useCalendlyEventListener({
 ```
 
 Note: SalesPageStepContent needs access to analytics and state. May need to pass these as props or restructure.
-
-### In AIChat (for chat-based bookings)
-
-When booking embed is clicked from chat, track it. This requires adding an `onBookingClick` callback to the booking embed component.
 
 ---
 
@@ -541,7 +544,8 @@ After implementation, verify in PostHog Live Events:
 - [ ] `chat_opened` has `chat_after_phase` as number
 - [ ] `chat_message_sent` has `phases_completed`, `chat_after_phase` as number
 - [ ] `embed_shown` has `phases_completed`
-- [ ] `booking_clicked` fires when Calendly booking completes
+- [x] `booking_clicked` fires when Calendly booking completes (chat source - DONE)
+- [ ] `booking_clicked` fires when Calendly booking completes (sales_page source - TODO)
 - [ ] User is identified when contact info submitted
 - [ ] All events can be filtered by `flow_id` in PostHog
 
@@ -566,4 +570,4 @@ After code is fixed, update/recreate insights:
 
 2. **Timer accuracy**: Step timers reset on each step completion. If user leaves and returns, time will be from when they returned, not original start. This is acceptable for v1.
 
-3. **Booking tracking scope**: Currently only covers Calendly in sales page. Chat-based booking tracking needs the embed component to expose a callback.
+3. **Booking tracking scope**: Chat-based booking tracking is implemented via `useCalendlyEventListener` in `ChatBookingEmbed`. Sales page booking tracking still needs to be added to `SalesPageStepContent`.

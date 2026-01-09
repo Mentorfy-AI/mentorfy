@@ -1,8 +1,10 @@
 import { streamText, tool } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { getAgent } from '@/agents/registry'
+import type { AgentConfig } from '@/agents/types'
 import { createTrace, flushLangfuse } from '@/lib/langfuse'
 import { generateLimiter, checkRateLimit, rateLimitResponse, getIdentifier } from '@/lib/ratelimit'
 import { sanitizeContextForAI } from '@/lib/context-sanitizer'
@@ -12,6 +14,17 @@ import type { EmbedData } from '@/types'
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
+
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
+})
+
+function getModel(agent: AgentConfig) {
+  if (agent.provider === 'google') {
+    return google(agent.model)
+  }
+  return anthropic(agent.model)
+}
 
 type RouteContext = { params: Promise<{ type: string }> }
 
@@ -149,7 +162,7 @@ export async function POST(req: Request, context: RouteContext) {
     })
 
     const generation = trace.generation({
-      name: `claude-${type}`,
+      name: `llm-${type}`,
       model: agent.model,
       modelParameters: {
         temperature: agent.temperature,
@@ -159,7 +172,7 @@ export async function POST(req: Request, context: RouteContext) {
     })
 
     const result = streamText({
-      model: anthropic(agent.model),
+      model: getModel(agent),
       system: agent.systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
       tools: Object.keys(tools || {}).length > 0 ? tools : undefined,

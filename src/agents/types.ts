@@ -16,6 +16,7 @@ export interface ToolConfig {
 export interface AgentConfig {
   id: string
   name: string
+  provider?: 'anthropic' | 'google'
   model: string
   systemPrompt: string
   maxTokens: number

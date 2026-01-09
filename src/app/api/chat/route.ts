@@ -184,20 +184,6 @@ export async function POST(req: Request) {
       ? getRafaelChatPrompt(embedSection)
       : agent.systemPrompt
 
-    // Create Langfuse trace
-    const trace = createTrace({
-      name: 'chat',
-      sessionId,
-      userId: sessionData.clerk_user_id || undefined,
-      metadata: { flowId: sessionData.flow_id, agentId, orgId: sessionData.clerk_org_id, availableTools: toolNames },
-    })
-
-    const generation = trace.generation({
-      name: 'claude-chat',
-      model: agent.model,
-      input: messages,
-    })
-
     // Get last user message for memory search
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content || ''
 
@@ -233,6 +219,30 @@ export async function POST(req: Request) {
 
     // Convert UI messages to model format
     const modelMessages = await convertToModelMessages(messages)
+
+    // Build messages array for Langfuse replay (system + UI messages)
+    const langfuseMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map((m: any) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })),
+    ]
+
+    // Create Langfuse trace
+    const trace = createTrace({
+      name: 'chat',
+      sessionId,
+      userId: sessionData.clerk_user_id || undefined,
+      metadata: { flowId: sessionData.flow_id, agentId, orgId: sessionData.clerk_org_id, hasTools: toolNames.length > 0, toolNames },
+    })
+
+    const generation = trace.generation({
+      name: 'claude-chat',
+      model: agent.model,
+      modelParameters: {
+        temperature: agent.temperature,
+        maxTokens: agent.maxTokens,
+      },
+      input: langfuseMessages,
+    })
 
     // Stream response with dynamic tools
     const result = streamText({

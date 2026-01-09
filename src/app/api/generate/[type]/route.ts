@@ -123,6 +123,22 @@ export async function POST(req: Request, context: RouteContext) {
     const shouldIncludeTools = promptKey === 'final-diagnosis' && calendlyUrl
     const tools = shouldIncludeTools ? buildDiagnosisTools(calendlyUrl) : undefined
 
+    // Build user message with sanitized context (removes phase/step references)
+    const sanitizedContext = sanitizeContextForAI(session.context)
+    const contextStr = JSON.stringify(sanitizedContext, null, 2)
+    const historyStr = conversationHistory
+      ? `\n\nConversation history:\n${conversationHistory}`
+      : ''
+
+    const promptKeyInfo = promptKey ? `\nPrompt key: ${promptKey}` : ''
+    const userMessage = `User context:\n${contextStr}${historyStr}${promptKeyInfo}\n\nGenerate the ${type} based on this information.`
+
+    // Build messages array for LLM call (also used for Langfuse replay)
+    const messages: { role: 'system' | 'user'; content: string }[] = [
+      { role: 'system', content: agent.systemPrompt },
+      { role: 'user', content: userMessage },
+    ]
+
     // Create Langfuse trace
     const trace = createTrace({
       name: `generate-${type}`,
@@ -134,18 +150,12 @@ export async function POST(req: Request, context: RouteContext) {
     const generation = trace.generation({
       name: `claude-${type}`,
       model: agent.model,
-      input: { context: session.context, conversationHistory, promptKey },
+      modelParameters: {
+        temperature: agent.temperature,
+        maxTokens: agent.maxTokens,
+      },
+      input: messages,
     })
-
-    // Build user message with sanitized context (removes phase/step references)
-    const sanitizedContext = sanitizeContextForAI(session.context)
-    const contextStr = JSON.stringify(sanitizedContext, null, 2)
-    const historyStr = conversationHistory
-      ? `\n\nConversation history:\n${conversationHistory}`
-      : ''
-
-    const promptKeyInfo = promptKey ? `\nPrompt key: ${promptKey}` : ''
-    const userMessage = `User context:\n${contextStr}${historyStr}${promptKeyInfo}\n\nGenerate the ${type} based on this information.`
 
     const result = streamText({
       model: anthropic(agent.model),

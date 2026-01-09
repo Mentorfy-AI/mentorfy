@@ -202,12 +202,9 @@ export async function POST(req: Request, context: RouteContext) {
       },
     })
 
-    // Return UI message stream if tools are available (allows tool results to be parsed)
-    // Otherwise return plain text stream for backward compatibility
-    if (shouldIncludeTools) {
-      return result.toUIMessageStreamResponse()
-    }
-    return result.toTextStreamResponse()
+    // Always use UI message stream - the client parser handles it correctly
+    // and it preserves newlines (plain text stream parsing strips them)
+    return result.toUIMessageStreamResponse()
   } catch (err) {
     console.error(`Generate ${type} error:`, err)
     return new Response(JSON.stringify({ error: 'Internal error' }), {

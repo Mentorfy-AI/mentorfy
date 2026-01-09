@@ -36,13 +36,14 @@ export async function PATCH(req: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Session not found' }, { status: 404 })
   }
 
-  // Check for returning user by email
+  // Check for returning user by email (must match same flow)
   if (body.email && body.email !== existing.email) {
     const { data: existingByEmail } = await db
       .from('sessions')
       .select('id')
       .eq('email', body.email)
       .eq('clerk_org_id', existing.clerk_org_id)
+      .eq('flow_id', existing.flow_id)
       .neq('id', id)
       .single()
 

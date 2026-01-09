@@ -521,9 +521,16 @@ interface RafaelContentProps {
   content: string
 }
 
+// Normalize markdown to ensure ## headers are properly separated as blocks
+function normalizeMarkdown(content: string): string {
+  // Insert double newline before ## if not already preceded by newline
+  return content.replace(/([^\n])\n?(## )/g, '$1\n\n$2')
+}
+
 // Format Rafael's message content with proper styling
 function RafaelContent({ content }: RafaelContentProps) {
-  const blocks = content.split('\n\n').filter(p => p.trim())
+  const normalized = normalizeMarkdown(content)
+  const blocks = normalized.split('\n\n').filter(p => p.trim())
   return <>{blocks.map((block, i) => renderFormattedBlock(block, i, i === 0, i === blocks.length - 1, true))}</>
 }
 
@@ -556,7 +563,8 @@ function StreamingRafaelMessage({ content, onComplete }: StreamingRafaelMessageP
     return () => clearInterval(interval)
   }, [content, onComplete])
 
-  const blocks = displayedText.split('\n\n').filter(p => p.trim())
+  const normalized = normalizeMarkdown(displayedText)
+  const blocks = normalized.split('\n\n').filter(p => p.trim())
 
   return (
     <motion.div
@@ -840,8 +848,8 @@ function EmbeddedRafaelMessage({ embedData, onComplete, onEmbedShown, onBookingC
     return () => clearInterval(interval)
   }, [phase, afterText, onComplete])
 
-  const beforeBlocks = displayedBefore.split('\n\n').filter(p => p.trim())
-  const afterBlocks = displayedAfter.split('\n\n').filter(p => p.trim())
+  const beforeBlocks = normalizeMarkdown(displayedBefore).split('\n\n').filter(p => p.trim())
+  const afterBlocks = normalizeMarkdown(displayedAfter).split('\n\n').filter(p => p.trim())
 
   return (
     <motion.div
@@ -882,8 +890,8 @@ function CompletedEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBoo
     return (ms / 1000).toFixed(2) + 's'
   }
 
-  const beforeBlocks = embedData.beforeText.split('\n\n').filter((p: string) => p.trim())
-  const afterBlocks = embedData.afterText.split('\n\n').filter((p: string) => p.trim())
+  const beforeBlocks = normalizeMarkdown(embedData.beforeText).split('\n\n').filter((p: string) => p.trim())
+  const afterBlocks = normalizeMarkdown(embedData.afterText).split('\n\n').filter((p: string) => p.trim())
 
   return (
     <div style={{ fontFamily: "'Lora', Charter, Georgia, serif" }}>

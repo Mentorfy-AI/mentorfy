@@ -4,6 +4,11 @@ import { useState, useEffect, useRef, MutableRefObject } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { GlassHeader } from '../shared/GlassHeader'
+
+// Normalize markdown to ensure ## headers are properly separated
+function normalizeMarkdown(content: string): string {
+  return content.replace(/([^\n])\n?(## )/g, '$1\n\n$2')
+}
 import { StepProgress } from '../shared/StepProgress'
 import { ThinkingAnimation } from '../shared/ThinkingAnimation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
@@ -599,7 +604,7 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
             `}</style>
             {/* Render beforeText from embed if present, otherwise full response */}
             <ReactMarkdown>
-              {embedData?.beforeText || response || ''}
+              {normalizeMarkdown(embedData?.beforeText || response || '')}
             </ReactMarkdown>
             {/* Blinking cursor while streaming */}
             {!streamingComplete && (

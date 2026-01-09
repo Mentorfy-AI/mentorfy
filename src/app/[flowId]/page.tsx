@@ -13,6 +13,7 @@ import { AIChat } from '@/components/flow/screens/AIChat'
 import { COLORS, TIMING, LAYOUT } from '@/config/flow'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { getFlow } from '@/data/flows'
 import type { FlowDefinition } from '@/data/flows/types'
 
 // Animated checkmark component
@@ -151,17 +152,18 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
   // Ref for the Chat Panel's scroll container - passed to AIChat for scroll control
   const chatPanelScrollRef = useRef<HTMLDivElement>(null)
 
-  // Wait for session to load before rendering - prevents flash of welcome screen
-  if (sessionLoading) {
+  // Screen states: 'welcome', 'level-flow', 'experience'
+  const currentScreen = state.progress.currentScreen
+
+  // Only block on session loading for screens that need session data
+  // Welcome screen can render immediately since it doesn't need session
+  if (sessionLoading && currentScreen !== 'welcome') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading...</div>
       </div>
     )
   }
-
-  // Screen states: 'welcome', 'level-flow', 'experience'
-  const currentScreen = state.progress.currentScreen
   const currentPhaseNumber = state.progress.currentPhase
   const currentPanel = state.timeline?.currentPanel ?? 0
   const totalPhases = flow.phases.length
@@ -529,36 +531,17 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
 }
 
 function FlowPageLoader({ flowId }: { flowId: string }) {
-  const [flow, setFlow] = useState<FlowDefinition | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch(`/api/flow/${flowId}`)
-      .then(r => {
-        if (!r.ok) throw new Error('Flow not found')
-        return r.json()
-      })
-      .then(setFlow)
-      .catch(e => setError(e.message))
-  }, [flowId])
-
-  if (error) {
+  // Use synchronous getFlow - flow data is static, no need for API call
+  try {
+    const flow = getFlow(flowId)
+    return <FlowContent flow={flow} />
+  } catch {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-red-500">{error}</div>
+        <div className="text-red-500">Flow not found</div>
       </div>
     )
   }
-
-  if (!flow) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading...</div>
-      </div>
-    )
-  }
-
-  return <FlowContent flow={flow} />
 }
 
 export default function FlowPage({ params }: { params: Promise<{ flowId: string }> }) {

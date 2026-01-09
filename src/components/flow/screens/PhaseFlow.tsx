@@ -196,9 +196,10 @@ function LongAnswerStepContent({ step, onAnswer }: LongAnswerStepContentProps) {
 interface ContactInfoStepContentProps {
   step: any
   onAnswer: (stateKey: string, value: Record<string, string>) => void
+  analytics: ReturnType<typeof useAnalytics>
 }
 
-function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps) {
+function ContactInfoStepContent({ step, onAnswer, analytics }: ContactInfoStepContentProps) {
   const { updateContact } = useUser()
   const [values, setValues] = useState<Record<string, string>>({})
   const [focusedField, setFocusedField] = useState<string | null>(null)
@@ -219,6 +220,13 @@ function ContactInfoStepContent({ step, onAnswer }: ContactInfoStepContentProps)
 
     // Update contact info on server
     await updateContact(values)
+
+    // Identify user in PostHog
+    analytics.identify({
+      email: values.email || '',
+      name: values.name || values.fullName,
+      phone: values.phone,
+    })
 
     // Advance to next step
     onAnswer(step.stateKey, values)
@@ -1684,6 +1692,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
               key={currentStepIndex}
               step={currentStep}
               onAnswer={handleAnswer}
+              analytics={analytics}
             />
           )
         } else {

@@ -7,6 +7,7 @@
  */
 
 type SessionContext = {
+  // Rafael TATS flow structure
   situation?: {
     bookingStatus?: string
     dayRate?: string
@@ -36,6 +37,18 @@ type SessionContext = {
     pricingFear?: string
     doubleRevenue?: string
   }
+  // Growth Operator flow structure
+  assessment?: {
+    situation?: string
+    background?: string
+    experience?: string
+    time?: string
+    capital?: string
+    whatsGoingOn?: string
+    whyThis?: string
+    whyYou?: string
+  }
+  // Common fields
   progress?: {
     currentScreen?: string
     currentPhase?: number
@@ -57,6 +70,7 @@ type SanitizedContext = {
     name?: string
     email?: string
   }
+  // Rafael TATS sanitized output
   businessStatus?: {
     bookingStatus?: string
     dayRate?: string
@@ -78,6 +92,17 @@ type SanitizedContext = {
     objectionResponse?: string
     mainFear?: string
     revenueGoals?: string
+  }
+  // Growth Operator sanitized output
+  applicantProfile?: {
+    currentSituation?: string
+    professionalBackground?: string
+    entrepreneurExperience?: string
+    weeklyTimeAvailable?: string
+    startupCapital?: string
+    motivation?: string
+    whyThisOpportunity?: string
+    pitchForSelection?: string
   }
 }
 
@@ -146,6 +171,23 @@ export function sanitizeContextForAI(context: SessionContext): SanitizedContext 
     })
     if (Object.keys(pricingMindset).length > 0) {
       sanitized.pricingMindset = pricingMindset
+    }
+  }
+
+  // Growth Operator: applicant profile from assessment
+  if (context.assessment) {
+    const applicantProfile = removeEmpty({
+      currentSituation: context.assessment.situation,
+      professionalBackground: context.assessment.background,
+      entrepreneurExperience: context.assessment.experience,
+      weeklyTimeAvailable: context.assessment.time,
+      startupCapital: context.assessment.capital,
+      motivation: context.assessment.whatsGoingOn,
+      whyThisOpportunity: context.assessment.whyThis,
+      pitchForSelection: context.assessment.whyYou,
+    })
+    if (Object.keys(applicantProfile).length > 0) {
+      sanitized.applicantProfile = applicantProfile
     }
   }
 

@@ -27,7 +27,7 @@ export async function POST(_req: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const orgId = session.clerk_org_id // e.g., 'org_35wDDMLUgC1nZZLkDLtZ3A8TbJY'
+    const orgId = session.clerk_org_id // null for most sessions (auth not used)
 
     // 2. Update session with Clerk user ID
     await db

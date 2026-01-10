@@ -45,6 +45,7 @@ export function writeMemory(containerId: string, content: string): void {
 }
 
 // Helper to generate container ID
-export function getContainerId(orgId: string, sessionId: string): string {
-  return `${orgId}-${sessionId}`
+// Session IDs are globally unique UUIDs, so we just use them directly
+export function getContainerId(sessionId: string): string {
+  return sessionId
 }

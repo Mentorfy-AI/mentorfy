@@ -232,7 +232,7 @@ export async function POST(req: Request) {
       name: 'chat',
       sessionId,
       userId: sessionData.clerk_user_id || undefined,
-      metadata: { flowId: sessionData.flow_id, agentId, orgId: sessionData.clerk_org_id, hasTools: toolNames.length > 0, toolNames },
+      metadata: { flowId: sessionData.flow_id, agentId, hasTools: toolNames.length > 0, toolNames },
       input: langfuseMessages,
     })
 

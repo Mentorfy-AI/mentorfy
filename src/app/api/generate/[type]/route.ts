@@ -190,7 +190,6 @@ export async function POST(req: Request, context: RouteContext) {
       metadata: {
         flowId,
         agentId,
-        orgId: session.clerk_org_id,
         type,
         promptKey,
         hasTools: !!tools,

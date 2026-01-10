@@ -2,27 +2,22 @@ import { NextResponse } from 'next/server'
 import { db, Session } from '@/lib/db'
 import { getContainerId } from '@/lib/supermemory'
 
-// POST /api/session - create a new session (for authenticated users)
+// POST /api/session - create a new session
 export async function POST(req: Request) {
   try {
-    const { clerk_org_id, clerk_user_id, flow_id, context } = await req.json()
-
-    if (!clerk_org_id) {
-      return NextResponse.json({ error: 'clerk_org_id required' }, { status: 400 })
-    }
+    const { clerk_user_id, flow_id, context } = await req.json()
 
     if (!flow_id) {
       return NextResponse.json({ error: 'flow_id required' }, { status: 400 })
     }
 
     const sessionId = crypto.randomUUID()
-    const supermemoryContainer = getContainerId(clerk_org_id, sessionId)
+    const supermemoryContainer = getContainerId(sessionId)
 
     const { data, error } = await db
       .from('sessions')
       .insert({
         id: sessionId,
-        clerk_org_id,
         clerk_user_id: clerk_user_id || null,
         flow_id,
         supermemory_container: supermemoryContainer,

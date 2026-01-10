@@ -3,7 +3,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useReducer } from 'react'
 
 const SESSION_KEY = 'mentorfy-session-id'
-const CLERK_ORG_ID = 'org_35wDDMLUgC1nZZLkDLtZ3A8TbJY' // MVP hardcode
 
 interface Session {
   id: string
@@ -101,7 +100,7 @@ export function UserProvider({ children, flowId = 'rafael-tats' }: UserProviderP
         const res = await fetch('/api/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clerk_org_id: CLERK_ORG_ID, flow_id: flowId })
+          body: JSON.stringify({ flow_id: flowId })
         })
         if (res.ok) {
           const { sessionId } = await res.json()

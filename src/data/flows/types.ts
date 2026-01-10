@@ -4,6 +4,16 @@ export interface FlowDefinition {
   phases: PhaseConfig[]
   agents: AgentConfig
   embeds: EmbedConfig
+  /**
+   * Maps raw session context keys to sanitized output keys for AI agents.
+   * Format: 'outputKey': 'inputPath' where inputPath uses dot notation.
+   * Groups outputs by category (e.g., 'businessStatus.bookingStatus': 'situation.bookingStatus')
+   */
+  contextMapping?: ContextMapping
+}
+
+export interface ContextMapping {
+  [outputKey: string]: string
 }
 
 export interface MentorConfig {

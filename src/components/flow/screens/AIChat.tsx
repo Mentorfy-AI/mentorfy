@@ -11,10 +11,8 @@ import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
 import { useUserState, useSessionId } from '@/context/UserContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/flow'
+import { getFlow } from '@/data/flows'
 import type { EmbedData } from '@/types'
-
-// Hardcoded for Rafael - swap when mentor #2 comes
-const AGENT_ID = 'rafael-chat'
 
 /**
  * Extract text content from UIMessage parts
@@ -275,14 +273,14 @@ function UserBubble({ children }: UserBubbleProps) {
   )
 }
 
-interface RafaelMessageProps {
+interface AssistantMessageProps {
   children: ReactNode
   content?: string
   thinkingTime?: number
 }
 
-// Rafael message with proper formatting
-function RafaelMessage({ children, thinkingTime }: RafaelMessageProps) {
+// Assistant message with proper formatting
+function AssistantMessage({ children, thinkingTime }: AssistantMessageProps) {
   const formatTime = (ms: number | undefined) => {
     if (!ms) return null
     return (ms / 1000).toFixed(2) + 's'
@@ -517,7 +515,7 @@ function renderFormattedBlock(block: string, index: number, isFirst: boolean, is
   )
 }
 
-interface RafaelContentProps {
+interface FormattedContentProps {
   content: string
 }
 
@@ -527,20 +525,20 @@ function normalizeMarkdown(content: string): string {
   return content.replace(/([^\n])\n?(## )/g, '$1\n\n$2')
 }
 
-// Format Rafael's message content with proper styling
-function RafaelContent({ content }: RafaelContentProps) {
+// Format assistant message content with proper styling
+function FormattedContent({ content }: FormattedContentProps) {
   const normalized = normalizeMarkdown(content)
   const blocks = normalized.split('\n\n').filter(p => p.trim())
   return <>{blocks.map((block, i) => renderFormattedBlock(block, i, i === 0, i === blocks.length - 1, true))}</>
 }
 
-interface StreamingRafaelMessageProps {
+interface StreamingAssistantMessageProps {
   content: string
   onComplete?: () => void
 }
 
 // Streaming message component - uses renderFormattedBlock for consistent formatting
-function StreamingRafaelMessage({ content, onComplete }: StreamingRafaelMessageProps) {
+function StreamingAssistantMessage({ content, onComplete }: StreamingAssistantMessageProps) {
   const [displayedText, setDisplayedText] = useState('')
   const [isComplete, setIsComplete] = useState(false)
   const streamSpeed = TIMING.STREAM_SPEED
@@ -794,15 +792,15 @@ function RenderEmbed({ embedData, onCheckoutComplete, onBookingComplete, onEmbed
   }
 }
 
-interface EmbeddedRafaelMessageProps {
+interface StreamingEmbeddedMessageProps {
   embedData: any
   onComplete?: () => void
   onEmbedShown?: (embedType: 'checkout' | 'booking' | 'video') => void
   onBookingComplete?: () => void
 }
 
-// Message with embedded content
-function EmbeddedRafaelMessage({ embedData, onComplete, onEmbedShown, onBookingComplete }: EmbeddedRafaelMessageProps) {
+// Message with embedded content (streaming)
+function StreamingEmbeddedMessage({ embedData, onComplete, onEmbedShown, onBookingComplete }: StreamingEmbeddedMessageProps) {
   const { beforeText, afterText } = embedData
   const [phase, setPhase] = useState(0) // 0: before, 1: embed, 2: after, 3: complete
   const [displayedBefore, setDisplayedBefore] = useState('')
@@ -876,15 +874,15 @@ function EmbeddedRafaelMessage({ embedData, onComplete, onEmbedShown, onBookingC
   )
 }
 
-interface CompletedEmbeddedMessageProps {
+interface StaticEmbeddedMessageProps {
   embedData: any
   thinkingTime?: number
   onEmbedShown?: (embedType: 'checkout' | 'booking' | 'video') => void
   onBookingComplete?: () => void
 }
 
-// Completed embedded message (non-streaming, already in state)
-function CompletedEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBookingComplete }: CompletedEmbeddedMessageProps) {
+// Static embedded message (non-streaming, already in state)
+function StaticEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBookingComplete }: StaticEmbeddedMessageProps) {
   const formatTime = (ms: number | undefined) => {
     if (!ms) return null
     return (ms / 1000).toFixed(2) + 's'
@@ -1215,9 +1213,10 @@ export function AIChat({
 
     try {
       // Use useChat's sendMessage - it handles streaming and tool invocations
+      // agentId is derived from flowId for routing to correct chat agent
       await sendMessage(
         { text: content },
-        { body: { sessionId, agentId: AGENT_ID } }
+        { body: { sessionId, agentId: `${flowId}-chat` } }
       )
 
       setIsTyping(false)
@@ -1311,29 +1310,29 @@ export function AIChat({
                     isTyping ? (
                       <ThinkingIndicator onTimeUpdate={handleThinkingTimeUpdate} />
                     ) : message.embedData ? (
-                      <EmbeddedRafaelMessage
+                      <StreamingEmbeddedMessage
                         embedData={message.embedData}
                         onComplete={handleStreamingComplete}
                         onEmbedShown={handleEmbedShown}
                         onBookingComplete={handleBookingComplete}
                       />
                     ) : (
-                      <StreamingRafaelMessage
+                      <StreamingAssistantMessage
                         content={message.content || ''}
                         onComplete={handleStreamingComplete}
                       />
                     )
                   ) : message.embedData ? (
-                    <CompletedEmbeddedMessage
+                    <StaticEmbeddedMessage
                       embedData={message.embedData}
                       thinkingTime={message.thinkingTime}
                       onEmbedShown={handleEmbedShown}
                       onBookingComplete={handleBookingComplete}
                     />
                   ) : message.content ? (
-                    <RafaelMessage content={message.content} thinkingTime={message.thinkingTime}>
-                      <RafaelContent content={message.content} />
-                    </RafaelMessage>
+                    <AssistantMessage content={message.content} thinkingTime={message.thinkingTime}>
+                      <FormattedContent content={message.content} />
+                    </AssistantMessage>
                   ) : null}
                 </div>
               )
@@ -1348,7 +1347,7 @@ export function AIChat({
 
       {/* Chat input */}
       <ChatBar
-        placeholder="Message Rafael..."
+        placeholder={`Message ${getFlow(flowId).mentor.name}...`}
         onSend={handleSendMessage}
         disabled={isTyping}
         continuePhase={currentPhase <= 4 ? currentPhase : undefined}

@@ -42,7 +42,6 @@ export async function PATCH(req: Request, context: RouteContext) {
       .from('sessions')
       .select('id')
       .eq('email', body.email)
-      .eq('clerk_org_id', existing.clerk_org_id)
       .eq('flow_id', existing.flow_id)
       .neq('id', id)
       .single()

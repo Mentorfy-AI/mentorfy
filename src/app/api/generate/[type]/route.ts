@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { getAgent } from '@/agents/registry'
 import type { AgentConfig } from '@/agents/types'
-import { createTrace, flushLangfuse } from '@/lib/langfuse'
+import { createTrace, flushLangfuse, getAgentPrompt } from '@/lib/langfuse'
 import { generateLimiter, checkRateLimit, rateLimitResponse, getIdentifier } from '@/lib/ratelimit'
 import { sanitizeContextForAI } from '@/lib/context-sanitizer'
 import { getFlow } from '@/data/flows'
@@ -158,13 +158,16 @@ export async function POST(req: Request, context: RouteContext) {
       })
     }
 
+    // Fetch prompt from Langfuse (falls back to hardcoded if unavailable)
+    const { systemPrompt, langfusePrompt, promptVersion, promptName } = await getAgentPrompt(agentId)
+
     // Build tools for prompts that can show booking (final-diagnosis for v1, fit-assessment for v2)
     const toolPromptKeys = ['final-diagnosis', 'fit-assessment']
     const shouldIncludeTools = toolPromptKeys.includes(promptKey || '') && calendlyUrl
     const tools = shouldIncludeTools ? buildDiagnosisTools(calendlyUrl) : undefined
 
     // Build user message with sanitized context (removes phase/step references)
-    const sanitizedContext = sanitizeContextForAI(session.context)
+    const sanitizedContext = sanitizeContextForAI(flowId, session.context)
     const contextStr = JSON.stringify(sanitizedContext, null, 2)
     const historyStr = conversationHistory
       ? `\n\nConversation history:\n${conversationHistory}`
@@ -175,7 +178,7 @@ export async function POST(req: Request, context: RouteContext) {
 
     // Build messages array for LLM call (also used for Langfuse replay)
     const messages: { role: 'system' | 'user'; content: string }[] = [
-      { role: 'system', content: agent.systemPrompt },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage },
     ]
 
@@ -184,7 +187,16 @@ export async function POST(req: Request, context: RouteContext) {
       name: `generate-${type}`,
       sessionId,
       userId: session.clerk_user_id || undefined,
-      metadata: { flowId, agentId, orgId: session.clerk_org_id, type, promptKey, hasTools: !!tools, toolNames: tools ? Object.keys(tools) : [] },
+      metadata: {
+        flowId,
+        agentId,
+        type,
+        promptKey,
+        hasTools: !!tools,
+        toolNames: tools ? Object.keys(tools) : [],
+        promptName,
+        promptVersion,
+      },
       input: messages,
     })
 
@@ -196,11 +208,13 @@ export async function POST(req: Request, context: RouteContext) {
         maxTokens: agent.maxTokens,
       },
       input: messages,
+      // Link to Langfuse prompt for version tracking
+      prompt: langfusePrompt,
     })
 
     const result = streamText({
       model: getModel(agent),
-      system: agent.systemPrompt,
+      system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
       tools: Object.keys(tools || {}).length > 0 ? tools : undefined,
       maxOutputTokens: agent.maxTokens,

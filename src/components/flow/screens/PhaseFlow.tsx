@@ -97,11 +97,19 @@ interface LongAnswerStepContentProps {
   step: any
   onAnswer: (stateKey: string, value: string) => void
   sessionId?: string
+  initialValue?: string
 }
 
-function LongAnswerStepContent({ step, onAnswer, sessionId }: LongAnswerStepContentProps) {
-  const [value, setValue] = useState('')
+function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }: LongAnswerStepContentProps) {
+  const [value, setValue] = useState(initialValue)
   const [isFocused, setIsFocused] = useState(false)
+
+  // Sync value with initialValue when it changes (e.g., when navigating back and state updates)
+  useEffect(() => {
+    if (initialValue && initialValue !== value) {
+      setValue(initialValue)
+    }
+  }, [initialValue])
   const [fullQuestion, setFullQuestion] = useState<string | null>(null) // Full text from API
   const [displayedQuestion, setDisplayedQuestion] = useState('') // Text being typed out
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(!!step.personalizePromptKey)
@@ -1720,6 +1728,17 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
   )
 }
 
+// Helper to extract nested value from state using dot-separated path (e.g., "models.whatHappened")
+function getNestedValue(obj: any, path: string): any {
+  const parts = path.split('.')
+  let current = obj
+  for (const part of parts) {
+    if (current == null) return undefined
+    current = current[part]
+  }
+  return current
+}
+
 // Content transition variants - direction-aware horizontal slide
 const getContentVariants = (direction: number) => ({
   initial: { opacity: 0, x: direction * 60 },
@@ -1939,12 +1958,15 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
             />
           )
         } else {
+          // Get previously saved answer from state.answers (if navigating back)
+          const savedValue = currentStep.stateKey ? getNestedValue(state.answers, currentStep.stateKey) : undefined
           return (
             <LongAnswerStepContent
               key={currentStepIndex}
               step={currentStep}
               onAnswer={handleAnswer}
               sessionId={state.sessionId || undefined}
+              initialValue={typeof savedValue === 'string' ? savedValue : ''}
             />
           )
         }

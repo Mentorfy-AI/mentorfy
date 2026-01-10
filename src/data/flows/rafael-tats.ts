@@ -28,6 +28,29 @@ export const rafaelTatsFlow: FlowDefinition = {
     bookingAfterPhase: 4,
   },
 
+  // Maps raw session state keys to sanitized keys for AI agents
+  contextMapping: {
+    // Business status from situation
+    'businessStatus.bookingStatus': 'situation.bookingStatus',
+    'businessStatus.dayRate': 'situation.dayRate',
+    'businessStatus.mainBlocker': 'situation.blocker',
+    'businessStatus.selfReflection': 'situation.confession',
+    // Content strategy from phase2 + phase3
+    'contentStrategy.primaryMetric': 'phase2.checkFirst',
+    'contentStrategy.followerGoalMindset': 'phase2.hundredKFollowers',
+    'contentStrategy.successDefinition': 'phase2.postWorked',
+    'contentStrategy.viewsReflection': 'phase2.viewsReflection',
+    'contentStrategy.weeklyTimeInvested': 'phase3.timeOnContent',
+    'contentStrategy.biggestChallenge': 'phase3.hardestPart',
+    'contentStrategy.creatorIdentity': 'phase3.contentCreatorIdentity',
+    'contentStrategy.timeGoals': 'phase3.extraTime',
+    // Pricing mindset from phase4
+    'pricingMindset.lastPriceIncrease': 'phase4.lastPriceRaise',
+    'pricingMindset.objectionResponse': 'phase4.tooExpensiveResponse',
+    'pricingMindset.mainFear': 'phase4.pricingFear',
+    'pricingMindset.revenueGoals': 'phase4.doubleRevenue',
+  },
+
   phases: [
     {
       id: 1,

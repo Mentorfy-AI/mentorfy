@@ -6,63 +6,15 @@
  * This prevents agents from mentioning "phases" or "steps" which breaks immersion.
  */
 
+import { getFlow, type ContextMapping } from '@/data/flows'
+
 type SessionContext = {
-  // Rafael TATS flow structure
-  situation?: {
-    bookingStatus?: string
-    dayRate?: string
-    goal?: string
-    blocker?: string
-    confession?: string
-    experience?: string
-    currentIncome?: string
-    biggestChallenge?: string
-    longAnswer?: string
+  user?: {
+    name?: string
+    email?: string
+    phone?: string
   }
-  phase2?: {
-    checkFirst?: string
-    hundredKFollowers?: string
-    postWorked?: string
-    viewsReflection?: string
-  }
-  phase3?: {
-    timeOnContent?: string
-    hardestPart?: string
-    contentCreatorIdentity?: string
-    extraTime?: string
-  }
-  phase4?: {
-    lastPriceRaise?: string
-    tooExpensiveResponse?: string
-    pricingFear?: string
-    doubleRevenue?: string
-  }
-  // Growth Operator v1 flow structure (legacy)
-  assessment?: {
-    situation?: string
-    background?: string
-    experience?: string
-    time?: string
-    capital?: string
-    whatsGoingOn?: string
-    whyThis?: string
-    whyYou?: string
-  }
-  // Growth Operator v2 flow structure
-  models?: {
-    tried?: string
-    whatHappened?: string
-    whyFailed?: string
-  }
-  vision?: {
-    whatChanges?: string
-    whyNow?: string
-  }
-  commitment?: {
-    ready?: string
-    capital?: string
-  }
-  // Common fields
+  // Progress tracking (internal, never shared with AI)
   progress?: {
     currentScreen?: string
     currentPhase?: number
@@ -71,11 +23,7 @@ type SessionContext = {
     videosWatched?: string[]
     justCompletedLevel?: boolean
   }
-  user?: {
-    name?: string
-    email?: string
-    phone?: string
-  }
+  // All other fields are flow-specific and dynamically mapped
   [key: string]: any
 }
 
@@ -84,64 +32,55 @@ type SanitizedContext = {
     name?: string
     email?: string
   }
-  // Rafael TATS sanitized output
-  businessStatus?: {
-    bookingStatus?: string
-    dayRate?: string
-    mainBlocker?: string
-    selfReflection?: string
-  }
-  contentStrategy?: {
-    primaryMetric?: string
-    followerGoalMindset?: string
-    successDefinition?: string
-    viewsReflection?: string
-    weeklyTimeInvested?: string
-    biggestChallenge?: string
-    creatorIdentity?: string
-    timeGoals?: string
-  }
-  pricingMindset?: {
-    lastPriceIncrease?: string
-    objectionResponse?: string
-    mainFear?: string
-    revenueGoals?: string
-  }
-  // Growth Operator v1 sanitized output (legacy)
-  applicantProfile?: {
-    currentSituation?: string
-    professionalBackground?: string
-    entrepreneurExperience?: string
-    weeklyTimeAvailable?: string
-    startupCapital?: string
-    motivation?: string
-    whyThisOpportunity?: string
-    pitchForSelection?: string
-  }
-  // Growth Operator v2 sanitized output
-  businessModelHistory?: {
-    modelTried?: string
-    whatHappened?: string
-    whyTheyThinkItFailed?: string
-  }
-  futureVision?: {
-    whatWouldChange?: string
-    whyNow?: string
-  }
-  readiness?: {
-    isCommitted?: string
-    availableCapital?: string
-  }
+  [key: string]: any
 }
 
 /**
- * Removes empty strings and undefined values from an object
+ * Gets a nested value from an object using dot notation path
  */
-function removeEmpty<T extends Record<string, any>>(obj: T): Partial<T> {
-  const result: Partial<T> = {}
+function getNestedValue(obj: any, path: string): any {
+  const parts = path.split('.')
+  let current = obj
+  for (const part of parts) {
+    if (current === undefined || current === null) return undefined
+    current = current[part]
+  }
+  return current
+}
+
+/**
+ * Sets a nested value in an object using dot notation path
+ */
+function setNestedValue(obj: any, path: string, value: any): void {
+  const parts = path.split('.')
+  let current = obj
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i]
+    if (current[part] === undefined) {
+      current[part] = {}
+    }
+    current = current[part]
+  }
+  current[parts[parts.length - 1]] = value
+}
+
+/**
+ * Removes empty strings, undefined, and null values from nested objects
+ */
+function removeEmptyValues(obj: any): any {
+  if (typeof obj !== 'object' || obj === null) return obj
+
+  const result: any = {}
   for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined && value !== '' && value !== null) {
-      result[key as keyof T] = value
+    if (value === undefined || value === '' || value === null) continue
+
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      const cleaned = removeEmptyValues(value)
+      if (Object.keys(cleaned).length > 0) {
+        result[key] = cleaned
+      }
+    } else {
+      result[key] = value
     }
   }
   return result
@@ -149,9 +88,10 @@ function removeEmpty<T extends Record<string, any>>(obj: T): Partial<T> {
 
 /**
  * Transforms raw session context into AI-friendly semantic labels.
+ * Uses the flow's contextMapping to dynamically transform keys.
  * Strips out internal tracking data and renames phase-specific keys.
  */
-export function sanitizeContextForAI(context: SessionContext): SanitizedContext {
+export function sanitizeContextForAI(flowId: string, context: SessionContext): SanitizedContext {
   const sanitized: SanitizedContext = {}
 
   // User info (keep name for personalization, omit phone/email for privacy in prompts)
@@ -159,102 +99,20 @@ export function sanitizeContextForAI(context: SessionContext): SanitizedContext 
     sanitized.user = { name: context.user.name }
   }
 
-  // Business status from situation
-  if (context.situation) {
-    const businessStatus = removeEmpty({
-      bookingStatus: context.situation.bookingStatus,
-      dayRate: context.situation.dayRate,
-      mainBlocker: context.situation.blocker,
-      selfReflection: context.situation.confession,
-    })
-    if (Object.keys(businessStatus).length > 0) {
-      sanitized.businessStatus = businessStatus
+  // Get the flow's context mapping
+  const flow = getFlow(flowId)
+  const mapping = flow.contextMapping
+
+  if (mapping) {
+    // Apply the flow's context mapping dynamically
+    for (const [outputPath, inputPath] of Object.entries(mapping)) {
+      const value = getNestedValue(context, inputPath)
+      if (value !== undefined && value !== '' && value !== null) {
+        setNestedValue(sanitized, outputPath, value)
+      }
     }
   }
 
-  // Content strategy from phase2 + phase3
-  const contentStrategy = removeEmpty({
-    // From phase2 (views/metrics mindset)
-    primaryMetric: context.phase2?.checkFirst,
-    followerGoalMindset: context.phase2?.hundredKFollowers,
-    successDefinition: context.phase2?.postWorked,
-    viewsReflection: context.phase2?.viewsReflection,
-    // From phase3 (content creation)
-    weeklyTimeInvested: context.phase3?.timeOnContent,
-    biggestChallenge: context.phase3?.hardestPart,
-    creatorIdentity: context.phase3?.contentCreatorIdentity,
-    timeGoals: context.phase3?.extraTime,
-  })
-  if (Object.keys(contentStrategy).length > 0) {
-    sanitized.contentStrategy = contentStrategy
-  }
-
-  // Pricing mindset from phase4
-  if (context.phase4) {
-    const pricingMindset = removeEmpty({
-      lastPriceIncrease: context.phase4.lastPriceRaise,
-      objectionResponse: context.phase4.tooExpensiveResponse,
-      mainFear: context.phase4.pricingFear,
-      revenueGoals: context.phase4.doubleRevenue,
-    })
-    if (Object.keys(pricingMindset).length > 0) {
-      sanitized.pricingMindset = pricingMindset
-    }
-  }
-
-  // Growth Operator v1: applicant profile from assessment (legacy)
-  if (context.assessment) {
-    const applicantProfile = removeEmpty({
-      currentSituation: context.assessment.situation,
-      professionalBackground: context.assessment.background,
-      entrepreneurExperience: context.assessment.experience,
-      weeklyTimeAvailable: context.assessment.time,
-      startupCapital: context.assessment.capital,
-      motivation: context.assessment.whatsGoingOn,
-      whyThisOpportunity: context.assessment.whyThis,
-      pitchForSelection: context.assessment.whyYou,
-    })
-    if (Object.keys(applicantProfile).length > 0) {
-      sanitized.applicantProfile = applicantProfile
-    }
-  }
-
-  // Growth Operator v2: business model history
-  if (context.models) {
-    const businessModelHistory = removeEmpty({
-      modelTried: context.models.tried,
-      whatHappened: context.models.whatHappened,
-      whyTheyThinkItFailed: context.models.whyFailed,
-    })
-    if (Object.keys(businessModelHistory).length > 0) {
-      sanitized.businessModelHistory = businessModelHistory
-    }
-  }
-
-  // Growth Operator v2: future vision
-  if (context.vision) {
-    const futureVision = removeEmpty({
-      whatWouldChange: context.vision.whatChanges,
-      whyNow: context.vision.whyNow,
-    })
-    if (Object.keys(futureVision).length > 0) {
-      sanitized.futureVision = futureVision
-    }
-  }
-
-  // Growth Operator v2: readiness/commitment
-  if (context.commitment) {
-    const readiness = removeEmpty({
-      isCommitted: context.commitment.ready,
-      availableCapital: context.commitment.capital,
-    })
-    if (Object.keys(readiness).length > 0) {
-      sanitized.readiness = readiness
-    }
-  }
-
-  // Explicitly omit: progress (currentPhase, currentStep, completedPhases)
-  // These are internal tracking and should never be shared with AI
-
-  return sanitized
+  // Clean up any empty nested objects
+  return removeEmptyValues(sanitized)
 }

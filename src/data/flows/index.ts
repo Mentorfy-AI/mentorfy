@@ -17,4 +17,4 @@ export function getAllFlowIds(): string[] {
   return Object.keys(flows)
 }
 
-export type { FlowDefinition, PhaseConfig, StepConfig, MentorConfig, AgentConfig, EmbedConfig, ContactField } from './types'
+export type { FlowDefinition, PhaseConfig, StepConfig, MentorConfig, AgentConfig, EmbedConfig, ContactField, ContextMapping } from './types'

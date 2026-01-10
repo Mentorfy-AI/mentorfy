@@ -195,7 +195,8 @@ export async function POST(req: Request) {
     // Build context from session + memories
     // Sanitize context to remove phase/step references before sending to AI
     const contextParts: string[] = []
-    const sanitizedContext = sanitizeContextForAI(sessionData.context)
+    const flowId = sessionData.flow_id || 'rafael-tats'
+    const sanitizedContext = sanitizeContextForAI(flowId, sessionData.context)
 
     if (Object.keys(sanitizedContext).length > 0) {
       contextParts.push(`User context: ${JSON.stringify(sanitizedContext)}`)
@@ -231,7 +232,7 @@ export async function POST(req: Request) {
       name: 'chat',
       sessionId,
       userId: sessionData.clerk_user_id || undefined,
-      metadata: { flowId: sessionData.flow_id, agentId, orgId: sessionData.clerk_org_id, hasTools: toolNames.length > 0, toolNames },
+      metadata: { flowId: sessionData.flow_id, agentId, hasTools: toolNames.length > 0, toolNames },
       input: langfuseMessages,
     })
 

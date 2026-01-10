@@ -26,6 +26,20 @@ export const growthoperatorFlow: FlowDefinition = {
     calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
   },
 
+  // Maps raw session state keys to sanitized keys for AI agents
+  contextMapping: {
+    // Business model history
+    'businessModelHistory.modelTried': 'models.tried',
+    'businessModelHistory.whatHappened': 'models.whatHappened',
+    'businessModelHistory.whyTheyThinkItFailed': 'models.whyFailed',
+    // Future vision
+    'futureVision.whatWouldChange': 'vision.whatChanges',
+    'futureVision.whyNow': 'vision.whyNow',
+    // Readiness/commitment
+    'readiness.isCommitted': 'commitment.ready',
+    'readiness.availableCapital': 'commitment.capital',
+  },
+
   phases: [
     {
       id: 1,

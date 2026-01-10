@@ -9,7 +9,7 @@ export const db = createClient(supabaseUrl, supabaseServiceKey)
 export interface Session {
   id: string
   clerk_user_id: string | null
-  clerk_org_id: string
+  clerk_org_id: string | null
   email: string | null
   phone: string | null
   name: string | null

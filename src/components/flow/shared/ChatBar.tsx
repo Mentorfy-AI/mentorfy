@@ -260,7 +260,7 @@ interface ChatBarProps {
 
 // Chat input bar with liquid glass style
 export function ChatBar({
-  placeholder = "Message Rafael...",
+  placeholder = "Type a message...",
   onSend,
   disabled,
   continuePhase,

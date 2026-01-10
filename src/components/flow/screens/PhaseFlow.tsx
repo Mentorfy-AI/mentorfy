@@ -27,69 +27,149 @@ interface MultipleChoiceStepContentProps {
 function MultipleChoiceStepContent({ step, onAnswer }: MultipleChoiceStepContentProps) {
   const [selected, setSelected] = useState<string | null>(null)
 
+  // Typing animation state - same as other questions
+  const [fullQuestion, setFullQuestion] = useState<string | null>(null)
+  const [displayedQuestion, setDisplayedQuestion] = useState('')
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(true)
+  const [isTyping, setIsTyping] = useState(false)
+  const [typingComplete, setTypingComplete] = useState(false)
+
+  // Set fullQuestion after brief cursor delay
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setFullQuestion(step.question)
+      setIsWaitingForResponse(false)
+    }, 150) // Quick cursor flash
+    return () => clearTimeout(delay)
+  }, [step.question])
+
+  // Start typing after brief pause once we have the question
+  useEffect(() => {
+    if (!fullQuestion || typingComplete) return
+    const delay = setTimeout(() => {
+      setIsTyping(true)
+    }, 200) // Quick pause then type
+    return () => clearTimeout(delay)
+  }, [fullQuestion, typingComplete])
+
+  // Type out characters - same speed as other questions
+  useEffect(() => {
+    if (!isTyping || !fullQuestion) return
+
+    if (displayedQuestion.length < fullQuestion.length) {
+      const typeSpeed = 8 + Math.random() * 8
+      const charsToAdd = 2
+      const timeout = setTimeout(() => {
+        setDisplayedQuestion(fullQuestion.slice(0, displayedQuestion.length + charsToAdd))
+      }, typeSpeed)
+      return () => clearTimeout(timeout)
+    } else {
+      setIsTyping(false)
+      setTypingComplete(true)
+    }
+  }, [isTyping, displayedQuestion, fullQuestion])
+
   const handleSelect = (option: { value: string; label: string }) => {
     setSelected(option.value)
-    // Brief delay to show selection, then advance
     setTimeout(() => {
       onAnswer(step.stateKey, option.value)
-    }, 200)
+    }, 100) // Snappier transition
   }
 
+  const showCursor = isWaitingForResponse || (fullQuestion && !isTyping && !typingComplete)
+
   return (
-    <div style={{
-      maxWidth: '480px',
-      margin: '0 auto',
-      padding: '140px 24px 48px',
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
-      {/* Progress is now persistent in parent */}
-
-      {/* Question - Main Focus (no avatar) */}
+    <>
+      <style>{`
+        @keyframes cursorBlink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .typing-cursor {
+          display: inline-block;
+          width: 2px;
+          height: 1em;
+          background-color: #000;
+          margin-left: 1px;
+          vertical-align: text-bottom;
+          animation: cursorBlink 0.8s step-end infinite;
+        }
+      `}</style>
       <div style={{
-        fontFamily: "'Lora', Charter, Georgia, serif",
-        fontSize: '24px',
-        fontWeight: '600',
-        color: '#000',
-        textAlign: 'left',
-        lineHeight: '1.4',
-        marginBottom: '32px',
+        maxWidth: '480px',
+        margin: '0 auto',
+        padding: '140px 24px 48px',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
-        {step.question}
-      </div>
+        {/* Question with typing animation */}
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: '18px',
+          fontWeight: '500',
+          color: '#000',
+          textAlign: 'left',
+          lineHeight: '1.5',
+          marginBottom: '32px',
+        }}>
+          {displayedQuestion || ''}
+          {showCursor && <span className="typing-cursor" />}
+        </div>
 
-      {/* Options - Raised button styling like back button */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {step.options.map((option: { value: string; label: string }) => (
-          <motion.button
-            key={option.value}
-            onClick={() => handleSelect(option)}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            style={{
-              width: '100%',
-              padding: '18px 20px',
-              borderRadius: '14px',
-              backgroundColor: selected === option.value ? 'rgba(16, 185, 129, 0.12)' : '#F0EBE4',
-              border: selected === option.value ? `2px solid ${COLORS.ACCENT}` : '1px solid #E8E3DC',
-              cursor: 'pointer',
-              fontFamily: "'Lora', Charter, Georgia, serif",
-              fontSize: '17px',
-              fontWeight: '500',
-              color: '#111',
-              textAlign: 'left',
-              transition: 'all 0.15s ease',
-              boxShadow: selected === option.value
-                ? `0 0 0 2px ${COLORS.ACCENT}, 0 4px 12px rgba(16, 185, 129, 0.25)`
-                : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-            }}
-          >
-            {option.label}
-          </motion.button>
-        ))}
+        {/* Options - fade in one at a time when typing complete */}
+        <AnimatePresence>
+          {typingComplete && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: {
+                    staggerChildren: 0.08,
+                  },
+                },
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
+              {step.options.map((option: { value: string; label: string }) => (
+                <motion.button
+                  key={option.value}
+                  onClick={() => handleSelect(option)}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    width: '100%',
+                    padding: '18px 20px',
+                    borderRadius: '14px',
+                    backgroundColor: selected === option.value ? 'rgba(16, 185, 129, 0.12)' : '#F0EBE4',
+                    border: selected === option.value ? `2px solid ${COLORS.ACCENT}` : '1px solid #E8E3DC',
+                    cursor: 'pointer',
+                    fontFamily: "'Lora', Charter, Georgia, serif",
+                    fontSize: '17px',
+                    fontWeight: '500',
+                    color: '#111',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                    boxShadow: selected === option.value
+                      ? `0 0 0 2px ${COLORS.ACCENT}, 0 4px 12px rgba(16, 185, 129, 0.25)`
+                      : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                  }}
+                >
+                  {option.label}
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -110,15 +190,28 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
       setValue(initialValue)
     }
   }, [initialValue])
-  const [fullQuestion, setFullQuestion] = useState<string | null>(null) // Full text from API
+  const [fullQuestion, setFullQuestion] = useState<string | null>(null) // Full text to type out
   const [displayedQuestion, setDisplayedQuestion] = useState('') // Text being typed out
-  const [isWaitingForResponse, setIsWaitingForResponse] = useState(!!step.personalizePromptKey)
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(true) // Always start with cursor
   const [isTyping, setIsTyping] = useState(false)
   const [typingComplete, setTypingComplete] = useState(false)
   const isValid = value.trim().length >= 3
 
-  // Track if we need to initialize for personalized questions
+  // Track if we need to fetch from API
   const needsPersonalization = !!step.personalizePromptKey
+
+  // For static questions, set fullQuestion after brief cursor delay
+  useEffect(() => {
+    if (step.personalizePromptKey) return // Skip for personalized - handled below
+
+    // Brief delay to show cursor before typing static question
+    const delay = setTimeout(() => {
+      setFullQuestion(step.question)
+      setIsWaitingForResponse(false)
+    }, 150) // Quick cursor flash
+
+    return () => clearTimeout(delay)
+  }, [step.personalizePromptKey, step.question])
 
   // Fetch personalized question if step has personalizePromptKey
   useEffect(() => {
@@ -190,20 +283,25 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
     }
   }, [step.personalizePromptKey, step.baseQuestion, step.question, sessionId])
 
-  // Start typing immediately once we have the full question
+  // Start typing after a brief "thinking" pause once we have the full question
   useEffect(() => {
     if (!fullQuestion || typingComplete) return
-    setIsTyping(true)
+    // Small delay so cursor has time to blink before text appears
+    const delay = setTimeout(() => {
+      setIsTyping(true)
+    }, 200) // Quick pause then type
+    return () => clearTimeout(delay)
   }, [fullQuestion, typingComplete])
 
-  // Type out characters one by one - faster speed
+  // Type out characters - fast and smooth, 2 chars at a time
   useEffect(() => {
     if (!isTyping || !fullQuestion) return
 
     if (displayedQuestion.length < fullQuestion.length) {
-      const typeSpeed = 12 + Math.random() * 12 // 12-24ms per character for snappier feel
+      const typeSpeed = 8 + Math.random() * 8 // 8-16ms - snappy
+      const charsToAdd = 2 // Type 2 characters at a time for speed
       const timeout = setTimeout(() => {
-        setDisplayedQuestion(fullQuestion.slice(0, displayedQuestion.length + 1))
+        setDisplayedQuestion(fullQuestion.slice(0, displayedQuestion.length + charsToAdd))
       }, typeSpeed)
       return () => clearTimeout(timeout)
     } else {
@@ -218,13 +316,12 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
     }
   }
 
-  // Determine which question to display
-  const displayQuestion = step.personalizePromptKey
-    ? (typingComplete ? fullQuestion : displayedQuestion) || ''
-    : step.question
+  // Determine which question to display - always use typing animation now
+  const displayQuestion = (typingComplete ? fullQuestion : displayedQuestion) || ''
 
-  // Check if we should show the cursor (waiting, or typing but not complete)
-  const showCursor = step.personalizePromptKey && (isWaitingForResponse || isTyping || (!typingComplete && fullQuestion))
+  // Show cursor while waiting OR during the brief pause before typing starts
+  // Disappears once text actually starts appearing
+  const showCursor = isWaitingForResponse || (fullQuestion && !isTyping && !typingComplete)
 
   return (
     <>
@@ -244,116 +341,150 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
       }}>
         {/* Progress is now persistent in parent */}
 
-        {/* Question - Main Focus with typing animation for personalized questions */}
+        {/* Question - Main Focus with typing animation for all questions */}
         <div
-          className={step.personalizePromptKey ? 'personalized-question-markdown' : ''}
+          className="question-markdown"
           style={{
             fontFamily: "'Lora', Charter, Georgia, serif",
-            fontSize: step.personalizePromptKey ? '18px' : '24px',
-            fontWeight: step.personalizePromptKey ? '500' : '600',
+            fontSize: '18px',
+            fontWeight: '500',
             color: '#000',
             textAlign: 'left',
             lineHeight: '1.5',
             marginBottom: '32px',
-            minHeight: showCursor ? '80px' : undefined,
           }}
         >
-          {step.personalizePromptKey ? (
-            <>
-              <style>{`
-                .personalized-question-markdown p {
-                  margin: 0 0 16px 0;
-                }
-                .personalized-question-markdown p:last-child {
-                  margin-bottom: 0;
-                }
-                .personalized-question-markdown strong {
-                  font-weight: 600;
-                }
-                .personalized-question-markdown em {
-                  font-style: italic;
-                }
-              `}</style>
-              <ReactMarkdown>{displayQuestion}</ReactMarkdown>
-            </>
+          <style>{`
+            .question-markdown p {
+              margin: 0 0 16px 0;
+            }
+            .question-markdown p:last-child {
+              margin-bottom: 0;
+            }
+            .question-markdown strong {
+              font-weight: 600;
+            }
+            .question-markdown em {
+              font-style: italic;
+            }
+            @keyframes cursorBlink {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0; }
+            }
+            .typing-cursor {
+              display: inline-block;
+              width: 2px;
+              height: 1em;
+              background-color: #000;
+              margin-left: 1px;
+              vertical-align: text-bottom;
+              animation: cursorBlink 0.8s step-end infinite;
+            }
+          `}</style>
+          {displayQuestion ? (
+            (() => {
+              // Split into paragraphs to track the last one
+              const paragraphs = displayQuestion.split('\n\n').filter(Boolean)
+              const lastParagraphIndex = paragraphs.length - 1
+              let currentParagraphIndex = -1
+
+              return (
+                <ReactMarkdown
+                  components={{
+                    p: ({ children, ...props }) => {
+                      currentParagraphIndex++
+                      const isLast = currentParagraphIndex === lastParagraphIndex
+                      return (
+                        <p {...props}>
+                          {children}
+                          {showCursor && isLast && <span className="typing-cursor" />}
+                        </p>
+                      )
+                    }
+                  }}
+                >
+                  {displayQuestion}
+                </ReactMarkdown>
+              )
+            })()
           ) : (
-            displayQuestion
-          )}
-          {/* Blinking cursor while waiting or typing */}
-          {showCursor && (
-            <span style={{
-              display: 'inline-block',
-              width: '2px',
-              height: '1em',
-              backgroundColor: '#000',
-              marginLeft: '2px',
-              verticalAlign: 'text-bottom',
-              animation: 'cursorBlink 1s step-end infinite',
-            }} />
+            // Show just the cursor when waiting for text
+            showCursor && <span className="typing-cursor" />
           )}
         </div>
 
-      {/* Text Area - Inner shadow styling (typing into the page) */}
-      <div style={{
-        backgroundColor: '#E8E3DC',
-        border: isFocused ? `2px solid ${COLORS.ACCENT}` : '1px solid #DDD8D0',
-        borderRadius: '14px',
-        padding: '16px',
-        minHeight: '160px',
-        marginBottom: '20px',
-        boxShadow: isFocused
-          ? `inset 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(16, 185, 129, 0.15)`
-          : 'inset 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.06)',
-        transition: 'all 0.15s ease',
-      }}>
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={step.placeholder}
-          style={{
-            width: '100%',
-            height: '128px',
-            border: 'none',
-            outline: 'none',
-            resize: 'none',
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            fontSize: '16px',
-            color: '#111',
-            lineHeight: '1.7',
-            backgroundColor: 'transparent',
-          }}
-        />
-      </div>
+      {/* Text Area + Button - Hidden during typing, fades in when complete */}
+      <AnimatePresence>
+        {typingComplete && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          >
+            {/* Text Area - Inner shadow styling (typing into the page) */}
+            <div style={{
+              backgroundColor: '#E8E3DC',
+              border: isFocused ? `2px solid ${COLORS.ACCENT}` : '1px solid #DDD8D0',
+              borderRadius: '14px',
+              padding: '16px',
+              minHeight: '160px',
+              marginBottom: '20px',
+              boxShadow: isFocused
+                ? `inset 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(16, 185, 129, 0.15)`
+                : 'inset 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.06)',
+              transition: 'all 0.15s ease',
+            }}>
+              <textarea
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={step.placeholder}
+                style={{
+                  width: '100%',
+                  height: '128px',
+                  border: 'none',
+                  outline: 'none',
+                  resize: 'none',
+                  fontFamily: "'Lora', Charter, Georgia, serif",
+                  fontSize: '16px',
+                  color: '#111',
+                  lineHeight: '1.7',
+                  backgroundColor: 'transparent',
+                }}
+              />
+            </div>
 
-      {/* Continue Button - Green */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <motion.button
-          onClick={handleSubmit}
-          disabled={!isValid}
-          whileHover={isValid ? { scale: 1.02 } : {}}
-          whileTap={isValid ? { scale: 0.98 } : {}}
-          style={{
-            backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
-            color: isValid ? '#FFFFFF' : '#999',
-            padding: '14px 28px',
-            borderRadius: '12px',
-            fontSize: '15px',
-            fontWeight: '500',
-            border: 'none',
-            cursor: isValid ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontFamily: "'Geist', -apple-system, sans-serif",
-            boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          Continue <span>→</span>
-        </motion.button>
-      </div>
+            {/* Continue Button - Green */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <motion.button
+                onClick={handleSubmit}
+                disabled={!isValid}
+                whileHover={isValid ? { scale: 1.02 } : {}}
+                whileTap={isValid ? { scale: 0.98 } : {}}
+                style={{
+                  backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
+                  color: isValid ? '#FFFFFF' : '#999',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: isValid ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontFamily: "'Geist', -apple-system, sans-serif",
+                  boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Continue <span>→</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     </>
   )
@@ -541,29 +672,18 @@ interface AIMomentStepContentProps {
 
 function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }: AIMomentStepContentProps) {
   const sessionId = useSessionId()
-  const [response, setResponse] = useState<string | null>(null)
+  const [fullResponse, setFullResponse] = useState<string | null>(null) // Full text from API
+  const [displayedResponse, setDisplayedResponse] = useState('') // Text being typed out
   const [embedData, setEmbedData] = useState<any>(null)
   const fetchedRef = useRef(false)
 
-  // Thinking animation state
-  const [displayText, setDisplayText] = useState('')
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
-  // If skipThinking is true, start directly in 'waiting' phase (wait for response, then stream)
-  const [phase, setPhase] = useState<'typing' | 'pausing' | 'deleting' | 'transitioning' | 'waiting' | 'streaming'>(step.skipThinking ? 'waiting' : 'typing')
+  // Phase: 'waiting' (cursor blinks), 'typing' (text types out), 'complete'
+  const [phase, setPhase] = useState<'waiting' | 'typing' | 'complete'>('waiting')
 
-  // Streaming state - driven by real streaming from API
+  // Streaming state - true when API response is fully received
   const [streamingComplete, setStreamingComplete] = useState(false)
 
-  const thinkingMessages = [
-    { text: "Give me a second...", pauseAfter: 800 },
-    { text: "I'm thinking about what you shared with me...", pauseAfter: 1200 },
-    { text: "Crafting a response for your situation...", pauseAfter: 1500, transitionToResponse: true }
-  ]
-
-  const typeSpeed = 45
-  const deleteSpeed = 12
-
-  // Fetch diagnosis with streaming - uses AI SDK UI message stream format
+  // Fetch diagnosis - collect full response first, then animate
   useEffect(() => {
     if (fetchedRef.current || !sessionId) return
     fetchedRef.current = true
@@ -597,18 +717,16 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
             if (!line.startsWith('data: ')) continue
             try {
               const data = JSON.parse(line.slice(6))
-              // AI SDK UI message stream format
               if (data.type === 'text-delta' && data.delta) {
                 fullText += data.delta
-                setResponse(fullText)
               } else if (data.type === 'tool-output-available' && data.output?.embedType) {
-                // AI SDK UI message stream sends tool outputs as 'tool-output-available'
                 setEmbedData(data.output)
               }
             } catch { /* skip invalid JSON */ }
           }
         }
 
+        setFullResponse(fullText)
         setStreamingComplete(true)
       } catch (err) {
         console.error('Diagnosis fetch error:', err)
@@ -617,71 +735,34 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
     fetchDiagnosis()
   }, [sessionId, step.promptKey])
 
-  // Thinking animation (typing/pausing/deleting phases only)
+  // Start typing animation after brief pause once we have full response
   useEffect(() => {
-    let timeout: NodeJS.Timeout
+    if (!fullResponse || phase !== 'waiting') return
+    const delay = setTimeout(() => {
+      setPhase('typing')
+    }, 400) // Brief pause with cursor before typing starts
+    return () => clearTimeout(delay)
+  }, [fullResponse, phase])
 
-    if (phase === 'typing') {
-      const currentMessage = thinkingMessages[currentMessageIndex]
-      if (displayText.length < currentMessage.text.length) {
-        timeout = setTimeout(() => {
-          setDisplayText(currentMessage.text.slice(0, displayText.length + 1))
-        }, typeSpeed + (Math.random() * 30 - 15))
-      } else {
-        setPhase('pausing')
-      }
-    } else if (phase === 'pausing') {
-      const currentMessage = thinkingMessages[currentMessageIndex]
-      timeout = setTimeout(() => {
-        if ((currentMessage as any).transitionToResponse) {
-          setPhase('transitioning')
-        } else {
-          setPhase('deleting')
-        }
-      }, currentMessage.pauseAfter)
-    } else if (phase === 'deleting') {
-      if (displayText.length > 0) {
-        timeout = setTimeout(() => {
-          setDisplayText(displayText.slice(0, -1))
-        }, deleteSpeed)
-      } else {
-        setCurrentMessageIndex(currentMessageIndex + 1)
-        setPhase('typing')
-      }
-    } else if (phase === 'transitioning') {
-      timeout = setTimeout(() => {
-        setDisplayText('')
-        if (response) {
-          setPhase('streaming')
-        }
-      }, 400)
-    }
-    // Streaming phase is now driven by real API streaming - no client-side animation needed
-
-    return () => clearTimeout(timeout)
-  }, [displayText, phase, currentMessageIndex, response])
-
-  // If transitioning or waiting but no response yet, wait
-  // Also check embedData.beforeText since tool calls may put all text there instead of response
-  const hasContent = response || embedData?.beforeText
+  // Type out characters - same speed as personalized questions
   useEffect(() => {
-    if ((phase === 'transitioning' || phase === 'waiting') && !hasContent) {
-      // Keep waiting
-    } else if (phase === 'transitioning' && hasContent) {
+    if (phase !== 'typing' || !fullResponse) return
+
+    if (displayedResponse.length < fullResponse.length) {
+      const typeSpeed = 8 + Math.random() * 8 // 8-16ms - snappy
+      const charsToAdd = 2 // Type 2 characters at a time
       const timeout = setTimeout(() => {
-        setDisplayText('')
-        setPhase('streaming')
-      }, 100)
+        setDisplayedResponse(fullResponse.slice(0, displayedResponse.length + charsToAdd))
+      }, typeSpeed)
       return () => clearTimeout(timeout)
-    } else if (phase === 'waiting' && hasContent) {
-      // Skip thinking, go straight to streaming
-      setPhase('streaming')
+    } else {
+      setPhase('complete')
     }
-  }, [phase, hasContent])
+  }, [phase, displayedResponse, fullResponse])
 
-  const isInThinkingPhase = phase === 'typing' || phase === 'pausing' || phase === 'deleting' || phase === 'transitioning'
-  const isInWaitingPhase = phase === 'waiting'
-  const isInStreamingPhase = phase === 'streaming'
+  const isWaiting = phase === 'waiting'
+  const isTyping = phase === 'typing'
+  const showCursor = isWaiting || (fullResponse && phase === 'waiting') // Only show cursor while waiting
 
   return (
     <>
@@ -699,42 +780,8 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
       }}>
         {/* Progress is now persistent in parent */}
 
-        {/* Thinking Phase - Centered typing */}
-        {isInThinkingPhase && (
-          <div style={{
-            textAlign: 'center',
-            opacity: phase === 'transitioning' ? 0 : 1,
-            transition: 'opacity 0.3s ease-out',
-            minHeight: '200px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <p style={{
-              fontFamily: "'Lora', Charter, Georgia, serif",
-              fontSize: '20px',
-              fontWeight: '400',
-              color: '#333333',
-              lineHeight: '1.5',
-              margin: 0,
-              display: 'inline',
-            }}>
-              {displayText}
-              <span style={{
-                display: 'inline-block',
-                width: '2px',
-                height: '1.2em',
-                backgroundColor: '#333333',
-                marginLeft: '2px',
-                verticalAlign: 'text-bottom',
-                animation: 'cursorBlink 1s step-end infinite',
-              }} />
-            </p>
-          </div>
-        )}
-
         {/* Waiting Phase - Just a blinking cursor while loading */}
-        {isInWaitingPhase && (
+        {isWaiting && (
           <div style={{
             fontFamily: "'Lora', Charter, Georgia, serif",
             minHeight: '200px',
@@ -744,13 +791,13 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
               width: '2px',
               height: '1.2em',
               backgroundColor: '#333333',
-              animation: 'cursorBlink 1s step-end infinite',
+              animation: 'cursorBlink 0.8s step-end infinite',
             }} />
           </div>
         )}
 
-        {/* Streaming Phase - Left-aligned response with markdown */}
-        {isInStreamingPhase && (
+        {/* Typing/Complete Phase - Left-aligned response with markdown */}
+        {(isTyping || phase === 'complete') && (
           <div className="ai-moment-markdown" style={{ fontFamily: "'Lora', Charter, Georgia, serif" }}>
             <style>{`
               .ai-moment-markdown h1 {
@@ -809,27 +856,15 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
                 color: #444;
               }
             `}</style>
-            {/* Render beforeText from embed if present, otherwise full response */}
+            {/* Render displayed text (typing animation) */}
             <ReactMarkdown>
-              {normalizeMarkdown(embedData?.beforeText || response || '')}
+              {normalizeMarkdown(displayedResponse || '')}
             </ReactMarkdown>
-            {/* Blinking cursor while streaming */}
-            {!streamingComplete && (
-              <span style={{
-                display: 'inline-block',
-                width: '2px',
-                height: '1em',
-                backgroundColor: '#333333',
-                marginLeft: '2px',
-                verticalAlign: 'text-bottom',
-                animation: 'cursorBlink 1s step-end infinite',
-              }} />
-            )}
           </div>
         )}
 
         {/* Calendly Embed - Show when AI determined user is qualified */}
-        {streamingComplete && embedData?.embedType === 'booking' && embedData?.calendlyUrl && (
+        {phase === 'complete' && embedData?.embedType === 'booking' && embedData?.calendlyUrl && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -857,7 +892,7 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
         )}
 
         {/* After Text - Future pace copy after booking embed */}
-        {streamingComplete && embedData?.embedType === 'booking' && embedData?.afterText && (
+        {phase === 'complete' && embedData?.embedType === 'booking' && embedData?.afterText && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -883,7 +918,7 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
         )}
 
         {/* Continue Button - Green (hide when booking embed is shown) */}
-        {streamingComplete && !embedData?.embedType && (
+        {phase === 'complete' && !embedData?.embedType && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

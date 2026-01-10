@@ -28,6 +28,7 @@ export interface PhaseConfig {
 }
 
 export interface StepConfig {
+  stepKey: string
   type: 'question' | 'ai-moment' | 'sales-page' | 'video' | 'thinking'
   question?: string
   questionType?: 'multiple-choice' | 'long-answer' | 'contact-info'

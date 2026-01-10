@@ -16,14 +16,16 @@ export function getLangfuse(): Langfuse {
 }
 
 // Map agent IDs to Langfuse prompt names
+// DISABLED: Using hardcoded prompts in code for now (Brady iterating directly)
+// Re-enable when Langfuse workflow is ready
 const agentToPromptName: Record<string, string> = {
-  'growthoperator-q2-personalize': 'GO: After Biz Model Selected',
-  'growthoperator-q3-personalize': 'GO: After What Happened',
-  'growthoperator-diagnosis-1': 'GO: Diagnosis - Why Your Biz Model Failed',
-  'growthoperator-diagnosis-2': 'GO: Diagnosis - Why ALL Biz Models Fail',
-  'growthoperator-diagnosis-3': 'GO: Diagnosis - Tease The Path',
-  'growthoperator-path-reveal': 'GO: Reveal The Opportunity',
-  'growthoperator-fit-assessment': 'GO: Qualification + Booking',
+  // 'growthoperator-q2-personalize': 'GO: After Biz Model Selected',
+  // 'growthoperator-q3-personalize': 'GO: After What Happened',
+  // 'growthoperator-diagnosis-1': 'GO: Diagnosis - Why Your Biz Model Failed',
+  // 'growthoperator-diagnosis-2': 'GO: Diagnosis - Why ALL Biz Models Fail',
+  // 'growthoperator-diagnosis-3': 'GO: Diagnosis - Tease The Path',
+  // 'growthoperator-path-reveal': 'GO: Reveal The Opportunity',
+  // 'growthoperator-fit-assessment': 'GO: Qualification + Booking',
 }
 
 export interface AgentPromptResult {

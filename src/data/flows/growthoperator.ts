@@ -33,6 +33,7 @@ export const growthoperatorFlow: FlowDefinition = {
       steps: [
         // Q1: What business models have you tried?
         {
+          stepKey: 'q1-models-tried',
           type: 'question',
           questionType: 'multiple-choice',
           question: "Let's start easy. What have you tried?",
@@ -57,6 +58,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Q2: What happened? (personalized based on Q1)
         {
+          stepKey: 'q2-what-happened',
           type: 'question',
           questionType: 'long-answer',
           baseQuestion: 'Tell me what happened. How far did you get? What made you stop?',
@@ -68,6 +70,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Q3: Why do you think it didn't work? (personalized based on Q1 + Q2)
         {
+          stepKey: 'q3-why-failed',
           type: 'question',
           questionType: 'long-answer',
           baseQuestion: 'Why didn\'t it work?',
@@ -78,6 +81,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Diagnosis 1: Problem with that specific model
         {
+          stepKey: 'diag-model-problem',
           type: 'ai-moment',
           promptKey: 'diagnosis-1',
           skipThinking: true,
@@ -85,6 +89,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Diagnosis 2: The reframe (bigger pattern)
         {
+          stepKey: 'diag-reframe',
           type: 'ai-moment',
           promptKey: 'diagnosis-2',
           skipThinking: true,
@@ -92,6 +97,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Diagnosis 3: Setup for path + future pace
         {
+          stepKey: 'diag-future-pace',
           type: 'ai-moment',
           promptKey: 'diagnosis-3',
           skipThinking: true,
@@ -99,6 +105,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Q4: Vision - what would change
         {
+          stepKey: 'q4-vision',
           type: 'question',
           questionType: 'long-answer',
           question: "Imagine this works. You're making $15K-$25K a month six months from now.\n\nWhat would actually change in your life?",
@@ -108,6 +115,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Q5: Why now
         {
+          stepKey: 'q5-why-now',
           type: 'question',
           questionType: 'long-answer',
           question: "You've seen opportunities before. You've scrolled past 100s of ads.\n\nBut you're still here.\n\nWhy today? What's actually going on that made you stop and pay attention to this?",
@@ -117,6 +125,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Q6: Commitment
         {
+          stepKey: 'q6-commitment',
           type: 'question',
           questionType: 'multiple-choice',
           question: "This is NOT a side project.\n\nThis is building a real business. It takes real commitment. Real focus. Real work.\n\nAre you ready for that?",
@@ -134,6 +143,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Q7: Investment capital
         {
+          stepKey: 'q7-capital',
           type: 'question',
           questionType: 'multiple-choice',
           question: "Building a real business takes capital. The more you have, the faster you can move.\n\nHow much do you have available to invest in building this?",
@@ -154,6 +164,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Path Reveal: The opportunity explained
         {
+          stepKey: 'path-reveal',
           type: 'ai-moment',
           promptKey: 'path-reveal',
           skipThinking: true,
@@ -161,6 +172,7 @@ export const growthoperatorFlow: FlowDefinition = {
 
         // Fit Assessment: Stack the offer + conditional booking
         {
+          stepKey: 'fit-assessment',
           type: 'ai-moment',
           promptKey: 'fit-assessment',
           skipThinking: true,

@@ -34,6 +34,7 @@ export const rafaelTatsFlow: FlowDefinition = {
       name: 'The Diagnosis',
       steps: [
         {
+          stepKey: 'q1-booking-status',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'What stage is your tattoo business at now?',
@@ -47,6 +48,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'situation.bookingStatus',
         },
         {
+          stepKey: 'q2-day-rate',
           type: 'question',
           questionType: 'multiple-choice',
           question: "What's your day rate?",
@@ -61,6 +63,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'situation.dayRate',
         },
         {
+          stepKey: 'q3-blocker',
           type: 'question',
           questionType: 'multiple-choice',
           question: "What's stopping you from being booked out?",
@@ -73,6 +76,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'situation.blocker',
         },
         {
+          stepKey: 'q4-contact-info',
           type: 'question',
           questionType: 'contact-info',
           question: "What's your contact info?",
@@ -84,6 +88,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'user',
         },
         {
+          stepKey: 'q5-confession',
           type: 'question',
           questionType: 'long-answer',
           question: "Be honest: why aren't you booked out yet?",
@@ -91,6 +96,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'situation.confession',
         },
         {
+          stepKey: 'ai-phase1-relief',
           type: 'ai-moment',
           promptKey: 'phase-1-relief',
           skipThinking: true,
@@ -102,6 +108,7 @@ export const rafaelTatsFlow: FlowDefinition = {
       name: 'Get Booked Without Going Viral',
       steps: [
         {
+          stepKey: 'q6-check-first',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'What do you check first after posting?',
@@ -114,6 +121,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase2.checkFirst',
         },
         {
+          stepKey: 'q7-hundred-k',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'If you had 100k followers, what would change?',
@@ -126,6 +134,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase2.hundredKFollowers',
         },
         {
+          stepKey: 'q8-post-worked',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'When does a post feel like it worked?',
@@ -138,6 +147,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase2.postWorked',
         },
         {
+          stepKey: 'q9-views-reflection',
           type: 'question',
           questionType: 'long-answer',
           question: "What would change if views didn't matter?",
@@ -145,6 +155,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase2.viewsReflection',
         },
         {
+          stepKey: 'ai-phase2-relief',
           type: 'ai-moment',
           promptKey: 'phase-2-relief',
           skipThinking: true,
@@ -156,6 +167,7 @@ export const rafaelTatsFlow: FlowDefinition = {
       name: 'The 30-Minute Content System',
       steps: [
         {
+          stepKey: 'q10-time-on-content',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'How much time on content each week?',
@@ -168,6 +180,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase3.timeOnContent',
         },
         {
+          stepKey: 'q11-hardest-part',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'Hardest part about content?',
@@ -180,6 +193,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase3.hardestPart',
         },
         {
+          stepKey: 'q12-creator-identity',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'Do you see yourself as a content creator?',
@@ -192,6 +206,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase3.contentCreatorIdentity',
         },
         {
+          stepKey: 'q13-extra-time',
           type: 'question',
           questionType: 'long-answer',
           question: 'What would you do with 5 extra hours a week?',
@@ -199,6 +214,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase3.extraTime',
         },
         {
+          stepKey: 'ai-phase3-relief',
           type: 'ai-moment',
           promptKey: 'phase-3-relief',
           skipThinking: true,
@@ -210,6 +226,7 @@ export const rafaelTatsFlow: FlowDefinition = {
       name: 'Double Your Revenue',
       steps: [
         {
+          stepKey: 'q14-last-price-raise',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'Last time you raised prices?',
@@ -222,6 +239,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase4.lastPriceRaise',
         },
         {
+          stepKey: 'q15-too-expensive',
           type: 'question',
           questionType: 'multiple-choice',
           question: "When someone says 'too expensive'?",
@@ -234,6 +252,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase4.tooExpensiveResponse',
         },
         {
+          stepKey: 'q16-pricing-fear',
           type: 'question',
           questionType: 'multiple-choice',
           question: 'Biggest fear about raising prices?',
@@ -246,6 +265,7 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase4.pricingFear',
         },
         {
+          stepKey: 'q17-double-revenue',
           type: 'question',
           questionType: 'long-answer',
           question: 'What would you do with double the revenue?',
@@ -253,11 +273,13 @@ export const rafaelTatsFlow: FlowDefinition = {
           stateKey: 'phase4.doubleRevenue',
         },
         {
+          stepKey: 'ai-phase4-relief',
           type: 'ai-moment',
           promptKey: 'phase-4-relief',
           skipThinking: true,
         },
         {
+          stepKey: 'sales-calendly',
           type: 'sales-page',
           variant: 'calendly',
           headline: "You're a great fit for 1-on-1.",

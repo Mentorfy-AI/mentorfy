@@ -176,19 +176,11 @@ export const growthoperatorFlow: FlowDefinition = {
           },
         },
 
-        // Path Reveal: The opportunity explained
+        // Final Diagnosis: Personalized close + book the call
         {
-          stepKey: 'path-reveal',
+          stepKey: 'final-diagnosis',
           type: 'ai-moment',
-          promptKey: 'path-reveal',
-          skipThinking: true,
-        },
-
-        // Fit Assessment: Stack the offer + conditional booking
-        {
-          stepKey: 'fit-assessment',
-          type: 'ai-moment',
-          promptKey: 'fit-assessment',
+          promptKey: 'final-diagnosis',
           skipThinking: true,
         },
       ],

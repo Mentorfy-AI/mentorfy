@@ -36,11 +36,11 @@ function getAgentId(flowId: string, type: string, promptKey?: string): string | 
       'diagnosis-1': 'growthoperator-diagnosis-1',
       'diagnosis-2': 'growthoperator-diagnosis-2',
       'diagnosis-3': 'growthoperator-diagnosis-3',
+      'final-diagnosis': 'growthoperator-final-diagnosis',
+      // Legacy (keeping for backwards compatibility)
       'path-reveal': 'growthoperator-path-reveal',
       'fit-assessment': 'growthoperator-fit-assessment',
-      // Legacy v1 prompt keys
       'first-diagnosis': 'growthoperator-diagnosis',
-      'final-diagnosis': 'growthoperator-diagnosis',
     }
     if (promptKeyToAgent[promptKey]) {
       return promptKeyToAgent[promptKey]
@@ -70,10 +70,9 @@ function buildDiagnosisTools(calendlyUrl?: string) {
 
   return {
     showBooking: tool({
-      description: 'Show booking calendar when the user is qualified and ready to schedule a call. Only use this if you determine the user is a good fit.',
+      description: 'Show booking calendar when the user is qualified and ready to schedule a call. Call this after your main copy to display the calendar, then include the future pace text in afterText.',
       inputSchema: z.object({
-        beforeText: z.string().describe('The diagnosis text to show before the calendar embed'),
-        afterText: z.string().describe('Optional follow-up text after the calendar embed'),
+        afterText: z.string().describe('The future pace copy to show after the calendar embed - what happens after they book'),
       }),
       outputSchema: z.object({
         embedType: z.literal('booking'),
@@ -81,10 +80,10 @@ function buildDiagnosisTools(calendlyUrl?: string) {
         afterText: z.string(),
         calendlyUrl: z.string(),
       }),
-      execute: async ({ beforeText }) => ({
+      execute: async ({ afterText }) => ({
         embedType: 'booking' as const,
-        beforeText,
-        afterText: "Pick a time below. 30 minutes. They'll see everything we talked about—your history, your goals, why you're here. No repeating yourself. They'll already know who you are.",
+        beforeText: '', // beforeText comes from the streamed text before the tool call
+        afterText,
         calendlyUrl,
       }),
     }),

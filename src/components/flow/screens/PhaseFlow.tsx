@@ -52,7 +52,7 @@ function MultipleChoiceStepContent({ step, onAnswer }: MultipleChoiceStepContent
         fontSize: '24px',
         fontWeight: '600',
         color: '#000',
-        textAlign: 'center',
+        textAlign: 'left',
         lineHeight: '1.4',
         marginBottom: '32px',
       }}>
@@ -252,7 +252,7 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
             fontSize: step.personalizePromptKey ? '18px' : '24px',
             fontWeight: step.personalizePromptKey ? '500' : '600',
             color: '#000',
-            textAlign: step.personalizePromptKey ? 'left' : 'center',
+            textAlign: 'left',
             lineHeight: '1.5',
             marginBottom: '32px',
             minHeight: showCursor ? '80px' : undefined,
@@ -853,6 +853,32 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
                 hideLandingPageDetails: false,
               }}
             />
+          </motion.div>
+        )}
+
+        {/* After Text - Future pace copy after booking embed */}
+        {streamingComplete && embedData?.embedType === 'booking' && embedData?.afterText && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
+            style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '18px',
+              fontWeight: '500',
+              color: '#000',
+              lineHeight: '1.6',
+              textAlign: 'left',
+            }}
+          >
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p style={{ marginBottom: '16px' }}>{children}</p>,
+                strong: ({ children }) => <strong style={{ fontWeight: '700' }}>{children}</strong>,
+              }}
+            >
+              {embedData.afterText}
+            </ReactMarkdown>
           </motion.div>
         )}
 

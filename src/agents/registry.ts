@@ -5,9 +5,12 @@ import { rafaelSummaryAgent } from './rafael/summary'
 import { growthoperatorDiagnosisAgent } from './growthoperator/diagnosis'
 import { growthoperatorQ2PersonalizeAgent } from './growthoperator/q2-personalize'
 import { growthoperatorQ3PersonalizeAgent } from './growthoperator/q3-personalize'
+import { growthoperatorQ4PersonalizeAgent } from './growthoperator/q4-personalize'
+import { growthoperatorQ5PersonalizeAgent } from './growthoperator/q5-personalize'
 import { growthoperatorDiagnosis1Agent } from './growthoperator/diagnosis-1'
 import { growthoperatorDiagnosis2Agent } from './growthoperator/diagnosis-2'
 import { growthoperatorDiagnosis3Agent } from './growthoperator/diagnosis-3'
+import { growthoperatorFinalDiagnosisAgent } from './growthoperator/final-diagnosis'
 import { growthoperatorPathRevealAgent } from './growthoperator/path-reveal'
 import { growthoperatorFitAssessmentAgent } from './growthoperator/fit-assessment'
 
@@ -21,9 +24,13 @@ const agents: Record<string, AgentConfig> = {
   // Growth Operator v2 agents
   'growthoperator-q2-personalize': growthoperatorQ2PersonalizeAgent,
   'growthoperator-q3-personalize': growthoperatorQ3PersonalizeAgent,
+  'growthoperator-q4-personalize': growthoperatorQ4PersonalizeAgent,
+  'growthoperator-q5-personalize': growthoperatorQ5PersonalizeAgent,
   'growthoperator-diagnosis-1': growthoperatorDiagnosis1Agent,
   'growthoperator-diagnosis-2': growthoperatorDiagnosis2Agent,
   'growthoperator-diagnosis-3': growthoperatorDiagnosis3Agent,
+  'growthoperator-final-diagnosis': growthoperatorFinalDiagnosisAgent,
+  // Legacy (keeping for backwards compatibility)
   'growthoperator-path-reveal': growthoperatorPathRevealAgent,
   'growthoperator-fit-assessment': growthoperatorFitAssessmentAgent,
 }

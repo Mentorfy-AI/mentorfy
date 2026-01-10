@@ -1,7 +1,9 @@
 import { streamText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { db } from '@/lib/db'
 import { getAgent } from '@/agents/registry'
+import type { AgentConfig } from '@/agents/types'
 import { createTrace, flushLangfuse, getAgentPrompt } from '@/lib/langfuse'
 import { generateLimiter, checkRateLimit, rateLimitResponse, getIdentifier } from '@/lib/ratelimit'
 import { sanitizeContextForAI } from '@/lib/context-sanitizer'
@@ -10,11 +12,24 @@ const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
+})
+
+function getModel(agent: AgentConfig) {
+  if (agent.provider === 'google') {
+    return google(agent.model)
+  }
+  return anthropic(agent.model)
+}
+
 // Map promptKey to agent ID for question personalization
 function getPersonalizeAgentId(promptKey: string): string | undefined {
   const agents: Record<string, string> = {
     'q2-personalize': 'growthoperator-q2-personalize',
     'q3-personalize': 'growthoperator-q3-personalize',
+    'q4-personalize': 'growthoperator-q4-personalize',
+    'q5-personalize': 'growthoperator-q5-personalize',
   }
   return agents[promptKey]
 }
@@ -98,7 +113,7 @@ export async function POST(req: Request) {
     const userMessage = `User context:\n${contextStr}\n\nBase question to personalize: "${baseQuestion}"\n\nGenerate the personalized question.`
 
     const result = streamText({
-      model: anthropic(agent.model),
+      model: getModel(agent),
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
       maxOutputTokens: agent.maxTokens,

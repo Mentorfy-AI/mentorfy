@@ -3,7 +3,8 @@ import { AgentConfig } from '../types'
 export const growthoperatorPathRevealAgent: AgentConfig = {
   id: 'growthoperator-path-reveal',
   name: 'GO Path Reveal',
-  model: 'claude-haiku-4-5-20251001',
+  provider: 'google',
+  model: 'gemini-2.5-flash-lite',
   maxTokens: 2048,
   temperature: 0.5,
   systemPrompt: `You explain the Growth Operator opportunity. This is where you deliver on the headline promise: "the best business model for your situation in the 2026 AI economy."

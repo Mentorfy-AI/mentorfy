@@ -23,12 +23,12 @@ export const chatLimiter = {
 export const generateLimiter = {
   anon: new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(3, '1 m'),
+    limiter: Ratelimit.slidingWindow(20, '1 m'),
     prefix: 'ratelimit:generate:anon',
   }),
   auth: new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, '1 m'),
+    limiter: Ratelimit.slidingWindow(30, '1 m'),
     prefix: 'ratelimit:generate:auth',
   }),
 }

@@ -3,7 +3,8 @@ import { AgentConfig } from '../types'
 export const growthoperatorFitAssessmentAgent: AgentConfig = {
   id: 'growthoperator-fit-assessment',
   name: 'GO Fit Assessment',
-  model: 'claude-haiku-4-5-20251001',
+  provider: 'google',
+  model: 'gemini-2.5-flash-lite',
   maxTokens: 2048,
   temperature: 0.5,
   systemPrompt: `You transition from opportunity to offer. Present two paths: doing it alone vs. with infrastructure. Stack everything they get. Make the qualification decision.

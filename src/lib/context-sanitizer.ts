@@ -1,39 +1,14 @@
 /**
  * Sanitizes session context before sending to AI agents.
  *
- * Transforms implementation-specific keys (phase2, phase3, etc.) into
- * semantic labels that don't reveal the underlying flow structure.
- * This prevents agents from mentioning "phases" or "steps" which breaks immersion.
+ * Transforms implementation-specific keys into semantic labels using
+ * the flow's contextMapping. This prevents agents from mentioning
+ * internal structure like "phases" or "steps" which breaks immersion.
  */
 
-import { getFlow, type ContextMapping } from '@/data/flows'
+import { getFlow } from '@/data/flows'
 
-type SessionContext = {
-  user?: {
-    name?: string
-    email?: string
-    phone?: string
-  }
-  // Progress tracking (internal, never shared with AI)
-  progress?: {
-    currentScreen?: string
-    currentPhase?: number
-    currentStep?: number
-    completedPhases?: number[]
-    videosWatched?: string[]
-    justCompletedLevel?: boolean
-  }
-  // All other fields are flow-specific and dynamically mapped
-  [key: string]: any
-}
-
-type SanitizedContext = {
-  user?: {
-    name?: string
-    email?: string
-  }
-  [key: string]: any
-}
+type SessionContext = Record<string, unknown>
 
 /**
  * Gets a nested value from an object using dot notation path
@@ -88,31 +63,39 @@ function removeEmptyValues(obj: any): any {
 
 /**
  * Transforms raw session context into AI-friendly semantic labels.
- * Uses the flow's contextMapping to dynamically transform keys.
- * Strips out internal tracking data and renames phase-specific keys.
+ * Uses the flow's contextMapping to transform keys.
  */
-export function sanitizeContextForAI(flowId: string, context: SessionContext): SanitizedContext {
-  const sanitized: SanitizedContext = {}
-
-  // User info (keep name for personalization, omit phone/email for privacy in prompts)
-  if (context.user?.name) {
-    sanitized.user = { name: context.user.name }
+export function sanitizeContextForAI(
+  flowId: string,
+  context: SessionContext | null | undefined
+): SessionContext {
+  if (!context || typeof context !== 'object') {
+    return {}
   }
 
-  // Get the flow's context mapping
   const flow = getFlow(flowId)
   const mapping = flow.contextMapping
 
-  if (mapping) {
-    // Apply the flow's context mapping dynamically
-    for (const [outputPath, inputPath] of Object.entries(mapping)) {
-      const value = getNestedValue(context, inputPath)
-      if (value !== undefined && value !== '' && value !== null) {
-        setNestedValue(sanitized, outputPath, value)
-      }
+  if (!mapping) {
+    console.warn(`Flow "${flowId}" has no contextMapping - AI will receive empty context`)
+    return {}
+  }
+
+  const sanitized: SessionContext = {}
+
+  // Keep user name for personalization
+  const userName = getNestedValue(context, 'user.name')
+  if (userName) {
+    sanitized.user = { name: userName }
+  }
+
+  // Apply the flow's context mapping
+  for (const [outputPath, inputPath] of Object.entries(mapping)) {
+    const value = getNestedValue(context, inputPath)
+    if (value !== undefined && value !== '' && value !== null) {
+      setNestedValue(sanitized, outputPath, value)
     }
   }
 
-  // Clean up any empty nested objects
   return removeEmptyValues(sanitized)
 }

@@ -1,39 +1,24 @@
 /**
  * Sanitizes session context before sending to AI agents.
  *
- * Transforms implementation-specific keys (phase2, phase3, etc.) into
- * semantic labels that don't reveal the underlying flow structure.
- * This prevents agents from mentioning "phases" or "steps" which breaks immersion.
+ * - Strips internal tracking fields (progress, phase/step indices)
+ * - Applies flow's contextMapping to transform keys into semantic labels
+ * - Keeps user name for personalization, omits phone/email for privacy
  */
 
-import { getFlow, type ContextMapping } from '@/data/flows'
+import { getFlow } from '@/data/flows'
 
-type SessionContext = {
-  user?: {
-    name?: string
-    email?: string
-    phone?: string
-  }
-  // Progress tracking (internal, never shared with AI)
-  progress?: {
-    currentScreen?: string
-    currentPhase?: number
-    currentStep?: number
-    completedPhases?: number[]
-    videosWatched?: string[]
-    justCompletedLevel?: boolean
-  }
-  // All other fields are flow-specific and dynamically mapped
-  [key: string]: any
-}
+type SessionContext = Record<string, unknown>
 
-type SanitizedContext = {
-  user?: {
-    name?: string
-    email?: string
-  }
-  [key: string]: any
-}
+// Fields to always remove from context before sending to AI
+const INTERNAL_FIELDS = [
+  'progress',
+  'currentPhase',
+  'currentStep',
+  'completedPhases',
+  'phaseIndex',
+  'stepIndex',
+]
 
 /**
  * Gets a nested value from an object using dot notation path
@@ -87,32 +72,67 @@ function removeEmptyValues(obj: any): any {
 }
 
 /**
- * Transforms raw session context into AI-friendly semantic labels.
- * Uses the flow's contextMapping to dynamically transform keys.
- * Strips out internal tracking data and renames phase-specific keys.
+ * Strips internal fields recursively from context
  */
-export function sanitizeContextForAI(flowId: string, context: SessionContext): SanitizedContext {
-  const sanitized: SanitizedContext = {}
+function stripInternalFields(context: SessionContext): SessionContext {
+  const result: SessionContext = {}
 
-  // User info (keep name for personalization, omit phone/email for privacy in prompts)
-  if (context.user?.name) {
-    sanitized.user = { name: context.user.name }
+  for (const [key, value] of Object.entries(context)) {
+    if (INTERNAL_FIELDS.includes(key)) continue
+
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const nested = stripInternalFields(value as SessionContext)
+      if (Object.keys(nested).length > 0) {
+        result[key] = nested
+      }
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result
+}
+
+/**
+ * Transforms raw session context into AI-friendly format.
+ *
+ * 1. Strips internal tracking fields (progress, indices)
+ * 2. If flow has contextMapping, applies it to transform keys
+ * 3. Keeps user name for personalization
+ */
+export function sanitizeContextForAI(
+  flowId: string,
+  context: SessionContext | null | undefined
+): SessionContext {
+  if (!context || typeof context !== 'object') {
+    return {}
   }
 
   // Get the flow's context mapping
   const flow = getFlow(flowId)
   const mapping = flow.contextMapping
 
-  if (mapping) {
-    // Apply the flow's context mapping dynamically
+  // If flow has contextMapping, use it for explicit key transformation
+  if (mapping && Object.keys(mapping).length > 0) {
+    const sanitized: SessionContext = {}
+
+    // Keep user name for personalization
+    const userName = getNestedValue(context, 'user.name')
+    if (userName) {
+      sanitized.user = { name: userName }
+    }
+
+    // Apply the flow's context mapping
     for (const [outputPath, inputPath] of Object.entries(mapping)) {
       const value = getNestedValue(context, inputPath)
       if (value !== undefined && value !== '' && value !== null) {
         setNestedValue(sanitized, outputPath, value)
       }
     }
+
+    return removeEmptyValues(sanitized)
   }
 
-  // Clean up any empty nested objects
-  return removeEmptyValues(sanitized)
+  // No contextMapping - just strip internal fields
+  return stripInternalFields(context)
 }

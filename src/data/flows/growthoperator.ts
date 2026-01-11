@@ -8,11 +8,12 @@ export const growthoperatorFlow: FlowDefinition = {
     handle: '@growthoperator',
     avatar: '/brady.jpg',
     welcome: {
-      callout: "In the next 5-10 minutes I'll show you why online business hasn't worked for you yet...",
-      headline: "Then I'll show you the best business model for your situation in the new 2026 AI economy",
+      callout: "You're about to see exactly why online business hasn't worked for you yet...",
+      headline: "And what will work for YOU in 2026's AI economy.",
       subheadline: '',
       buttonText: 'Start Conversation',
-      disclaimer: 'Warning: This experience adapts based on your answers. Please thoughtfully respond to get the most value from this. Enjoy :)',
+      disclaimer: 'Warning: This experience adapts based on your answers. Please thoughtfully respond to get the most value from this.',
+      estimatedTime: '2-3 minutes',
     },
   },
 

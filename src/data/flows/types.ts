@@ -28,6 +28,7 @@ export interface MentorConfig {
     videoUrl?: string
     disclaimer?: string
     socialProof?: string
+    estimatedTime?: string
   }
 }
 

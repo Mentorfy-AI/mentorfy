@@ -42,122 +42,201 @@ interface LandingPageProps {
 export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProps) {
   const flow = getFlow(flowId)
   const mentor = flow.mentor
+
+  // Stagger animation variants
+  const container = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.12,
+        delayChildren: 0.1,
+      },
+    },
+  }
+
+  const item = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const },
+    },
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
       backgroundColor: BACKGROUND_COLOR,
     }}>
-      <div style={{
-        maxWidth: '600px',
-        margin: '0 auto',
-        padding: '24px 24px 0',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        minHeight: '100vh',
-      }}>
-        {/* Avatar */}
-        <div style={{ marginBottom: '10px' }}>
-          <MentorAvatar size={64} flowId={flowId} />
-        </div>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="visible"
+        style={{
+          maxWidth: '600px',
+          margin: '0 auto',
+          padding: '48px 24px 0',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        {/* Avatar - Larger for trust */}
+        <motion.div variants={item} style={{ marginBottom: '8px' }}>
+          <MentorAvatar size={88} flowId={flowId} />
+        </motion.div>
 
-        {/* Name + Badge */}
-        <div style={{ marginBottom: '14px' }}>
+        {/* Name + Badge - Tighter to avatar */}
+        <motion.div variants={item} style={{ marginBottom: '24px' }}>
           <MentorBadge flowId={flowId} />
-        </div>
+        </motion.div>
 
-        {/* Callout (optional - shown above headline in larger italic text) */}
+        {/* Callout (optional - the hook) */}
         {mentor.welcome.callout && (
-          <p style={{
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            fontSize: '20px',
-            fontWeight: '500',
-            fontStyle: 'italic',
-            color: '#333333',
-            lineHeight: '1.5',
-            margin: '0 0 16px 0',
-            maxWidth: '520px',
-          }}>
+          <motion.p
+            variants={item}
+            style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '24px',
+              fontWeight: '600',
+              color: '#000000',
+              lineHeight: '1.35',
+              margin: '0 0 8px 0',
+              maxWidth: '480px',
+            }}
+          >
             {mentor.welcome.callout}
-          </p>
+          </motion.p>
         )}
 
-        {/* Headline - $2k-$10k in green */}
-        <h1 style={{
-          fontFamily: "'Lora', Charter, Georgia, serif",
-          fontSize: '24px',
-          fontWeight: '600',
-          color: '#000000',
-          lineHeight: '1.35',
-          margin: '0 0 8px 0',
-          maxWidth: '540px',
-        }}>
+        {/* Headline - Supporting line */}
+        <motion.h1
+          variants={item}
+          style={{
+            fontFamily: "'Lora', Charter, Georgia, serif",
+            fontSize: '19px',
+            fontWeight: '500',
+            fontStyle: 'italic',
+            color: '#555555',
+            lineHeight: '1.45',
+            margin: '0 0 32px 0',
+            maxWidth: '440px',
+          }}
+        >
           <HeadlineWithAccent text={mentor.welcome.headline} />
-        </h1>
+        </motion.h1>
 
         {/* Subheadline */}
-        <p style={{
-          fontFamily: "'Lora', Charter, Georgia, serif",
-          fontSize: '15px',
-          fontWeight: '400',
-          color: '#666666',
-          lineHeight: '1.5',
-          margin: '0 0 20px 0',
-        }}>
-          {mentor.welcome.subheadline}
-        </p>
+        {mentor.welcome.subheadline && (
+          <motion.p
+            variants={item}
+            style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '15px',
+              fontWeight: '400',
+              color: '#666666',
+              lineHeight: '1.5',
+              margin: '0 0 20px 0',
+            }}
+          >
+            {mentor.welcome.subheadline}
+          </motion.p>
+        )}
 
-        {/* Button - Green with hover animation */}
+        {/* Button - 3D raised style matching quiz buttons */}
         <motion.button
+          variants={item}
           onClick={onStart}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
           style={{
-            backgroundColor: ACCENT_COLOR,
+            background: 'linear-gradient(to bottom, #12c48a 0%, #10B981 50%, #0ea572 100%)', // Subtle gradient for depth
             color: '#FFFFFF',
-            padding: '16px 32px',
-            borderRadius: '12px',
-            fontSize: '16px',
-            fontWeight: '700',
-            border: 'none',
+            padding: '18px 48px',
+            borderRadius: '14px',
+            fontSize: '17px',
+            fontWeight: '600',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             cursor: 'pointer',
-            width: '100%',
-            maxWidth: '400px',
             fontFamily: "'Geist', -apple-system, sans-serif",
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+            // Stronger shadow to match quiz buttons' floating effect
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.22), 0 4px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
             transition: 'all 0.15s ease',
           }}
         >
           {mentor.welcome.buttonText} →
         </motion.button>
 
-        {/* Disclaimer (optional) - same styling as callout */}
+        {/* Estimated Time - Typeform style */}
+        {mentor.welcome.estimatedTime && (
+          <motion.div
+            variants={item}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              marginTop: '14px',
+            }}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#999999"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span style={{
+              fontFamily: "'Geist', -apple-system, sans-serif",
+              fontSize: '13px',
+              color: '#999999',
+            }}>
+              Takes {mentor.welcome.estimatedTime}
+            </span>
+          </motion.div>
+        )}
+
+        {/* Disclaimer (optional) - subtle */}
         {mentor.welcome.disclaimer && (
-          <p style={{
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            fontSize: '20px',
-            fontWeight: '500',
-            fontStyle: 'italic',
-            color: '#333333',
-            lineHeight: '1.5',
-            margin: '16px 0 0 0',
-            maxWidth: '520px',
-            textAlign: 'center',
-          }}>
+          <motion.p
+            variants={item}
+            style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '13px',
+              fontWeight: '400',
+              fontStyle: 'italic',
+              color: '#888888',
+              lineHeight: '1.5',
+              margin: '24px 0 0 0',
+              maxWidth: '420px',
+              textAlign: 'center',
+            }}
+          >
             {mentor.welcome.disclaimer}
-          </p>
+          </motion.p>
         )}
 
         {/* Social Proof - only show if flow has socialProof configured */}
         {mentor.welcome.socialProof && (
-          <div style={{
-            marginTop: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}>
+          <motion.div
+            variants={item}
+            style={{
+              marginTop: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
             <span style={{ color: ACCENT_COLOR, fontSize: '13px', letterSpacing: '2px' }}>★★★★★</span>
             <span style={{
               fontFamily: "'Geist', -apple-system, sans-serif",
@@ -166,12 +245,14 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
             }}>
               {mentor.welcome.socialProof}
             </span>
-          </div>
+          </motion.div>
         )}
 
         {/* Watermark */}
-        <MentorfyWatermark />
-      </div>
+        <motion.div variants={item}>
+          <MentorfyWatermark />
+        </motion.div>
+      </motion.div>
     </div>
   )
 }

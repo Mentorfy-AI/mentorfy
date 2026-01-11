@@ -19,6 +19,10 @@
 | D3 Focus | Future pace + "Growth Operator" tease | Full reveal + math + personalized picture |
 | Final Step | path-reveal + fit-assessment (2 steps) | final-diagnosis (1 step with booking) |
 | Prompt Style | Instructional | XML-structured with examples |
+| Landing Callout | "In the next 5-10 minutes..." | "You're about to see exactly..." |
+| Landing Headline | "Then I'll show you the best business model..." | "And what will work for YOU..." |
+| Time Estimate | "5-10 minutes" | "2-3 minutes" |
+| Q1 Back Button | Not rendered | Rendered (returns to landing) |
 
 ---
 
@@ -51,7 +55,7 @@ The v3 flow consists of:
 - **3 Disqualification Exit Points** (Q1, Q6, Q7)
 - **2 Dynamically Personalized Questions** (Q2, Q3 adapt based on previous answers)
 
-**Total Steps:** 12 (Landing + 7 Questions + 4 AI Moments)
+**Total Steps:** 11 (7 Questions + 4 AI Moments)
 
 ---
 
@@ -65,11 +69,17 @@ The v3 flow consists of:
 
 | Element | Expected Content |
 |---------|------------------|
-| Mentor Avatar | Brady Badour avatar image visible |
-| Callout (italic) | `In the next 5-10 minutes I'll show you why online business hasn't worked for you yet...` |
-| Headline | `Then I'll show you the best business model for your situation in the new 2026 AI economy` |
+| Mentor Avatar | Brady Badour avatar image visible (88px) |
+| Callout (italic) | `You're about to see exactly why online business hasn't worked for you yet...` |
+| Headline | `And what will work for YOU in 2026's AI economy.` |
 | Button | `Start Conversation` with arrow |
-| Disclaimer (italic) | `Warning: This experience adapts based on your answers. Please thoughtfully respond to get the most value from this. Enjoy :)` |
+| Time Estimate | `2-3 minutes` (below button with clock icon) |
+| Disclaimer (italic) | `Warning: This experience adapts based on your answers. Please thoughtfully respond to get the most value from this.` |
+
+**Visual Verification:**
+- Background color should be warm beige (#FAF6F0)
+- Button should have green gradient (#12c48a to #0ea572) with 3D raised effect
+- Staggered animation entrance (elements appear sequentially with 0.12s stagger)
 
 **Action:** Click "Start Conversation" button.
 
@@ -90,6 +100,8 @@ The v3 flow consists of:
 - `Investing (crypto, forex, stocks, options, real estate)`
 - `I have not tried a business model yet`
 
+**Assert:** Back button IS visible (can return to landing page)
+
 **Assert:** Questions are LEFT-ALIGNED (not centered)
 
 **Action:** Select "Agency / Services" option. (Clicking option auto-advances)
@@ -97,6 +109,7 @@ The v3 flow consists of:
 **EXIT CONDITION TEST (Scenario 2):** If `I have not tried a business model yet` is selected, assert DisqualificationScreen appears with:
 - Headline: `This is not for you`
 - Message containing: `This experience is designed for people who've already tried building something online.`
+- Message containing: `When you've taken your first real swing at building something, come back. We'll be here.`
 
 ---
 
@@ -107,7 +120,9 @@ The v3 flow consists of:
 2. Shows understanding of that model (e.g., "The outreach, the client work, the churn...")
 3. Ends with: `Tell me what happened. How far did you get? What made you stop?`
 
-**Assert:** Typing animation occurs (blinking cursor, text appears character by character)
+**Assert:** Typing animation occurs (blinking cursor, text appears character by character in 2-char chunks)
+
+**Assert:** Back button is NOT visible (phase boundary - `noBackButton: true`)
 
 **Assert:** Questions are LEFT-ALIGNED
 
@@ -132,6 +147,8 @@ The v3 flow consists of:
 
 **Assert:** Typing animation occurs for the personalized question
 
+**Assert:** Back button IS visible (within phase - can return to Q2)
+
 **Assert placeholder text:** `What do you think went wrong...`
 
 **Action:** Enter text: `I think I was trying to do everything myself. Sales, fulfillment, client management, all of it. I didn't have systems or processes. Every client was custom work and I couldn't step away without things falling apart.`
@@ -148,8 +165,11 @@ The v3 flow consists of:
 1. **Mirror their grind** - Reference their specific story (copywriting, clients, burnout)
 2. **Name the wall** - The moment it started to crack
 3. **Show the pattern** - They're not alone, everyone hits this
-4. **Name the trap** - One punchy line (e.g., "You didn't build a business. You built a job...")
+4. **Name the trap** - One punchy line (e.g., "You didn't build a business. You built a job..." or "trading one boss for a dozen")
 5. **End with absolution** - "**You weren't failing.** You were [absolution]"
+
+**Expected Agency-Specific Absolution:**
+- "**You weren't failing.** You were succeeding at something that was never going to free you."
 
 **CRITICAL - What should NOT appear:**
 - NO "here's what they didn't tell you" (that's D2)
@@ -160,6 +180,8 @@ The v3 flow consists of:
 1. **Assert** `**You weren't failing.**` renders as bold
 2. **Assert** short paragraphs (1-2 sentences) with blank lines between
 3. **Assert** response feels personal, not generic
+
+**Assert:** Back button is dimmed/hidden (AI moment - no navigation)
 
 **Assert:** Continue button appears after streaming completes.
 
@@ -192,6 +214,8 @@ The v3 flow consists of:
 2. **Assert** "$3 million" claim is bold
 3. **Assert** income numbers in case studies are bold ($30K/month, $50K/month, $100K/month)
 4. **Assert** numbered list renders properly (1. 2. 3.)
+
+**Assert:** Back button is dimmed/hidden (AI moment)
 
 **Assert:** Continue button appears after streaming completes.
 
@@ -228,6 +252,8 @@ The v3 flow consists of:
 2. **Assert** money numbers are bold ($50,000/month, $10,000/month)
 3. **Assert** "Just you. Running the show." is bold
 
+**Assert:** Back button is dimmed/hidden (AI moment)
+
 **Assert:** Continue button appears after streaming completes.
 
 **Action:** Click "Continue" button.
@@ -244,6 +270,8 @@ What would actually change in your life?
 ```
 
 **Assert:** Questions are LEFT-ALIGNED
+
+**Assert:** Back button IS visible (within question phase)
 
 **Assert placeholder text:** `What would be different...`
 
@@ -263,6 +291,8 @@ But you're still here.
 
 Why today? What's actually going on that made you stop and pay attention to this?
 ```
+
+**Assert:** Back button IS visible (within question phase)
 
 **Assert placeholder text:** `Be real about what brought you here...`
 
@@ -287,11 +317,14 @@ Are you ready for that?
 - `Yes, I'm ready`
 - `Not yet`
 
+**Assert:** Back button IS visible (within question phase)
+
 **Action:** Select "Yes, I'm ready" option. (Clicking option auto-advances)
 
 **EXIT CONDITION TEST (Scenario 3):** If `Not yet` is selected, assert DisqualificationScreen appears with:
 - Headline: `That's honest`
 - Message containing: `Most people aren't ready. And there's no shame in that.`
+- Message containing: `When you are ready—really ready—come back. The opportunity isn't going anywhere.`
 
 ---
 
@@ -311,11 +344,14 @@ How much do you have available to invest in building this?
 - `$10K - $25K`
 - `$25K+`
 
+**Assert:** Back button IS visible (within question phase)
+
 **Action:** Select "$5K - $10K" option. (Clicking option auto-advances)
 
 **EXIT CONDITION TEST (Scenario 4):** If `Less than $1K` is selected, assert DisqualificationScreen appears with:
 - Headline: `Not quite yet`
 - Message containing: `Every real business takes startup capital. Under $1K makes it nearly impossible to move fast enough.`
+- Message containing: `When you've got at least $1K-$5K to invest in building this properly, come back.`
 
 ---
 
@@ -350,6 +386,8 @@ How much do you have available to invest in building this?
 - "By the time we get on the call, I'll already have ideas for you."
 - `**This is just the beginning.**`
 
+**Assert:** Back button is dimmed/hidden (AI moment)
+
 **Markdown Rendering Verification:**
 1. **Assert** "You made it" is bold
 2. **Assert** "You're exactly who we're looking for" is bold
@@ -379,7 +417,8 @@ Use test data that meets ALL qualification criteria:
 
 **Expected Result:** DisqualificationScreen with:
 - Headline: `This is not for you`
-- Message: `This experience is designed for people who've already tried building something online...`
+- Message: `This experience is designed for people who've already tried building something online.`
+- Message: `When you've taken your first real swing at building something, come back. We'll be here.`
 - No further progression possible
 
 ---
@@ -392,7 +431,8 @@ Complete Q1-Q5 with qualifying answers, then:
 
 **Expected Result:** DisqualificationScreen with:
 - Headline: `That's honest`
-- Message: `Most people aren't ready. And there's no shame in that...`
+- Message: `Most people aren't ready. And there's no shame in that.`
+- Message: `When you are ready—really ready—come back. The opportunity isn't going anywhere.`
 - No further progression possible
 
 ---
@@ -405,7 +445,8 @@ Complete Q1-Q6 with qualifying answers, then:
 
 **Expected Result:** DisqualificationScreen with:
 - Headline: `Not quite yet`
-- Message: `Every real business takes startup capital. Under $1K makes it nearly impossible...`
+- Message: `Every real business takes startup capital. Under $1K makes it nearly impossible to move fast enough.`
+- Message: `When you've got at least $1K-$5K to invest in building this properly, come back.`
 - No further progression possible
 
 ---
@@ -414,21 +455,28 @@ Complete Q1-Q6 with qualifying answers, then:
 
 ### Back Button Behavior
 
-Back button works **within phases only**. It should NOT render at phase boundaries or during AI moments.
-
 | Current Step | Back Button State | Behavior |
 |--------------|-------------------|----------|
-| Step 1 (Q1) | **Not rendered** | First step of phase, no back |
-| Step 2 (Q2) | **Not rendered** | First step of Phase C, cannot go back to Phase B |
-| Step 3 (Q3) | **Rendered** | Returns to Q2 (within Phase C) |
-| Steps 4-6 (AI Moments) | **Not rendered** | AI response phase, no navigation |
-| Step 7 (Q4) | **Not rendered** | First step of Phase E, cannot go back to Phase D |
-| Step 8 (Q5) | **Rendered** | Returns to Q4 (within Phase E) |
-| Step 9 (Q6) | **Rendered** | Returns to Q5 (within Phase E) |
-| Step 10 (Q7) | **Rendered** | Returns to Q6 (within Phase E) |
-| Step 11 (Final Diagnosis) | **Not rendered** | AI response phase, no navigation |
+| Step 1 (Q1) | **Rendered** | Returns to landing page |
+| Step 2 (Q2) | **Not rendered** | Phase boundary (`noBackButton: true`) |
+| Step 3 (Q3) | **Rendered** | Returns to Q2 (within phase) |
+| Steps 4-6 (AI Moments) | **Dimmed/Hidden** | AI response phase, no navigation |
+| Step 7 (Q4) | **Rendered** | Within question phase |
+| Step 8 (Q5) | **Rendered** | Returns to Q4 (within phase) |
+| Step 9 (Q6) | **Rendered** | Returns to Q5 (within phase) |
+| Step 10 (Q7) | **Rendered** | Returns to Q6 (within phase) |
+| Step 11 (Final Diagnosis) | **Dimmed/Hidden** | AI response phase, no navigation |
 
 **Back Button Test Cases:**
+
+**TEST: Q1 back button returns to landing**
+1. On Q1, assert back button IS visible
+2. Click back button
+3. Assert returns to landing page
+
+**TEST: Q2 has no back button (phase boundary)**
+1. Complete Q1, arrive at Q2
+2. Assert back button is NOT visible
 
 **TEST: Back button works within Phase C (Q2-Q3)**
 1. Complete Q2, arrive at Q3
@@ -482,8 +530,8 @@ The final diagnosis MUST reference:
 For each disqualification screen, verify:
 
 1. **Layout:**
-   - Mentor avatar (Brady) centered at top
-   - Headline in large serif font
+   - Mentor avatar (Brady) visible
+   - Headline in large serif font (28px)
    - Message with proper line breaks
    - Mentorfy watermark at bottom
 
@@ -513,15 +561,17 @@ When an assertion fails, report using this format:
 
 | Checkpoint | Step | Expected Behavior |
 |------------|------|-------------------|
-| Landing Page | 0 | Callout, headline, button, disclaimer all visible |
-| Q1 Exit Condition | 1 | "Not tried yet" → Disqualification |
+| Landing Page | 0 | Callout, headline, button, time estimate, disclaimer all visible |
+| Q1 Back Button | 1 | Back button visible, returns to landing |
+| Q1 Exit Condition | 1 | "Not tried yet" -> Disqualification |
+| Q2 No Back Button | 2 | Back button NOT visible (phase boundary) |
 | Q2 Personalization | 2 | Question adapts based on Q1 model selection |
 | Q3 Personalization | 3 | Question adapts based on Q2 answer |
 | Diagnosis 1 | 4 | Validation + absolution, NO paradigm shift yet |
 | Diagnosis 2 | 5 | Shovel sellers paradigm, SPECIFIC model name, proof with Kade/Nick/Carson |
 | Diagnosis 3 | 6 | "Growth Operator" reveal, personalized expert type, math |
-| Q6 Exit Condition | 9 | "Not yet" → Disqualification |
-| Q7 Exit Condition | 10 | "Less than $1K" → Disqualification |
+| Q6 Exit Condition | 9 | "Not yet" -> Disqualification |
+| Q7 Exit Condition | 10 | "Less than $1K" -> Disqualification |
 | Final Diagnosis | 11 | Callbacks to Q4/Q5, selection frame, Calendly widget + afterText |
 
 ---
@@ -530,8 +580,8 @@ When an assertion fails, report using this format:
 
 **FAIL - Raw syntax visible:**
 ```
-**Bold text** not rendered        ← asterisks visible
-*Italic text* not rendered        ← asterisks visible
+**Bold text** not rendered        <- asterisks visible
+*Italic text* not rendered        <- asterisks visible
 ```
 
 **FAIL - No visual hierarchy:**
@@ -550,7 +600,7 @@ When an assertion fails, report using this format:
 
 | Q1 Selection | Expected Q2 Opening |
 |--------------|---------------------|
-| Ecommerce | "Ecommerce. Got it. The product research, the ads, the suppliers..." |
+| Ecommerce | "Ecommerce. Got it. The product research, the ads, the suppliers, the margins..." |
 | Agency / Services | "Agency. Got it. The outreach, the client work, the churn..." |
 | Sales | "Sales. Got it. The dials, the commission, the grind..." |
 | Content Creation | "Content. Got it. The posting, the algorithm, the waiting..." |
@@ -558,3 +608,41 @@ When an assertion fails, report using this format:
 | Affiliate Marketing | "Affiliate. Got it. The traffic, the commissions, the dependency..." |
 | Software | "Software. Got it. The building, the launching, the getting people to use it..." |
 | Investing | "Investing. Got it. The charts, the plays, the wins and losses..." |
+
+---
+
+## Diagnosis 1 Model-Specific Absolution Lines
+
+| Q1 Selection | Expected Absolution |
+|--------------|---------------------|
+| Ecommerce | "You weren't failing. You were playing a game designed to keep you searching." |
+| Agency / Services | "You weren't failing. You were succeeding at something that was never going to free you." |
+| Sales | "You weren't failing. You were winning at a game with no finish line." |
+| Content Creation | "You weren't failing. You were waiting for permission from an algorithm that doesn't care." |
+| Education Products | "You weren't failing. You were set up to fail." |
+| Affiliate Marketing | "You weren't failing. You were dependent by design." |
+| Software | "You weren't failing. You were outgunned from day one." |
+| Investing | "You weren't failing. You were gambling with better vocabulary." |
+
+---
+
+## Visual Style Verification
+
+**Colors:**
+- Background: #FAF6F0 (warm beige)
+- Accent/Buttons: #10B981 (green) / gradient #12c48a to #0ea572
+- Button Border: #E8E3DC (taupe)
+- Text: #000/#111 (primary), #666/#888 (secondary)
+
+**Typography:**
+- Headlines: Lora, Charter, Georgia (serif)
+- UI/Body: Geist, -apple-system, sans-serif
+- Question text: 18-24px
+- Disqualification headline: 28px
+
+**Animations:**
+- Landing page: staggered entrance (0.12s stagger, 0.1s initial delay)
+- Typing: 8-16ms per 2-char chunk with blinking cursor
+- Options: staggered fade-in (0.08s per option)
+- Button hover: scale 1.01
+- Button tap: scale 0.98

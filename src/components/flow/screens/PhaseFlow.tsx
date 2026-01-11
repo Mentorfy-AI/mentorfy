@@ -79,43 +79,27 @@ function MultipleChoiceStepContent({ step, onAnswer }: MultipleChoiceStepContent
   const showCursor = isWaitingForResponse || (fullQuestion && !isTyping && !typingComplete)
 
   return (
-    <>
-      <style>{`
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-        .typing-cursor {
-          display: inline-block;
-          width: 2px;
-          height: 1em;
-          background-color: #000;
-          margin-left: 1px;
-          vertical-align: text-bottom;
-          animation: cursorBlink 0.8s step-end infinite;
-        }
-      `}</style>
+    <div style={{
+      maxWidth: '480px',
+      margin: '0 auto',
+      padding: '140px 24px 48px',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Question with typing animation */}
       <div style={{
-        maxWidth: '480px',
-        margin: '0 auto',
-        padding: '140px 24px 48px',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
+        fontFamily: "'Lora', Charter, Georgia, serif",
+        fontSize: '18px',
+        fontWeight: '500',
+        color: '#000',
+        textAlign: 'left',
+        lineHeight: '1.5',
+        marginBottom: '32px',
       }}>
-        {/* Question with typing animation */}
-        <div style={{
-          fontFamily: "'Lora', Charter, Georgia, serif",
-          fontSize: '18px',
-          fontWeight: '500',
-          color: '#000',
-          textAlign: 'left',
-          lineHeight: '1.5',
-          marginBottom: '32px',
-        }}>
-          {displayedQuestion || ''}
-          {showCursor && <span className="typing-cursor" />}
-        </div>
+        {displayedQuestion || ''}
+        {showCursor && <span className="typing-cursor" />}
+      </div>
 
         {/* Options - fade in one at a time when typing complete */}
         <AnimatePresence>
@@ -168,8 +152,7 @@ function MultipleChoiceStepContent({ step, onAnswer }: MultipleChoiceStepContent
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </>
+    </div>
   )
 }
 
@@ -324,94 +307,52 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
   const showCursor = isWaitingForResponse || (fullQuestion && !isTyping && !typingComplete)
 
   return (
-    <>
-      <style>{`
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
-      <div style={{
-        maxWidth: '540px',
-        margin: '0 auto',
-        padding: '140px 24px 48px',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-        {/* Progress is now persistent in parent */}
+    <div style={{
+      maxWidth: '540px',
+      margin: '0 auto',
+      padding: '140px 24px 48px',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Progress is now persistent in parent */}
 
-        {/* Question - Main Focus with typing animation for all questions */}
-        <div
-          className="question-markdown"
-          style={{
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            fontSize: '18px',
-            fontWeight: '500',
-            color: '#000',
-            textAlign: 'left',
-            lineHeight: '1.5',
-            marginBottom: '32px',
-          }}
-        >
-          <style>{`
-            .question-markdown p {
-              margin: 0 0 16px 0;
-            }
-            .question-markdown p:last-child {
-              margin-bottom: 0;
-            }
-            .question-markdown strong {
-              font-weight: 600;
-            }
-            .question-markdown em {
-              font-style: italic;
-            }
-            @keyframes cursorBlink {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0; }
-            }
-            .typing-cursor {
-              display: inline-block;
-              width: 2px;
-              height: 1em;
-              background-color: #000;
-              margin-left: 1px;
-              vertical-align: text-bottom;
-              animation: cursorBlink 0.8s step-end infinite;
-            }
-          `}</style>
-          {displayQuestion ? (
-            (() => {
-              // Split into paragraphs to track the last one
-              const paragraphs = displayQuestion.split('\n\n').filter(Boolean)
-              const lastParagraphIndex = paragraphs.length - 1
-              let currentParagraphIndex = -1
-
-              return (
-                <ReactMarkdown
-                  components={{
-                    p: ({ children, ...props }) => {
-                      currentParagraphIndex++
-                      const isLast = currentParagraphIndex === lastParagraphIndex
-                      return (
-                        <p {...props}>
-                          {children}
-                          {showCursor && isLast && <span className="typing-cursor" />}
-                        </p>
-                      )
-                    }
-                  }}
-                >
-                  {displayQuestion}
-                </ReactMarkdown>
-              )
-            })()
-          ) : (
-            // Show just the cursor when waiting for text
-            showCursor && <span className="typing-cursor" />
-          )}
-        </div>
+      {/* Question - Main Focus with typing animation for all questions */}
+      <div
+        className="question-markdown"
+        style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: '18px',
+          fontWeight: '500',
+          color: '#000',
+          textAlign: 'left',
+          lineHeight: '1.5',
+          marginBottom: '32px',
+        }}
+      >
+        <style>{`
+          .question-markdown p {
+            margin: 0 0 16px 0;
+          }
+          .question-markdown p:last-child {
+            margin-bottom: 0;
+          }
+          .question-markdown strong {
+            font-weight: 600;
+          }
+          .question-markdown em {
+            font-style: italic;
+          }
+        `}</style>
+        {displayQuestion ? (
+          <span>
+            <ReactMarkdown>{displayQuestion}</ReactMarkdown>
+            {showCursor && <span className="typing-cursor" style={{ color: '#000' }} />}
+          </span>
+        ) : (
+          showCursor && <span className="typing-cursor" style={{ color: '#000' }} />
+        )}
+      </div>
 
       {/* Text Area + Button - Hidden during typing, fades in when complete */}
       <AnimatePresence>
@@ -486,7 +427,6 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
         )}
       </AnimatePresence>
     </div>
-    </>
   )
 }
 
@@ -762,42 +702,27 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
 
   const isWaiting = phase === 'waiting'
   const isTyping = phase === 'typing'
-  const showCursor = isWaiting || (fullResponse && phase === 'waiting') // Only show cursor while waiting
 
   return (
-    <>
-      <style>{`
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
+    <div style={{
+      maxWidth: '640px',
+      margin: '0 auto',
+      padding: '140px 24px 48px',
+    }}>
+      {/* Progress is now persistent in parent */}
 
-      <div style={{
-        maxWidth: '640px',
-        margin: '0 auto',
-        padding: '140px 24px 48px',
-      }}>
-        {/* Progress is now persistent in parent */}
+      {/* Waiting Phase - Just a blinking cursor while loading */}
+      {isWaiting && (
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          minHeight: '200px',
+        }}>
+          <span className="typing-cursor" style={{ color: '#333333' }} />
+        </div>
+      )}
 
-        {/* Waiting Phase - Just a blinking cursor while loading */}
-        {isWaiting && (
-          <div style={{
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            minHeight: '200px',
-          }}>
-            <span style={{
-              display: 'inline-block',
-              width: '2px',
-              height: '1.2em',
-              backgroundColor: '#333333',
-              animation: 'cursorBlink 0.8s step-end infinite',
-            }} />
-          </div>
-        )}
-
-        {/* Typing/Complete Phase - Left-aligned response with markdown */}
-        {(isTyping || phase === 'complete') && (
+      {/* Typing/Complete Phase - Left-aligned response with markdown */}
+      {(isTyping || phase === 'complete') && (
           <div className="ai-moment-markdown" style={{ fontFamily: "'Lora', Charter, Georgia, serif" }}>
             <style>{`
               .ai-moment-markdown h1 {
@@ -950,8 +875,7 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
             </motion.button>
           </motion.div>
         )}
-      </div>
-    </>
+    </div>
   )
 }
 
@@ -1035,52 +959,36 @@ function VideoStepContent({ step, onContinue, flowId = 'rafael-tats' }: VideoSte
       : null
 
   return (
-    <>
-      <style>{`
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
+    <div style={{
+      maxWidth: '640px',
+      margin: '0 auto',
+      padding: '140px 24px 48px',
+    }}>
+      {/* Progress is now persistent in parent */}
 
-      <div style={{
-        maxWidth: '640px',
-        margin: '0 auto',
-        padding: '140px 24px 48px',
-      }}>
-        {/* Progress is now persistent in parent */}
-
-        {/* Intro Text with streaming animation */}
-        {step.introText && (
-          <div style={{
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            marginBottom: '32px',
-          }}>
-            {displayParagraphs.map((paragraph, i) => (
-              <p key={i} style={{
-                fontSize: '17px',
-                lineHeight: '1.75',
-                color: '#222',
-                margin: 0,
-                marginTop: i > 0 ? '20px' : 0,
-              }}>
-                {paragraph}
-                {/* Show cursor on the last paragraph while streaming */}
-                {i === displayParagraphs.length - 1 && !textComplete && (
-                  <span style={{
-                    display: 'inline-block',
-                    width: '2px',
-                    height: '1em',
-                    backgroundColor: '#333333',
-                    marginLeft: '2px',
-                    verticalAlign: 'text-bottom',
-                    animation: 'cursorBlink 1s step-end infinite',
-                  }} />
-                )}
-              </p>
-            ))}
-          </div>
-        )}
+      {/* Intro Text with streaming animation */}
+      {step.introText && (
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          marginBottom: '32px',
+        }}>
+          {displayParagraphs.map((paragraph, i) => (
+            <p key={i} style={{
+              fontSize: '17px',
+              lineHeight: '1.75',
+              color: '#222',
+              margin: 0,
+              marginTop: i > 0 ? '20px' : 0,
+            }}>
+              {paragraph}
+              {/* Show cursor on the last paragraph while streaming */}
+              {i === displayParagraphs.length - 1 && !textComplete && (
+                <span className="typing-cursor" style={{ color: '#333333' }} />
+              )}
+            </p>
+          ))}
+        </div>
+      )}
 
         {/* Video - Animated entrance matching ActiveChat */}
         {videoInfo && (
@@ -1207,8 +1115,7 @@ function VideoStepContent({ step, onContinue, flowId = 'rafael-tats' }: VideoSte
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </>
+    </div>
   )
 }
 
@@ -1380,15 +1287,7 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
           }}>
             {paragraph}
             {phase === 'typing-above' && i === paragraphs.length - 1 && (
-              <span style={{
-                display: 'inline-block',
-                width: '2px',
-                height: '0.85em',
-                backgroundColor: '#333',
-                marginLeft: '3px',
-                verticalAlign: 'baseline',
-                animation: 'cursorBlink 1s step-end infinite',
-              }} />
+              <span className="typing-cursor" style={{ color: '#333' }} />
             )}
           </h1>
         )
@@ -1406,15 +1305,7 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
           {parseTextWithBold(paragraph)}
           {((isAbove && phase === 'typing-above') || (!isAbove && phase === 'typing-below')) &&
            i === paragraphs.length - 1 && (
-            <span style={{
-              display: 'inline-block',
-              width: '2px',
-              height: '1em',
-              backgroundColor: '#333',
-              marginLeft: '2px',
-              verticalAlign: 'text-bottom',
-              animation: 'cursorBlink 1s step-end infinite',
-            }} />
+            <span className="typing-cursor" style={{ color: '#333' }} />
           )}
         </p>
       )
@@ -1422,20 +1313,12 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
   }
 
   return (
-    <>
-      <style>{`
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
-
-      <div style={{
-        maxWidth: '640px',
-        margin: '0 auto',
-        padding: '140px 24px 120px',
-      }}>
-        {/* Progress is now persistent in parent */}
+    <div style={{
+      maxWidth: '640px',
+      margin: '0 auto',
+      padding: '140px 24px 120px',
+    }}>
+      {/* Progress is now persistent in parent */}
 
         {/* Copy Above Video - Streaming */}
         <div style={{ marginBottom: videoVisible ? '32px' : 0 }}>
@@ -1784,8 +1667,7 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </>
+    </div>
   )
 }
 

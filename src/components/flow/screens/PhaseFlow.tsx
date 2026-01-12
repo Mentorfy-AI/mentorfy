@@ -886,15 +886,27 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
           buffer = lines.pop() || ''
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            try {
-              const data = JSON.parse(line.slice(6))
-              if (data.type === 'text-delta' && data.delta) {
-                fullText += data.delta
-              } else if (data.type === 'tool-output-available' && data.output?.embedType) {
-                setEmbedData(data.output)
-              }
-            } catch { /* skip invalid JSON */ }
+            // UI message stream format: text chunks start with "0:", tool results with "9:"
+            if (line.startsWith('0:')) {
+              try {
+                const textChunk = JSON.parse(line.slice(2))
+                if (typeof textChunk === 'string') {
+                  fullText += textChunk
+                }
+              } catch { /* skip invalid JSON */ }
+            } else if (line.startsWith('9:')) {
+              // Tool result format: 9:[{"toolCallId":"...","result":{...}}]
+              try {
+                const toolResults = JSON.parse(line.slice(2))
+                if (Array.isArray(toolResults)) {
+                  for (const toolResult of toolResults) {
+                    if (toolResult.result?.embedType) {
+                      setEmbedData(toolResult.result)
+                    }
+                  }
+                }
+              } catch { /* skip invalid JSON */ }
+            }
           }
         }
 

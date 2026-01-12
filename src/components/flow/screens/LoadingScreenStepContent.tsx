@@ -68,6 +68,10 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           buffer = lines.pop() || ''
 
           for (const line of lines) {
+            // Debug: log first few lines to see format
+            if (fullText.length < 100) {
+              console.log('[LoadingScreen] Raw line:', line.slice(0, 100))
+            }
             // UI message stream format: text chunks start with "0:" followed by JSON string
             if (line.startsWith('0:')) {
               try {
@@ -80,12 +84,18 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           }
         }
 
+        console.log('[LoadingScreen] fullText length:', fullText.length)
+        console.log('[LoadingScreen] fullText preview:', fullText.slice(0, 500))
+
         const screens: string[] = []
         const regex = /<screen_(\d+)>([\s\S]*?)<\/screen_\d+>/g
         let match
         while ((match = regex.exec(fullText)) !== null) {
           screens[parseInt(match[1]) - 1] = match[2].trim()
         }
+
+        console.log('[LoadingScreen] screens found:', screens.length)
+        console.log('[LoadingScreen] screen lengths:', screens.map(s => s?.length || 0))
 
         setDiagnosisScreens(screens)
         setDiagnosisReady(true)

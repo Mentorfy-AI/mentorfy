@@ -26,30 +26,31 @@ export const growthoperatorFlow: FlowDefinition = {
     calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
   },
 
-  // Maps raw session state keys to sanitized keys for AI agents
+  // Maps session context paths to semantic AI-friendly paths
+  // Format: 'outputPath (what AI sees)': 'inputPath (where to read from context)'
   contextMapping: {
     // Q1-Q5: Business history
-    'assessment.modelTried': 'business.modelTried',
-    'assessment.modelsCount': 'business.modelsCount',
-    'assessment.originalMotivation': 'motivation.original',
-    'assessment.bestResult': 'progress.bestResult',
-    'assessment.whatHappened': 'progress.whatHappened',
+    'business.modelTried': 'assessment.modelTried',
+    'business.modelsCount': 'assessment.modelsCount',
+    'motivation.original': 'assessment.originalMotivation',
+    'progress.bestResult': 'assessment.bestResult',
+    'progress.whatHappened': 'assessment.whatHappened',
     // Q6-Q8: Investment
-    'assessment.duration': 'journey.duration',
-    'assessment.moneyInvested': 'investment.money',
-    'assessment.deeperCost': 'investment.cost',
+    'journey.duration': 'assessment.duration',
+    'investment.money': 'assessment.moneyInvested',
+    'investment.cost': 'assessment.deeperCost',
     // Q9-Q11: Education & belief
-    'assessment.educationSource': 'education.source',
-    'assessment.teacherMoney': 'education.teacherMoney',
-    'assessment.beliefWhyFailed': 'belief.whyFailed',
+    'education.source': 'assessment.educationSource',
+    'education.teacherMoney': 'assessment.teacherMoney',
+    'belief.whyFailed': 'assessment.beliefWhyFailed',
     // Q12-Q14: Emotional state
-    'assessment.emotionalState': 'emotion.current',
-    'assessment.shame': 'emotion.shame',
-    'assessment.whyKeepGoing': 'resilience.whyGoing',
+    'emotion.current': 'assessment.emotionalState',
+    'emotion.shame': 'assessment.shame',
+    'resilience.whyGoing': 'assessment.whyKeepGoing',
     // Q15-Q17: Vision & urgency
-    'assessment.whatWouldChange': 'vision.whatChanges',
-    'assessment.urgency': 'urgency.level',
-    'assessment.biggestFear': 'fear.biggest',
+    'vision.whatChanges': 'assessment.whatWouldChange',
+    'urgency.level': 'assessment.urgency',
+    'fear.biggest': 'assessment.biggestFear',
     // Contact info
     'user.name': 'user.name',
     'user.email': 'user.email',

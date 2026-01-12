@@ -68,13 +68,15 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           buffer = lines.pop() || ''
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            try {
-              const data = JSON.parse(line.slice(6))
-              if (data.type === 'text-delta' && data.delta) {
-                fullText += data.delta
-              }
-            } catch { /* skip invalid JSON */ }
+            // UI message stream format: text chunks start with "0:" followed by JSON string
+            if (line.startsWith('0:')) {
+              try {
+                const textChunk = JSON.parse(line.slice(2))
+                if (typeof textChunk === 'string') {
+                  fullText += textChunk
+                }
+              } catch { /* skip invalid JSON */ }
+            }
           }
         }
 

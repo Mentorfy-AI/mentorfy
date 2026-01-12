@@ -68,18 +68,23 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           buffer = lines.pop() || ''
 
           for (const line of lines) {
-            // AI SDK 6 uses SSE format: data: {"type":"text-delta","delta":"..."}
+            // SSE format: data: {"type":"text-delta","id":"0","delta":"text"}
             if (line.startsWith('data: ')) {
-              const jsonStr = line.slice(6)
-              if (jsonStr === '[DONE]') continue
               try {
-                const data = JSON.parse(jsonStr)
-                if (data.type === 'text-delta' && data.delta) {
+                const data = JSON.parse(line.slice(6))
+                if (data.type === 'text-delta' && typeof data.delta === 'string') {
                   fullText += data.delta
                 }
-              } catch {
-                // Skip malformed JSON chunks
-              }
+              } catch { /* skip invalid JSON */ }
+            }
+            // Legacy format: 0:"text chunk"
+            else if (line.startsWith('0:')) {
+              try {
+                const textChunk = JSON.parse(line.slice(2))
+                if (typeof textChunk === 'string') {
+                  fullText += textChunk
+                }
+              } catch { /* skip invalid JSON */ }
             }
           }
         }

@@ -1,11 +1,13 @@
 import { rafaelTatsFlow } from './rafael-tats'
 import { growthoperatorFlow } from './growthoperator'
+import { growthoperatorDebugFlow } from './growthoperator-debug'
 import { blackboxFlow } from './blackbox'
 import type { FlowDefinition } from './types'
 
 const flows: Record<string, FlowDefinition> = {
   'rafael-tats': rafaelTatsFlow,
   'growthoperator': growthoperatorFlow,
+  'growthoperator-debug': growthoperatorDebugFlow,
   'blackbox': blackboxFlow,
 }
 

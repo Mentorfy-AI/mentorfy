@@ -26,7 +26,7 @@ export const blackboxFlow: FlowDefinition = {
     calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
   },
 
-  webhookUrl: 'https://webhook.site/12b16c59-a636-49fb-a06c-f87f70b7c2f6',
+  webhookUrl: process.env.BLACKBOX_WEBHOOK_URL,
 
   contextMapping: {
     // Q1-Q3: Placeholder questions

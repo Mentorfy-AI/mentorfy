@@ -30,8 +30,8 @@ type RouteContext = { params: Promise<{ type: string }> }
 
 // Map flow + type + promptKey to agent ID
 function getAgentId(flowId: string, type: string, promptKey?: string): string | undefined {
-  // Growth Operator v2/v3 uses promptKey-based routing
-  if (flowId === 'growthoperator' && type === 'diagnosis' && promptKey) {
+  // Growth Operator v2/v3/v4 uses promptKey-based routing (includes debug variant)
+  if ((flowId === 'growthoperator' || flowId === 'growthoperator-debug') && type === 'diagnosis' && promptKey) {
     const promptKeyToAgent: Record<string, string> = {
       // v3 comprehensive 8-screen diagnosis (Opus 4.5)
       'diagnosis-comprehensive': 'growthoperator-diagnosis-comprehensive',

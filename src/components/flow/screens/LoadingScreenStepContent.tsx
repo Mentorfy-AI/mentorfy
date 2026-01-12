@@ -68,10 +68,6 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           buffer = lines.pop() || ''
 
           for (const line of lines) {
-            // Debug: log first few lines to see format
-            if (fullText.length < 200) {
-              console.log('[LoadingScreen] Raw line:', JSON.stringify(line.slice(0, 120)))
-            }
             // AI SDK 6 uses SSE format: data: {"type":"text-delta","delta":"..."}
             if (line.startsWith('data: ')) {
               const jsonStr = line.slice(6)
@@ -81,15 +77,12 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
                 if (data.type === 'text-delta' && data.delta) {
                   fullText += data.delta
                 }
-              } catch (e) {
-                console.log('[LoadingScreen] JSON parse error:', e, 'for:', jsonStr.slice(0, 50))
+              } catch {
+                // Skip malformed JSON chunks
               }
             }
           }
         }
-
-        console.log('[LoadingScreen] fullText length:', fullText.length)
-        console.log('[LoadingScreen] fullText preview:', fullText.slice(0, 500))
 
         const screens: string[] = []
         const regex = /<screen_(\d+)>([\s\S]*?)<\/screen_\d+>/g
@@ -97,9 +90,6 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
         while ((match = regex.exec(fullText)) !== null) {
           screens[parseInt(match[1]) - 1] = match[2].trim()
         }
-
-        console.log('[LoadingScreen] screens found:', screens.length)
-        console.log('[LoadingScreen] screen lengths:', screens.map(s => s?.length || 0))
 
         setDiagnosisScreens(screens)
         setDiagnosisReady(true)

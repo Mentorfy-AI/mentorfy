@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db, Session } from '@/lib/db'
+import { maybeQueueContactWebhook } from '@/lib/webhook'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -94,6 +95,18 @@ export async function PATCH(req: Request, context: RouteContext) {
   if (error) {
     console.error('Session update error:', error)
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 })
+  }
+
+  // Queue webhook if contact info was added/updated (non-blocking)
+  const contactInfoChanged =
+    (body.email !== undefined && body.email !== existing.email) ||
+    (body.phone !== undefined && body.phone !== existing.phone) ||
+    (body.name !== undefined && body.name !== existing.name)
+
+  if (contactInfoChanged) {
+    maybeQueueContactWebhook(data as Session).catch((err) => {
+      console.error('[webhook] Failed to queue contact webhook:', err)
+    })
   }
 
   return NextResponse.json(data)

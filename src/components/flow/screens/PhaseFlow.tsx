@@ -874,36 +874,40 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
         if (!reader) return
 
         const decoder = new TextDecoder()
-        let rawText = ''
+        let fullText = ''
+        let buffer = ''
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          rawText += decoder.decode(value, { stream: true })
-        }
 
-        // Check if response is SSE format (UI message stream) or plain text
-        let fullText = ''
-        if (rawText.startsWith('data: ')) {
-          // SSE format - parse data lines (used when tools are enabled)
-          const lines = rawText.split('\n')
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const jsonStr = line.slice(6)
-              if (jsonStr === '[DONE]') continue
+            // UI message stream format: text chunks start with "0:", tool results with "9:"
+            if (line.startsWith('0:')) {
               try {
-                const data = JSON.parse(jsonStr)
-                if (data.type === 'text-delta' && data.delta) {
-                  fullText += data.delta
-                } else if (data.type === 'tool-result' && data.result?.embedType) {
-                  setEmbedData(data.result)
+                const textChunk = JSON.parse(line.slice(2))
+                if (typeof textChunk === 'string') {
+                  fullText += textChunk
+                }
+              } catch { /* skip invalid JSON */ }
+            } else if (line.startsWith('9:')) {
+              // Tool result format: 9:[{"toolCallId":"...","result":{...}}]
+              try {
+                const toolResults = JSON.parse(line.slice(2))
+                if (Array.isArray(toolResults)) {
+                  for (const toolResult of toolResults) {
+                    if (toolResult.result?.embedType) {
+                      setEmbedData(toolResult.result)
+                    }
+                  }
                 }
               } catch { /* skip invalid JSON */ }
             }
           }
-        } else {
-          // Plain text stream (no tools)
-          fullText = rawText
         }
 
         setFullResponse(fullText)

@@ -56,17 +56,30 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
         const reader = res.body?.getReader()
         if (!reader) return
 
-        // Simple text stream - just concatenate bytes (no SSE parsing needed)
         const decoder = new TextDecoder()
         let fullText = ''
+        let buffer = ''
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          fullText += decoder.decode(value, { stream: true })
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            // UI message stream format: text chunks start with "0:" followed by JSON string
+            if (line.startsWith('0:')) {
+              try {
+                const textChunk = JSON.parse(line.slice(2))
+                if (typeof textChunk === 'string') {
+                  fullText += textChunk
+                }
+              } catch { /* skip invalid JSON */ }
+            }
+          }
         }
 
-        // Extract screens from <screen_N>...</screen_N> tags
         const screens: string[] = []
         const regex = /<screen_(\d+)>([\s\S]*?)<\/screen_\d+>/g
         let match

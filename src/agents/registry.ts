@@ -14,6 +14,7 @@ import { growthoperatorFinalDiagnosisAgent } from './growthoperator/final-diagno
 import { growthoperatorPathRevealAgent } from './growthoperator/path-reveal'
 import { growthoperatorFitAssessmentAgent } from './growthoperator/fit-assessment'
 import { growthoperatorDiagnosisComprehensiveAgent } from './growthoperator/diagnosis-comprehensive'
+import { blackboxDiagnosisAgent } from './blackbox/diagnosis'
 
 const agents: Record<string, AgentConfig> = {
   // Rafael TATS agents
@@ -36,6 +37,8 @@ const agents: Record<string, AgentConfig> = {
   // Legacy (keeping for backwards compatibility)
   'growthoperator-path-reveal': growthoperatorPathRevealAgent,
   'growthoperator-fit-assessment': growthoperatorFitAssessmentAgent,
+  // Blackbox agents
+  'blackbox-diagnosis': blackboxDiagnosisAgent,
 }
 
 export function getAgent(id: string): AgentConfig | undefined {

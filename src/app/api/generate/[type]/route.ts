@@ -169,7 +169,18 @@ export async function POST(req: Request, context: RouteContext) {
     const tools = shouldIncludeTools ? buildDiagnosisTools(calendlyUrl) : undefined
 
     // Build user message with sanitized context (removes phase/step references)
-    const sanitizedContext = sanitizeContextForAI(flowId, session.context)
+    // Use session.answers as source of truth (context is deprecated per db.ts)
+    const sanitizedContext = sanitizeContextForAI(flowId, session.answers)
+
+    // Prevent diagnosis calls with empty context
+    if (type === 'diagnosis' && Object.keys(sanitizedContext).length === 0) {
+      console.error(`[Generate ${type}] Empty context for session ${sessionId} - aborting`)
+      return new Response(JSON.stringify({ error: 'No assessment data found' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const contextStr = JSON.stringify(sanitizedContext, null, 2)
     const historyStr = conversationHistory
       ? `\n\nConversation history:\n${conversationHistory}`
@@ -214,6 +225,8 @@ export async function POST(req: Request, context: RouteContext) {
       prompt: langfusePrompt,
     })
 
+    console.log(`[Generate ${type}] Starting streamText with model:`, agent.model)
+
     const result = streamText({
       model: getModel(agent),
       system: systemPrompt,
@@ -221,7 +234,13 @@ export async function POST(req: Request, context: RouteContext) {
       tools: Object.keys(tools || {}).length > 0 ? tools : undefined,
       maxOutputTokens: agent.maxTokens,
       temperature: agent.temperature,
-      onFinish: ({ text, usage }) => {
+      onFinish: ({ text, usage, finishReason }) => {
+        console.log(`[Generate ${type}] Stream finished`)
+        console.log(`[Generate ${type}] Finish reason:`, finishReason)
+        console.log(`[Generate ${type}] Text length:`, text?.length || 0)
+        console.log(`[Generate ${type}] Text preview:`, text?.slice(0, 200) || 'EMPTY')
+        console.log(`[Generate ${type}] Usage:`, usage)
+
         // Complete Langfuse generation
         generation.end({
           output: text,
@@ -237,11 +256,15 @@ export async function POST(req: Request, context: RouteContext) {
             latencyMs: Date.now() - startTime,
             inputTokens: usage?.inputTokens,
             outputTokens: usage?.outputTokens,
+            finishReason,
           },
         })
 
         // Flush traces to Langfuse
         flushLangfuse()
+      },
+      onError: (error) => {
+        console.error(`[Generate ${type}] Stream error:`, error)
       },
     })
 

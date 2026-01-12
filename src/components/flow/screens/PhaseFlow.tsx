@@ -2004,7 +2004,6 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
   }
 
   const currentStep = level.steps[currentStepIndex]
-  const totalSteps = level.steps.length
 
   // Guard against undefined step (can happen briefly during phase transition)
   if (!currentStep) {
@@ -2022,8 +2021,17 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
     )
   }
 
-  // Current step number for progress indicator (0-indexed)
-  const currentStepNumber = currentStepIndex
+  // Calculate progress excluding loading and diagnosis-sequence steps
+  // These are "hidden" steps that don't count toward visible progress
+  const hiddenStepTypes = ['loading', 'diagnosis-sequence']
+  const visibleSteps = level.steps.filter(step => !hiddenStepTypes.includes(step.type))
+  const totalSteps = visibleSteps.length
+
+  // Count how many visible steps we've completed (steps before current that are visible)
+  const currentStepNumber = level.steps
+    .slice(0, currentStepIndex)
+    .filter(step => !hiddenStepTypes.includes(step.type))
+    .length
 
   // Determine if back button should be hidden
   // Hide on: AI moments, videos, thinking, sales-page steps
@@ -2171,6 +2179,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
               goToNextStep()
             }}
             sessionId={state.sessionId || undefined}
+            flowId={flowId}
           />
         )
 
@@ -2233,14 +2242,16 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
     }
   }
 
-  // Hide header and progress for diagnosis-sequence (it renders its own)
+  // Hide header and progress for diagnosis-sequence and loading screens
   const isDiagnosisSequence = currentStep.type === 'diagnosis-sequence'
+  const isLoadingScreen = currentStep.type === 'loading'
+  const hideHeaderAndProgress = isDiagnosisSequence || isLoadingScreen
 
   return (
     <div style={{ backgroundColor: COLORS.BACKGROUND, minHeight: '100vh', position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>
       {/* Persistent Header - uses absolute positioning when inside a panel */}
-      {/* Hidden for diagnosis-sequence which renders its own header */}
-      {!hideHeader && !isDiagnosisSequence && (
+      {/* Hidden for diagnosis-sequence and loading screens */}
+      {!hideHeader && !hideHeaderAndProgress && (
         <GlassHeader
           onBack={goToPreviousStep}
           showBackButton={(currentStepIndex > 0 || !!onBack) && !shouldDimBackButton}
@@ -2250,8 +2261,8 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
       )}
 
       {/* Persistent Progress Indicator - stays in place while content slides */}
-      {/* Hidden for diagnosis-sequence which shows its own 1-8 progress */}
-      {!isDiagnosisSequence && (
+      {/* Hidden for diagnosis-sequence and loading screens */}
+      {!hideHeaderAndProgress && (
         <div style={{
           position: 'absolute',
           top: (hideHeader && !onBack) ? 24 : 80,

@@ -1,44 +1,94 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { COLORS } from '@/config/flow'
+import { MentorAvatar } from '../shared/MentorAvatar'
+import { MentorBadge } from '../shared/MentorBadge'
 
 interface LoadingScreenStepContentProps {
   step: any
   onComplete: (diagnosisScreens: string[]) => void
   sessionId?: string
+  flowId?: string
 }
 
 /**
  * Loading screen displayed while AI generates comprehensive diagnosis.
- * Shows animated pulsing rings and cycles through loading messages.
- * Fetches diagnosis in background and waits for minimum display time.
+ * Features mentor avatar with pulsing animation and typing messages.
  */
-export function LoadingScreenStepContent({ step, onComplete, sessionId }: LoadingScreenStepContentProps) {
+export function LoadingScreenStepContent({ step, onComplete, sessionId, flowId = 'growthoperator' }: LoadingScreenStepContentProps) {
+  // Message cycling state
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
   const [displayedText, setDisplayedText] = useState('')
-  const [isTyping, setIsTyping] = useState(true)
+  const [phase, setPhase] = useState<'typing' | 'paused' | 'done'>('typing')
+
+  // Diagnosis state
   const [diagnosisReady, setDiagnosisReady] = useState(false)
   const [diagnosisScreens, setDiagnosisScreens] = useState<string[]>([])
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Refs to prevent double-calls
   const fetchedRef = useRef(false)
+  const hasCalledComplete = useRef(false)
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const messages = step.loadingMessages || [
+  // Initial messages shown once during first loop
+  const initialMessages = [
     'Analyzing your responses...',
-    'Identifying patterns...',
-    'Generating your personalized diagnosis...',
+    'Identifying patterns in your journey...',
+    'This is interesting...',
+    'Connecting the dots...',
+    'I see what happened here...',
+    'Preparing your diagnosis...',
   ]
-  const minDuration = step.minDuration || 12000
 
-  useEffect(() => {
-    const timer = setTimeout(() => setMinTimeElapsed(true), minDuration)
-    return () => clearTimeout(timer)
-  }, [minDuration])
+  // Messages that loop after initial set (while still waiting for API)
+  const waitingLoopMessages = [
+    'Almost there...',
+    'Just a moment longer...',
+    'Putting the finishing touches...',
+    'This is taking a bit longer than usual...',
+    'Still working on it...',
+    'Hang tight...',
+  ]
 
+  const readyMessage = "Alright it's ready... let's dive in."
+
+  // Track if we're showing the ready message
+  const [showingReadyMessage, setShowingReadyMessage] = useState(false)
+
+  // Get current message based on index
+  const getCurrentMessage = () => {
+    if (showingReadyMessage) return readyMessage
+    // First loop through initial messages
+    if (currentMessageIndex < initialMessages.length) {
+      return initialMessages[currentMessageIndex]
+    }
+    // After initial messages, loop through waiting messages
+    const loopIndex = (currentMessageIndex - initialMessages.length) % waitingLoopMessages.length
+    return waitingLoopMessages[loopIndex]
+  }
+
+  // Debug logging
   useEffect(() => {
-    if (fetchedRef.current || !sessionId) return
+    console.log('[Loading] Component mounted, sessionId:', sessionId)
+  }, [sessionId])
+
+  // Fetch diagnosis from API
+  useEffect(() => {
+    if (fetchedRef.current) {
+      console.log('[Loading] Already fetched, skipping')
+      return
+    }
+    if (!sessionId) {
+      console.log('[Loading] No sessionId, skipping fetch')
+      return
+    }
+
     fetchedRef.current = true
+    console.log('[Loading] Starting diagnosis fetch for session:', sessionId)
 
     async function fetchDiagnosis() {
       try {
@@ -48,13 +98,25 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           body: JSON.stringify({ sessionId, promptKey: 'diagnosis-comprehensive' })
         })
 
+        console.log('[Loading] Diagnosis response status:', res.status)
+
         if (!res.ok) {
-          console.error('Diagnosis fetch failed:', res.status)
+          console.error('[Loading] Diagnosis fetch failed:', res.status)
+          if (res.status === 400) {
+            setError('Your session data is incomplete. Please restart the assessment.')
+          } else if (res.status === 429) {
+            setError('Too many requests. Please wait a moment and try again.')
+          } else {
+            setError('Failed to generate your diagnosis. Please try again.')
+          }
           return
         }
 
         const reader = res.body?.getReader()
-        if (!reader) return
+        if (!reader) {
+          console.error('[Loading] No response body reader')
+          return
+        }
 
         const decoder = new TextDecoder()
         let fullText = ''
@@ -68,7 +130,6 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           buffer = lines.pop() || ''
 
           for (const line of lines) {
-            // SSE format: data: {"type":"text-delta","id":"0","delta":"text"}
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6))
@@ -77,7 +138,6 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
                 }
               } catch { /* skip invalid JSON */ }
             }
-            // Legacy format: 0:"text chunk"
             else if (line.startsWith('0:')) {
               try {
                 const textChunk = JSON.parse(line.slice(2))
@@ -89,6 +149,8 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           }
         }
 
+        console.log('[Loading] Full response length:', fullText.length)
+
         const screens: string[] = []
         const regex = /<screen_(\d+)>([\s\S]*?)<\/screen_\d+>/g
         let match
@@ -96,50 +158,116 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
           screens[parseInt(match[1]) - 1] = match[2].trim()
         }
 
-        setDiagnosisScreens(screens)
-        setDiagnosisReady(true)
+        console.log('[Loading] Parsed screens:', screens.length)
+
+        if (screens.length > 0) {
+          setDiagnosisScreens(screens)
+          setDiagnosisReady(true)
+        } else {
+          console.error('[Loading] No screens parsed from response')
+          console.log('[Loading] Response preview:', fullText.slice(0, 500))
+          // Check if the response indicates an error
+          if (fullText.length === 0 || fullText.includes('error') || fullText.includes('Overloaded')) {
+            setError('Our AI is currently experiencing high demand. Please try again in a moment.')
+          } else {
+            setError('Failed to generate your diagnosis. Please try again.')
+          }
+        }
       } catch (err) {
-        console.error('Diagnosis fetch error:', err)
+        console.error('[Loading] Diagnosis fetch error:', err)
+        setError('Something went wrong. Please try again.')
       }
     }
+
     fetchDiagnosis()
   }, [sessionId])
 
+  // Typing animation - only handles typing characters
   useEffect(() => {
-    if (diagnosisReady && minTimeElapsed && diagnosisScreens.length > 0) {
-      onComplete(diagnosisScreens)
-    }
-  }, [diagnosisReady, minTimeElapsed, diagnosisScreens, onComplete])
+    if (phase !== 'typing') return
 
-  useEffect(() => {
-    const currentMessage = messages[currentMessageIndex]
+    const currentMessage = getCurrentMessage()
     if (!currentMessage) return
 
     if (displayedText.length < currentMessage.length) {
       const typeSpeed = 30 + Math.random() * 20
       const timeout = setTimeout(() => {
-        setDisplayedText(currentMessage.slice(0, displayedText.length + 1))
+        setDisplayedText(prev => currentMessage.slice(0, prev.length + 1))
       }, typeSpeed)
       return () => clearTimeout(timeout)
     } else {
-      setIsTyping(false)
-      const timeout = setTimeout(() => {
-        const nextIndex = (currentMessageIndex + 1) % messages.length
-        setCurrentMessageIndex(nextIndex)
-        setDisplayedText('')
-        setIsTyping(true)
-      }, 2000)
-      return () => clearTimeout(timeout)
+      // Finished typing this message
+      console.log('[Loading] Finished typing message:', currentMessage.slice(0, 30) + '...')
+      setPhase('paused')
     }
-  }, [displayedText, currentMessageIndex, messages])
+  }, [phase, displayedText, currentMessageIndex, showingReadyMessage])
+
+  // Handle pause between messages - separate effect to avoid cleanup issues
+  useEffect(() => {
+    if (phase !== 'paused') return
+
+    // If showing ready message and done typing, trigger transition
+    if (showingReadyMessage) {
+      console.log('[Loading] Ready message complete, starting transition')
+      const fadeTimer = setTimeout(() => {
+        setIsTransitioning(true)
+      }, 1500)
+      return () => clearTimeout(fadeTimer)
+    }
+
+    // Wait then move to next message (or show ready message if API done)
+    const pauseDuration = 2500 + Math.random() * 1000
+    console.log('[Loading] Pausing for', Math.round(pauseDuration), 'ms')
+
+    transitionTimeoutRef.current = setTimeout(() => {
+      // Check if diagnosis is ready - if so, show ready message
+      if (diagnosisReady && diagnosisScreens.length > 0) {
+        console.log('[Loading] Diagnosis ready, showing ready message')
+        setShowingReadyMessage(true)
+        setDisplayedText('')
+        setPhase('typing')
+      } else {
+        // Move to next waiting message (loops)
+        console.log('[Loading] Moving to next message')
+        setCurrentMessageIndex(prev => prev + 1)
+        setDisplayedText('')
+        setPhase('typing')
+      }
+    }, pauseDuration)
+
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current)
+      }
+    }
+  }, [phase, showingReadyMessage, diagnosisReady, diagnosisScreens.length])
+
+  // Call onComplete after fade out
+  useEffect(() => {
+    if (!isTransitioning || hasCalledComplete.current) return
+
+    hasCalledComplete.current = true
+    console.log('[Loading] Calling onComplete with', diagnosisScreens.length, 'screens')
+
+    const completeTimer = setTimeout(() => {
+      onComplete(diagnosisScreens)
+    }, 600)
+
+    return () => clearTimeout(completeTimer)
+  }, [isTransitioning, diagnosisScreens, onComplete])
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: '100vh',
-      backgroundColor: COLORS.BACKGROUND,
-    }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: isTransitioning ? 0 : 1 }}
+      transition={{ duration: 0.8, ease: 'easeOut' }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: COLORS.BACKGROUND,
+      }}
+    >
       <div style={{
         flex: 1,
         display: 'flex',
@@ -149,77 +277,149 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId }: Loadin
         maxWidth: '500px',
         margin: '0 auto',
         width: '100%',
-        padding: '100px 24px 48px',
+        padding: '60px 24px 48px',
       }}>
-        <div style={{ position: 'relative', width: '120px', height: '120px', marginBottom: '48px' }}>
+        {/* Avatar with spinning circle */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const }}
+          style={{
+            marginBottom: '24px',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '120px',
+            height: '120px',
+          }}
+        >
+          {/* Spinning gradient ring */}
           <motion.div
-            animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
-            style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `3px solid ${COLORS.ACCENT}` }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.25, 1], opacity: [0.5, 0.1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeOut', delay: 0.3 }}
-            style={{ position: 'absolute', inset: '15px', borderRadius: '50%', border: `2px solid ${COLORS.ACCENT}` }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            animate={{ rotate: 360 }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
             style={{
               position: 'absolute',
-              inset: '30px',
+              width: '120px',
+              height: '120px',
               borderRadius: '50%',
-              backgroundColor: COLORS.ACCENT,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)',
+              background: `conic-gradient(from 0deg, transparent 0deg, ${COLORS.ACCENT} 60deg, transparent 120deg)`,
+              opacity: 0.8,
+            }}
+          />
+
+          {/* Inner mask to create ring effect */}
+          <div
+            style={{
+              position: 'absolute',
+              width: '108px',
+              height: '108px',
+              borderRadius: '50%',
+              backgroundColor: COLORS.BACKGROUND,
+            }}
+          />
+
+          {/* Avatar */}
+          <div
+            style={{
+              borderRadius: '50%',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
-              <path d="M12 11v6" />
-              <path d="M8 15h8" />
-              <circle cx="12" cy="19" r="2" />
-              <path d="M9 6.5a2.5 2.5 0 0 0-5 0v2a2.5 2.5 0 0 0 5 0" />
-              <path d="M15 6.5a2.5 2.5 0 0 1 5 0v2a2.5 2.5 0 0 1-5 0" />
-            </svg>
-          </motion.div>
-        </div>
+            <MentorAvatar size={100} flowId={flowId} />
+          </div>
+        </motion.div>
 
+        {/* Name + Badge */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          style={{
-            fontFamily: "'Lora', Charter, Georgia, serif",
-            fontSize: '22px',
-            fontWeight: '500',
-            color: '#222',
-            textAlign: 'center',
-            lineHeight: '1.5',
-            minHeight: '66px',
-          }}
+          transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
+          style={{ marginBottom: '40px' }}
         >
-          {displayedText}
-          {isTyping && <span className="typing-cursor" style={{ color: '#333' }} />}
+          <MentorBadge flowId={flowId} />
         </motion.div>
 
-        <motion.p
+        {/* Typing message or Error */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 3, duration: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
           style={{
-            marginTop: '40px',
-            fontFamily: "'Geist', -apple-system, sans-serif",
-            fontSize: '14px',
-            color: '#999',
-            textAlign: 'center',
+            minHeight: '80px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            gap: '16px',
           }}
         >
-          This usually takes 10-15 seconds
-        </motion.p>
+          {error ? (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ textAlign: 'center' }}
+            >
+              <p style={{
+                fontFamily: "'Lora', Charter, Georgia, serif",
+                fontSize: '18px',
+                color: '#666',
+                marginBottom: '16px',
+              }}>
+                {error}
+              </p>
+              <button
+                onClick={() => {
+                  setError(null)
+                  fetchedRef.current = false
+                  // Trigger re-fetch by changing a dependency
+                  window.location.reload()
+                }}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: COLORS.ACCENT,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Try Again
+              </button>
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentMessageIndex}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                style={{
+                  fontFamily: "'Lora', Charter, Georgia, serif",
+                  fontSize: '20px',
+                  fontWeight: '400',
+                  color: '#222',
+                  textAlign: 'center',
+                  lineHeight: '1.6',
+                  fontStyle: 'italic',
+                }}
+              >
+                {displayedText}
+                {phase === 'typing' && <span className="typing-cursor" style={{ color: '#222' }} />}
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   )
 }

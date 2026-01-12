@@ -10,6 +10,11 @@ export interface FlowDefinition {
    * Groups outputs by category (e.g., 'businessStatus.bookingStatus': 'situation.bookingStatus')
    */
   contextMapping?: ContextMapping
+  /**
+   * URL to receive webhook notifications when leads submit contact info.
+   * Webhooks are queued for reliable delivery with automatic retries.
+   */
+  webhookUrl?: string
 }
 
 export interface ContextMapping {

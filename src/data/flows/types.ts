@@ -15,6 +15,11 @@ export interface FlowDefinition {
    * Webhooks are queued for reliable delivery with automatic retries.
    */
   webhookUrl?: string
+  /**
+   * Format for webhook payload. Defaults to 'json' (raw structured data).
+   * Use 'slack' for Slack incoming webhooks with Block Kit formatting.
+   */
+  webhookFormat?: 'json' | 'slack'
 }
 
 export interface ContextMapping {
@@ -73,7 +78,11 @@ export interface StepConfig {
   // Explicitly hide back button on this step (for phase boundaries)
   noBackButton?: boolean
   // Loading screen specific
-  loadingMessages?: string[]
+  loadingMessages?: {
+    initial: string[]
+    waiting: string[]
+    ready: string
+  }
   minDuration?: number // Minimum display time in ms
 }
 

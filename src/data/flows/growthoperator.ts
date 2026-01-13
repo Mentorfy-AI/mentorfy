@@ -26,6 +26,9 @@ export const growthoperatorFlow: FlowDefinition = {
     calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
   },
 
+  webhookUrl: process.env.GROWTHOPERATOR_WEBHOOK_URL,
+  webhookFormat: 'slack',
+
   // Maps session context paths to semantic AI-friendly paths
   // Format: 'outputPath (what AI sees)': 'inputPath (where to read from context)'
   contextMapping: {
@@ -373,11 +376,25 @@ export const growthoperatorFlow: FlowDefinition = {
         {
           stepKey: 'loading-diagnosis',
           type: 'loading',
-          loadingMessages: [
-            'Analyzing your responses...',
-            'Identifying patterns...',
-            'Generating your personalized diagnosis...',
-          ],
+          loadingMessages: {
+            initial: [
+              'Analyzing your responses...',
+              'Identifying patterns in your journey...',
+              'This is interesting...',
+              'Connecting the dots...',
+              'I see what happened here...',
+              'Preparing your diagnosis...',
+            ],
+            waiting: [
+              'Almost there...',
+              'Just a moment longer...',
+              'Putting the finishing touches...',
+              'This is taking a bit longer than usual...',
+              'Still working on it...',
+              'Hang tight...',
+            ],
+            ready: "Alright it's ready... let's dive in.",
+          },
           minDuration: 12000, // 12 seconds minimum
           noBackButton: true,
         },

@@ -2,6 +2,7 @@ import { db, Session } from './db'
 import { getFlow } from '@/data/flows'
 
 export type WebhookEventType = 'lead.contact-captured'
+export type WebhookFormat = 'json' | 'slack'
 
 /**
  * Webhook payload sent when a lead submits contact information.
@@ -108,6 +109,45 @@ export function buildContactCapturedPayload(session: Session): WebhookPayload {
 }
 
 /**
+ * Format a webhook payload for the target service.
+ * - 'json': Raw structured payload (default, works with Zapier, n8n, custom endpoints)
+ * - 'slack': Slack Block Kit format with rich formatting
+ */
+export function formatPayloadForDelivery(
+  payload: WebhookPayload,
+  format: WebhookFormat = 'json'
+): Record<string, any> {
+  if (format === 'slack') {
+    const s = payload.session
+    return {
+      text: `New lead: ${s.name || 'Unknown'} (${s.email || 'no email'})`,
+      blocks: [
+        {
+          type: 'header',
+          text: { type: 'plain_text', text: '🎯 New Lead Captured', emoji: true },
+        },
+        {
+          type: 'section',
+          fields: [
+            { type: 'mrkdwn', text: `*Name:*\n${s.name || '_not provided_'}` },
+            { type: 'mrkdwn', text: `*Email:*\n${s.email || '_not provided_'}` },
+            { type: 'mrkdwn', text: `*Phone:*\n${s.phone || '_not provided_'}` },
+            { type: 'mrkdwn', text: `*Flow:*\n${s.flowId}` },
+          ],
+        },
+        {
+          type: 'context',
+          elements: [
+            { type: 'mrkdwn', text: `Session: \`${s.id}\` | ${new Date(payload.timestamp).toLocaleString()}` },
+          ],
+        },
+      ],
+    }
+  }
+  return payload
+}
+
+/**
  * Queue a webhook for contact info capture if the flow has a webhookUrl configured.
  * This is a no-op if the flow doesn't have webhooks enabled.
  */
@@ -133,14 +173,15 @@ export async function maybeQueueContactWebhook(session: Session): Promise<void> 
     return
   }
 
-  const payload = buildContactCapturedPayload(session)
+  const rawPayload = buildContactCapturedPayload(session)
+  const formattedPayload = formatPayloadForDelivery(rawPayload, flow.webhookFormat || 'json')
 
   await queueWebhook({
     sessionId: session.id,
     flowId: session.flow_id,
     eventType: 'lead.contact-captured',
     webhookUrl: flow.webhookUrl,
-    payload,
+    payload: formattedPayload as any,
   })
 }
 

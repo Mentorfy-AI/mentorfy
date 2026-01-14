@@ -8,6 +8,7 @@ import { GlassHeader } from '../shared/GlassHeader'
 import { StepProgress } from '../shared/StepProgress'
 import { COLORS } from '@/config/flow'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { getCalendlyUrlWithSession } from '@/lib/calendly'
 
 function normalizeMarkdown(content: string): string {
   return content.replace(/([^\n])\n?(## )/g, '$1\n\n$2')
@@ -259,7 +260,7 @@ export function DiagnosisSequenceFlow({ screens, calendlyUrl, onBack, flowId = '
               }}
             >
               <InlineWidget
-                url={calendlyUrl}
+                url={getCalendlyUrlWithSession(calendlyUrl, sessionId)}
                 styles={{ height: '700px', minWidth: '100%' }}
                 pageSettings={{
                   backgroundColor: 'FAF6F0',

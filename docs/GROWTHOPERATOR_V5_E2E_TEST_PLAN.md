@@ -570,8 +570,16 @@ The diagnosis sequence is a nested flow with its own navigation. Each screen sho
 **CRITICAL ASSERT - Calendly Booking Widget:**
 - **Assert:** Calendly booking widget appears inline after the main copy
 - **Assert:** Widget URL contains: `https://calendly.com/brady-mentorfy/30min`
+- **Assert:** Widget URL contains `session_id` parameter with valid session ID (e.g., `?session_id=abc123...`)
 - **Assert:** Widget height is 700px
 - **Assert:** Widget theme colors: backgroundColor FAF6F0, primaryColor 10B981
+
+**Session Tracking Verification:**
+To verify session_id is passed to Calendly:
+1. Open browser DevTools → Network tab
+2. Filter by "calendly"
+3. Inspect the iframe src URL
+4. Assert URL contains `session_id=` parameter with a non-empty value matching the current session
 
 ---
 

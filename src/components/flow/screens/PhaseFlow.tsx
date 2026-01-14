@@ -15,6 +15,7 @@ import { useAnalytics } from '@/hooks/useAnalytics'
 import { COLORS } from '@/config/flow'
 import { LoadingScreenStepContent } from './LoadingScreenStepContent'
 import { DiagnosisSequenceFlow } from './DiagnosisSequenceFlow'
+import { getCalendlyUrlWithSession } from '@/lib/calendly'
 
 // Normalize markdown to ensure ## headers are properly separated
 function normalizeMarkdown(content: string): string {
@@ -1039,7 +1040,7 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
             }}
           >
             <InlineWidget
-              url={embedData.calendlyUrl}
+              url={getCalendlyUrlWithSession(embedData.calendlyUrl, sessionId || undefined)}
               styles={{ height: '700px', minWidth: '100%' }}
               pageSettings={{
                 backgroundColor: 'FAF6F0',
@@ -1675,7 +1676,7 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
               {isCalendlyVariant ? (
                 /* Calendly embed */
                 <InlineWidget
-                  url={step.calendlyUrl || flow.embeds.calendlyUrl}
+                  url={getCalendlyUrlWithSession(step.calendlyUrl || flow.embeds.calendlyUrl, state.sessionId || undefined)}
                   styles={{ height: '700px', minWidth: '100%' }}
                   pageSettings={{
                     backgroundColor: 'FAF6F0',

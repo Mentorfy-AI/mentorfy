@@ -9,6 +9,7 @@ import { VideoEmbed } from '../shared/VideoEmbed'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
 import { useUserState, useSessionId } from '@/context/UserContext'
+import { getCalendlyUrlWithSession } from '@/lib/calendly'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/flow'
 import { getFlow } from '@/data/flows'
@@ -717,11 +718,12 @@ function ChatVideoEmbed({ url }: ChatVideoEmbedProps) {
 
 interface ChatBookingEmbedProps {
   url: string
+  sessionId?: string
   onBookingComplete?: () => void
 }
 
 // Booking embed - exact copy from LevelFlow (Calendly InlineWidget)
-function ChatBookingEmbed({ url, onBookingComplete }: ChatBookingEmbedProps) {
+function ChatBookingEmbed({ url, sessionId, onBookingComplete }: ChatBookingEmbedProps) {
   const bookingCompleteRef = useRef(false)
 
   useCalendlyEventListener({
@@ -748,7 +750,7 @@ function ChatBookingEmbed({ url, onBookingComplete }: ChatBookingEmbedProps) {
       }}
     >
       <InlineWidget
-        url={url}
+        url={getCalendlyUrlWithSession(url, sessionId)}
         styles={{ height: '700px', minWidth: '100%' }}
         pageSettings={{
           backgroundColor: 'FAF6F0',
@@ -771,6 +773,7 @@ interface RenderEmbedProps {
 
 // Render embed based on type
 function RenderEmbed({ embedData, onCheckoutComplete, onBookingComplete, onEmbedShown }: RenderEmbedProps) {
+  const sessionId = useSessionId()
   const shownRef = useRef(false)
 
   useEffect(() => {
@@ -786,7 +789,7 @@ function RenderEmbed({ embedData, onCheckoutComplete, onBookingComplete, onEmbed
     case 'video':
       return <ChatVideoEmbed url={embedData.videoUrl} />
     case 'booking':
-      return <ChatBookingEmbed url={embedData.calendlyUrl} onBookingComplete={onBookingComplete} />
+      return <ChatBookingEmbed url={embedData.calendlyUrl} sessionId={sessionId || undefined} onBookingComplete={onBookingComplete} />
     default:
       return null
   }

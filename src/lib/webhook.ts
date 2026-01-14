@@ -113,13 +113,59 @@ export function buildContactCapturedPayload(session: Session): WebhookPayload {
  * - 'json': Raw structured payload (default, works with Zapier, n8n, custom endpoints)
  * - 'slack': Slack Block Kit format with rich formatting
  */
+// Question order for growthoperator flow (Q1-Q17)
+const GROWTHOPERATOR_QUESTION_ORDER = [
+  'modelTried',        // Q1
+  'modelsCount',       // Q2
+  'originalMotivation',// Q3
+  'bestResult',        // Q4
+  'whatHappened',      // Q5
+  'duration',          // Q6
+  'moneyInvested',     // Q7
+  'deeperCost',        // Q8
+  'educationSource',   // Q9
+  'teacherMoney',      // Q10
+  'beliefWhyFailed',   // Q11
+  'emotionalState',    // Q12
+  'shame',             // Q13
+  'whyKeepGoing',      // Q14
+  'whatWouldChange',   // Q15
+  'urgency',           // Q16
+  'biggestFear',       // Q17
+]
+
+/**
+ * Order answers by question sequence for readable output.
+ */
+function orderAnswers(answers: Record<string, any>, flowId: string): Record<string, any> {
+  const assessment = answers?.assessment
+  if (!assessment || flowId !== 'growthoperator') {
+    return answers
+  }
+
+  const ordered: Record<string, any> = {}
+  for (const key of GROWTHOPERATOR_QUESTION_ORDER) {
+    if (key in assessment) {
+      ordered[key] = assessment[key]
+    }
+  }
+  // Include any extra keys not in the order list
+  for (const key of Object.keys(assessment)) {
+    if (!(key in ordered)) {
+      ordered[key] = assessment[key]
+    }
+  }
+  return { assessment: ordered }
+}
+
 export function formatPayloadForDelivery(
   payload: WebhookPayload,
   format: WebhookFormat = 'json'
 ): Record<string, any> {
   if (format === 'slack') {
     const s = payload.session
-    const answersJson = JSON.stringify(s.answers, null, 2)
+    const orderedAnswers = orderAnswers(s.answers, s.flowId)
+    const answersJson = JSON.stringify(orderedAnswers, null, 2)
     return {
       text: `New lead: ${s.name || 'Unknown'} (${s.email || 'no email'})`,
       blocks: [

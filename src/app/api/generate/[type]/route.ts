@@ -225,34 +225,24 @@ export async function POST(req: Request, context: RouteContext) {
       prompt: langfusePrompt,
     })
 
-    // Build messages with cache control for Anthropic models
-    // The system prompt is ~8KB and benefits significantly from caching
+    // Build messages array
+    // Note: Anthropic prompt caching disabled - requires 4096+ tokens for Opus 4.5,
+    // our prompts are ~3500 tokens, and benchmarks showed no latency benefit anyway
     const isAnthropic = agent.provider === 'anthropic'
-    const streamMessages = isAnthropic
-      ? [
-          {
-            role: 'system' as const,
-            content: systemPrompt,
-            providerOptions: {
-              anthropic: { cacheControl: { type: 'ephemeral' } },
-            },
-          },
-          { role: 'user' as const, content: userMessage },
-        ]
-      : [{ role: 'user' as const, content: userMessage }]
+    const streamMessages = [
+      { role: 'system' as const, content: systemPrompt },
+      { role: 'user' as const, content: userMessage },
+    ]
 
     const result = streamText({
       model: getModel(agent),
-      // Only use system param for non-Anthropic (Google) models
       system: isAnthropic ? undefined : systemPrompt,
-      messages: streamMessages,
+      messages: isAnthropic ? streamMessages : [{ role: 'user' as const, content: userMessage }],
       tools: Object.keys(tools || {}).length > 0 ? tools : undefined,
       maxOutputTokens: agent.maxTokens,
       temperature: agent.temperature,
       onFinish: ({ text, usage, finishReason, providerMetadata }) => {
         // Log cache stats if available (Anthropic only)
-        // Note: Vercel AI SDK exposes cacheCreationInputTokens at top level but NOT cacheReadInputTokens.
-        // We pull both from the raw usage object for consistency (snake_case from Anthropic API).
         const anthropicUsage = providerMetadata?.anthropic?.usage as
           | { cache_creation_input_tokens?: number; cache_read_input_tokens?: number }
           | undefined

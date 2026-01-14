@@ -315,14 +315,55 @@ NEVER forget the goal is a booked call.
 Now generate all 8 screens based on the user's answers provided in the context.`
 
 // ============================================================
-// USER CONTEXT - PASTE YOUR INPUT HERE
+// USER CONTEXT
 // ============================================================
 const userContext = {
-  // PASTE YOUR USER CONTEXT JSON HERE
-  // Example structure:
-  // user: { name: "John" },
-  // journey: { ... },
-  // etc.
+  user: {
+    name: 'Test User',
+    email: 'test@example.com',
+    phone: '5551234567',
+  },
+  business: {
+    modelTried: 'agency',
+    modelsCount: '2-3',
+  },
+  motivation: {
+    original: 'escape',
+  },
+  progress: {
+    bestResult: '1k-5k',
+    whatHappened: 'too-many-hours',
+  },
+  journey: {
+    duration: '2-3yr',
+  },
+  investment: {
+    money: '5k-10k',
+    cost: 'all',
+  },
+  education: {
+    source: 'mix',
+    teacherMoney: 'teaching',
+  },
+  belief: {
+    whyFailed: 'wrong-model',
+  },
+  emotion: {
+    current: 'cautious',
+    shame: 'money-shame',
+  },
+  resilience: {
+    whyGoing: 'refuse-normal',
+  },
+  vision: {
+    whatChanges: 'quit-job',
+  },
+  urgency: {
+    level: 'this-year',
+  },
+  fear: {
+    biggest: 'stuck',
+  },
 }
 
 // ============================================================
@@ -355,7 +396,127 @@ async function makeCall(runId: string, callNumber: number, context: any): Promis
 
   // Add a unique nonce to the system prompt to control cache behavior
   // Same runId = cache hit, different runId = cache miss
-  const promptWithNonce = `${systemPrompt}\n\n<!-- cache-key: ${runId} -->`
+  //
+  // IMPORTANT: Claude Opus 4.5 requires minimum 4096 tokens for caching.
+  // Our system prompt is ~3500 tokens, so we need to pad it.
+  // Adding ~600 tokens of padding to reach the threshold.
+  const padding = `
+
+<!-- PADDING FOR CACHE THRESHOLD -->
+<!--
+This padding ensures the system prompt reaches Anthropic's minimum cacheable token threshold.
+Claude Opus 4.5 requires at least 4096 tokens for prompt caching to activate.
+Without this padding, cacheControl is silently ignored.
+
+Additional context for the diagnosis generation:
+- The Growth Operator model is a partnership where operators work with experts
+- Operators help experts monetize their knowledge through AI-powered products
+- The target price point is $5k-$15k per product
+- Success metrics include monthly recurring revenue and client retention
+- The diagnosis should feel personalized, not templated
+- Each screen should build emotional momentum toward the booking CTA
+- The proof section should weight case studies based on applicant similarity
+- The close should use selection framing, not sales pressure
+
+Extended guidelines for tone calibration:
+- For skeptical applicants: Lead with acknowledgment, avoid hype
+- For frustrated applicants: Validate their effort before pivoting
+- For cautiously open applicants: Give permission to believe
+- For exhausted applicants: Be warm but not soft
+- For logical applicants: Explain mechanisms clearly
+
+Additional copywriting principles:
+- Specificity creates recognition and trust
+- Insight beats mere accuracy in reflection
+- Contradictions between stated beliefs and evidence are gold
+- The shame they admitted is exactly what to address
+- Personalize expert examples based on their background
+- Earn every claim with their own data as evidence
+
+Remember: This is a sales letter disguised as a diagnosis.
+The goal is a booked call. Every word should serve that purpose.
+
+Screen-by-screen emotional arc:
+- Screen 1 (Mirror): Build trust through recognition - "this thing sees me"
+- Screen 2 (Pattern): Create the insight moment - "holy shit, that's exactly right"
+- Screen 3 (Paradigm): Reveal why they failed - the shovel sellers insight
+- Screen 4 (Absolution): Release from shame - "it wasn't my fault"
+- Screen 5 (Proof): Establish credibility - "this is real, these are real people"
+- Screen 6 (Reveal): Paint the vision - "I can see myself doing this"
+- Screen 7 (Stakes): Make it personal - "this is MY path"
+- Screen 8 (Close): Make booking inevitable - selection frame not sales pressure
+
+Quality checklist for each screen:
+- Does it use their specific data, not generic statements?
+- Does it advance the emotional arc toward booking?
+- Is the tone calibrated to their emotional state?
+- Does it avoid all anti-patterns listed above?
+- Would they feel more seen after reading this screen?
+
+Final reminders for voice and style:
+- No exclamation points ever
+- No guru energy or hype language
+- Be knowing, not enthusiastic
+- Be direct, not flowery
+- Use their words back to them
+- Make claims only with evidence from their answers
+
+EXTENDED PADDING TO REACH 4096 TOKEN MINIMUM:
+The Growth Operator model represents a paradigm shift in how people approach online business.
+Instead of building from scratch, operators leverage existing expertise and audiences.
+The key insight is that experts have knowledge but often lack business systems.
+Operators provide the growth infrastructure while experts provide the content.
+This creates a win-win where both parties focus on their strengths.
+
+Case study patterns to reference:
+- Kade transitioned from artist to operator, now earning $30K/month
+- Nick went from server to operator, now earning $50K/month
+- Carson overcame skepticism after a failed $7K program, now $100K/month
+- Each story follows the pattern: struggle, discovery, transformation
+
+Emotional triggers to leverage:
+- The sunk cost of previous investments creates urgency for a new approach
+- The fear of staying stuck motivates action
+- The vision of freedom provides the pull toward booking
+- The proof of others like them creates believability
+
+Writing techniques for each screen:
+- Use specific numbers from their answers, not vague references
+- Mirror their language back to them for recognition
+- Name emotions they feel but haven't articulated
+- Connect their past to their potential future
+- Make the path feel inevitable, not optional
+
+Technical reminders:
+- Format with proper markdown headers for each screen
+- Use bold for emphasis within paragraphs
+- Keep paragraphs short for mobile readability
+- End each screen with momentum toward the next
+- The final screen must make booking feel like the obvious choice
+
+Additional context about the target audience:
+- They have tried multiple business models without lasting success
+- They feel embarrassed about money spent on courses and coaching
+- They are skeptical but still searching for something that works
+- They want to believe but need permission and proof
+- They respond to understanding, not hype or pressure
+
+The diagnosis must accomplish these objectives:
+1. Make them feel deeply seen and understood
+2. Reframe their failures as learning, not weakness
+3. Present the Growth Operator model as their path forward
+4. Use case studies to prove it works for people like them
+5. Create urgency without pressure through selection framing
+6. Make booking the call feel like the natural next step
+
+This padding ensures the prompt exceeds the 4096 token minimum.
+Without sufficient tokens, Anthropic's prompt caching will not activate.
+The cache provides significant latency and cost improvements.
+-->
+<!-- END PADDING -->
+
+<!-- cache-key: ${runId} -->`
+  const promptWithNonce = `${systemPrompt}${padding}`
 
   const userMessage = `User context:
 ${JSON.stringify(context, null, 2)}
@@ -363,13 +524,14 @@ Prompt key: diagnosis-comprehensive
 
 Generate the diagnosis based on this information.`
 
-  // Build messages with cache control (same as production)
+  // Build messages with cache control
+  // SDK v3+ requires explicit ttl: '5m' or '1h' for ephemeral caching
   const messages = [
     {
       role: 'system' as const,
       content: promptWithNonce,
       providerOptions: {
-        anthropic: { cacheControl: { type: 'ephemeral' } },
+        anthropic: { cacheControl: { type: 'ephemeral', ttl: '1h' } },
       },
     },
     { role: 'user' as const, content: userMessage },

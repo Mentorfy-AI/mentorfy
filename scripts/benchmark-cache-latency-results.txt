@@ -1,0 +1,88 @@
+
+======================================================================
+ CACHE LATENCY BENCHMARK - Anthropic Prompt Caching
+======================================================================
+
+Model: claude-opus-4-5-20251101
+System prompt size: ~11KB
+Number of test runs: 5
+
+Each run:
+  1. Cache miss → New cache key forces cache creation
+  2. Cache hit  → Same cache key reads from cache
+
+----------------------------------------------------------------------
+
+ Run 1/5
+   Run 1 - Cache miss...   Preview: "<screen_1>  **Your Diagnosis**  You started with agency work. SMMA, maybe client..."
+ 42553ms (TTFT: 2254ms) ✓
+   Run 1 - Cache hit...  40990ms (TTFT: 1882ms) ✓
+
+ Run 2/5
+   Run 2 - Cache miss...   Preview: "<screen_1>  **Your Diagnosis**  You started with agency work. SMMA, probably. Ma..."
+ 41517ms (TTFT: 2245ms) ✓
+   Run 2 - Cache hit...  43975ms (TTFT: 2022ms) ✓
+
+ Run 3/5
+   Run 3 - Cache miss...   Preview: "<screen_1>  **I see you.**  Agency work. The model that promises freedom and del..."
+ 41808ms (TTFT: 2129ms) ✓
+   Run 3 - Cache hit...  42467ms (TTFT: 2323ms) ✓
+
+ Run 4/5
+   Run 4 - Cache miss...   Preview: "<screen_1>  **Your Diagnosis**  You started with agency work. SMMA, maybe. Or so..."
+ 36494ms (TTFT: 1884ms) ✓
+   Run 4 - Cache hit...  43424ms (TTFT: 1754ms) ✓
+
+ Run 5/5
+   Run 5 - Cache miss...   Preview: "<screen_1>  **Your Diagnosis**  You started with agency work. SMMA, maybe client..."
+ 40165ms (TTFT: 2170ms) ✓
+   Run 5 - Cache hit...  46015ms (TTFT: 1900ms) ✓
+
+======================================================================
+ RESULTS SUMMARY
+======================================================================
+
+ TOTAL LATENCY (ms)
+--------------------------------------------------
+                    Cache Miss      Cache Hit
+   Mean:               40507           43374
+   Median:             41517           43424
+   Std Dev:             2150            1664
+   Min:                36494           40990
+   Max:                42553           46015
+   P95:                42404           45607
+
+ TIME TO FIRST TOKEN (ms)
+--------------------------------------------------
+                    Cache Miss      Cache Hit
+   Mean:                2136            1976
+   Median:              2170            1900
+   Std Dev:              135             193
+   Min:                 1884            1754
+   Max:                 2254            2323
+   P95:                 2252            2263
+
+ CACHE IMPACT
+--------------------------------------------------
+   Latency reduction:  -2867ms (-7.1% faster)
+   TTFT reduction:     160ms (7.5% faster)
+
+ TOKEN USAGE (from run 1)
+--------------------------------------------------
+   Input tokens:       4681
+   Output tokens:      1841
+   Tokens cached:      4317
+   Tokens from cache:  4317
+   Cache coverage:     92.2%
+
+ RAW DATA
+--------------------------------------------------
+   Run  | Miss (ms) | Hit (ms)  | TTFT Miss | TTFT Hit
+     1  |     42553 |     40990 |      2254 |     1882
+     2  |     41517 |     43975 |      2245 |     2022
+     3  |     41808 |     42467 |      2129 |     2323
+     4  |     36494 |     43424 |      1884 |     1754
+     5  |     40165 |     46015 |      2170 |     1900
+
+======================================================================
+

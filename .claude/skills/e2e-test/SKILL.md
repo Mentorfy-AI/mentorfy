@@ -97,18 +97,25 @@ This is critical because later tests often depend on earlier state. A failure in
 
 When an assertion fails:
 
-1. **Document the failure:**
+1. **Take a screenshot immediately:**
+   ```
+   browser_take_screenshot with descriptive filename (e.g., "diagnosis-screen-missing-progress.png")
+   ```
+   **This is MANDATORY.** Every bug report must include screenshot evidence.
+
+2. **Document the failure:**
    - Step number and name
    - Expected behavior
    - Actual behavior
+   - Screenshot filename
    - Console errors (if any)
 
-2. **File a bd issue:**
+3. **File a bd issue:**
    ```bash
-   bd create "E2E: <brief description>" -t bug -p 1 -d "<detailed description with expected vs actual>"
+   bd create "E2E: <brief description>" -t bug -p 1 -d "<detailed description with expected vs actual, include screenshot path>"
    ```
 
-3. **STOP and wait for instructions.** Tell the user:
+4. **STOP and wait for instructions.** Tell the user:
    - What failed
    - The bd issue ID
    - That you're waiting for them to fix it or instruct you to continue
@@ -158,9 +165,10 @@ After completing the test plan, provide a summary:
 3. **STOP ON FIRST FAILURE** - Default behavior. File the bug, report it, wait for instructions
 4. **Only continue if `--continue` flag** - Then complete the entire flow
 5. **File bugs immediately** - Don't batch them up
-6. **Use TodoWrite** - Track progress visibly
-7. **Be thorough** - Verify all assertions in the test plan
-8. **Report clearly** - Structured output for easy review
+6. **ALWAYS take screenshots for failures** - No bug report without visual evidence
+7. **Use TodoWrite** - Track progress visibly
+8. **Be thorough** - Verify all assertions in the test plan
+9. **Report clearly** - Structured output for easy review
 
 ## Example Invocations
 

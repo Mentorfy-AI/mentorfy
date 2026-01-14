@@ -113,25 +113,26 @@ export function buildContactCapturedPayload(session: Session): WebhookPayload {
  * - 'json': Raw structured payload (default, works with Zapier, n8n, custom endpoints)
  * - 'slack': Slack Block Kit format with rich formatting
  */
-// Question order for growthoperator flow (Q1-Q17)
+// Question order for growthoperator flow (Q1-Q18)
 const GROWTHOPERATOR_QUESTION_ORDER = [
-  'modelTried',        // Q1
-  'modelsCount',       // Q2
-  'originalMotivation',// Q3
-  'bestResult',        // Q4
-  'whatHappened',      // Q5
-  'duration',          // Q6
-  'moneyInvested',     // Q7
-  'deeperCost',        // Q8
-  'educationSource',   // Q9
-  'teacherMoney',      // Q10
-  'beliefWhyFailed',   // Q11
-  'emotionalState',    // Q12
-  'shame',             // Q13
-  'whyKeepGoing',      // Q14
-  'whatWouldChange',   // Q15
-  'urgency',           // Q16
-  'biggestFear',       // Q17
+  'whyHere',             // Q1
+  'desiredIncome',       // Q2
+  'currentIncome',       // Q3
+  'modelsTried',         // Q4
+  'modelsCount',         // Q5
+  'duration',            // Q6
+  'totalInvestment',     // Q7
+  'availableCapital',    // Q8
+  'deeperCost',          // Q9
+  'positionInEquation',  // Q10
+  'teacherMoney',        // Q11
+  'aiRelationship',      // Q12
+  'thoughtConstellation',// Q13
+  'confession',          // Q14
+  'whyKeepGoing',        // Q15
+  'whatWouldChange',     // Q16
+  'urgency',             // Q17
+  'biggestFear',         // Q18
 ]
 
 /**

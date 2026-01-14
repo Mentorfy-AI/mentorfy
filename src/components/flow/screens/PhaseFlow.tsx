@@ -2364,7 +2364,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
             onBack={goToPreviousStep}
             flowId={flowId}
             sessionId={state.sessionId || undefined}
-            availableCapital={state.context?.assessment?.availableCapital}
+            availableCapital={state.answers?.assessment?.availableCapital}
           />
         )
 

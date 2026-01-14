@@ -40,3 +40,4 @@ out
 next-env.d.ts
 # bd worktree
 lead-contact-webhooks/
+.playwright-mcp/

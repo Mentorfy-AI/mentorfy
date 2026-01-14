@@ -161,11 +161,6 @@ export function UserProvider({ children, flowId = 'rafael-tats' }: UserProviderP
 
       if (res.ok) {
         const updated = await res.json()
-        // Handle returning user redirect
-        if (updated.returning && updated.existingSessionId) {
-          await switchToSession(updated.existingSessionId)
-          return
-        }
         setSession(updated)
       }
     } catch (e) {

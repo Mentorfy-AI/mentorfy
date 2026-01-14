@@ -37,24 +37,6 @@ export async function PATCH(req: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Session not found' }, { status: 404 })
   }
 
-  // Check for returning user by email (must match same flow)
-  if (body.email && body.email !== existing.email) {
-    const { data: existingByEmail } = await db
-      .from('sessions')
-      .select('id')
-      .eq('email', body.email)
-      .eq('flow_id', existing.flow_id)
-      .neq('id', id)
-      .single()
-
-    if (existingByEmail) {
-      return NextResponse.json({
-        returning: true,
-        existingSessionId: existingByEmail.id,
-      })
-    }
-  }
-
   // Deep merge context and answers
   const mergedContext = body.context
     ? {

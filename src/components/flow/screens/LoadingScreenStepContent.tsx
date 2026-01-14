@@ -34,8 +34,9 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId, flowId =
   const hasCalledComplete = useRef(false)
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Initial messages shown once during first loop
-  const initialMessages = [
+  // Messages from flow config (with fallbacks)
+  const messages = step.loadingMessages || {}
+  const initialMessages = messages.initial || [
     'Analyzing your responses...',
     'Identifying patterns in your journey...',
     'This is interesting...',
@@ -43,9 +44,7 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId, flowId =
     'I see what happened here...',
     'Preparing your diagnosis...',
   ]
-
-  // Messages that loop after initial set (while still waiting for API)
-  const waitingLoopMessages = [
+  const waitingLoopMessages = messages.waiting || [
     'Almost there...',
     'Just a moment longer...',
     'Putting the finishing touches...',
@@ -53,8 +52,7 @@ export function LoadingScreenStepContent({ step, onComplete, sessionId, flowId =
     'Still working on it...',
     'Hang tight...',
   ]
-
-  const readyMessage = "Alright it's ready... let's dive in."
+  const readyMessage = messages.ready || "Alright it's ready... let's dive in."
 
   // Track if we're showing the ready message
   const [showingReadyMessage, setShowingReadyMessage] = useState(false)

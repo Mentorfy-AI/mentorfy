@@ -105,11 +105,25 @@ export const blackboxFlow: FlowDefinition = {
         {
           stepKey: 'loading-diagnosis',
           type: 'loading',
-          loadingMessages: [
-            'Analyzing your responses...',
-            'Identifying patterns...',
-            'Generating your personalized diagnosis...',
-          ],
+          loadingMessages: {
+            initial: [
+              'Analyzing your responses...',
+              'Identifying patterns in your journey...',
+              'This is interesting...',
+              'Connecting the dots...',
+              'I see what happened here...',
+              'Preparing your diagnosis...',
+            ],
+            waiting: [
+              'Almost there...',
+              'Just a moment longer...',
+              'Putting the finishing touches...',
+              'This is taking a bit longer than usual...',
+              'Still working on it...',
+              'Hang tight...',
+            ],
+            ready: "Alright it's ready... let's dive in.",
+          },
           minDuration: 12000,
           noBackButton: true,
         },

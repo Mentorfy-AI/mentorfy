@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, MutableRefObject } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactMarkdown from 'react-markdown'
+import { ClientMarkdown } from '@/components/shared/ClientMarkdown'
 import { GlassHeader } from '../shared/GlassHeader'
+import { GlassBackButton } from '../shared/GlassBackButton'
 import { DisqualificationScreen } from './DisqualificationScreen'
-import { StepProgress } from '../shared/StepProgress'
 import { ThinkingAnimation } from '../shared/ThinkingAnimation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
@@ -26,9 +26,15 @@ interface MultipleChoiceStepContentProps {
   step: any
   onAnswer: (stateKey: string, value: string) => void
   sessionId?: string
+  isFirstStep?: boolean
+  introContent?: {
+    callout?: string
+    headline?: string
+    closingCallout?: string
+  }
 }
 
-function MultipleChoiceStepContent({ step, onAnswer, sessionId }: MultipleChoiceStepContentProps) {
+function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, introContent }: MultipleChoiceStepContentProps) {
   const [selected, setSelected] = useState<string | null>(null)
 
   // Typing animation state - same as other questions
@@ -158,11 +164,74 @@ function MultipleChoiceStepContent({ step, onAnswer, sessionId }: MultipleChoice
     <div style={{
       maxWidth: '480px',
       margin: '0 auto',
-      padding: '140px 24px 48px',
+      padding: isFirstStep ? '110px 24px 48px' : '140px 24px 48px',
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
     }}>
+      {/* Intro content for first step */}
+      {isFirstStep && introContent && (
+        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+          {introContent.callout && (
+            <p style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '18px',
+              fontWeight: '600',
+              fontStyle: 'italic',
+              color: '#000',
+              lineHeight: '1.45',
+              marginTop: '16px',
+              marginBottom: '12px',
+            }}>
+              {introContent.callout.split(/(\{\{green:[^}]+\}\})/).map((part, i) => {
+                const match = part.match(/\{\{green:([^}]+)\}\}/)
+                if (match) {
+                  return <span key={i} style={{ color: '#10B981' }}>{match[1]}</span>
+                }
+                return part
+              })}
+            </p>
+          )}
+          {introContent.headline && (
+            <h1 style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '24px',
+              fontWeight: '600',
+              color: '#000',
+              lineHeight: '1.35',
+              marginBottom: '12px',
+            }}>
+              {introContent.headline.split(/(\{\{green:[^}]+\}\})/).map((part, i) => {
+                const match = part.match(/\{\{green:([^}]+)\}\}/)
+                if (match) {
+                  return <span key={i} style={{ color: '#10B981' }}>{match[1]}</span>
+                }
+                return part
+              })}
+            </h1>
+          )}
+          {introContent.closingCallout && (
+            <p style={{
+              fontFamily: "'Lora', Charter, Georgia, serif",
+              fontSize: '18px',
+              fontStyle: 'italic',
+              color: '#000',
+              lineHeight: '1.45',
+              marginBottom: '16px',
+            }}>
+              {introContent.closingCallout}
+            </p>
+          )}
+          {/* Faded divider */}
+          <div style={{
+            width: '100%',
+            height: '1px',
+            background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.15) 20%, rgba(0,0,0,0.15) 80%, transparent)',
+            marginBottom: '0',
+          }} />
+        </div>
+      )}
+
       {/* Question with typing animation */}
       <div style={{
         fontFamily: "'Lora', Charter, Georgia, serif",
@@ -171,7 +240,7 @@ function MultipleChoiceStepContent({ step, onAnswer, sessionId }: MultipleChoice
         color: '#000',
         textAlign: 'left',
         lineHeight: '1.5',
-        marginBottom: step.instruction ? '8px' : '32px',
+        marginBottom: step.instruction ? '8px' : '16px',
       }}>
         {displayedQuestion || ''}
         {showCursor && <span className="typing-cursor" />}
@@ -430,30 +499,40 @@ function MultiSelectStepContent({ step, onAnswer }: MultiSelectStepContentProps)
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}
+            style={{ position: 'fixed', bottom: 32, right: 24, zIndex: 50 }}
           >
             <motion.button
               onClick={handleContinue}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                boxShadow: [
+                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                ],
+              }}
+              transition={{
+                boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+              }}
               style={{
-                backgroundColor: COLORS.ACCENT,
-                color: '#FFFFFF',
-                padding: '14px 28px',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '500',
-                border: 'none',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                fontFamily: "'Geist', -apple-system, sans-serif",
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                transition: 'all 0.15s ease',
+                justifyContent: 'center',
+                color: '#000',
               }}
             >
-              Continue <span>→</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </motion.button>
           </motion.div>
         )}
@@ -652,7 +731,7 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
         `}</style>
         {displayQuestion ? (
           <span>
-            <ReactMarkdown>{displayQuestion}</ReactMarkdown>
+            <ClientMarkdown>{displayQuestion}</ClientMarkdown>
             {showCursor && <span className="typing-cursor" style={{ color: '#000' }} />}
           </span>
         ) : (
@@ -703,30 +782,42 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
             </div>
 
             {/* Continue Button - Green */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ position: 'fixed', bottom: 32, right: 24, zIndex: 50 }}>
               <motion.button
                 onClick={handleSubmit}
                 disabled={!isValid}
-                whileHover={isValid ? { scale: 1.02 } : {}}
-                whileTap={isValid ? { scale: 0.98 } : {}}
+                whileHover={isValid ? { scale: 1.08 } : {}}
+                whileTap={isValid ? { scale: 0.95 } : {}}
+                animate={isValid ? {
+                  boxShadow: [
+                    '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                    '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                    '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  ],
+                } : {}}
+                transition={{
+                  boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+                }}
                 style={{
-                  backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
-                  color: isValid ? '#FFFFFF' : '#999',
-                  padding: '14px 28px',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  border: 'none',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: isValid
+                    ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%)'
+                    : 'rgba(0, 0, 0, 0.06)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  border: isValid ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
                   cursor: isValid ? 'pointer' : 'not-allowed',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontFamily: "'Geist', -apple-system, sans-serif",
-                  boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
-                  transition: 'all 0.15s ease',
+                  justifyContent: 'center',
+                  color: isValid ? '#000' : '#999',
                 }}
               >
-                Continue <span>→</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               </motion.button>
             </div>
           </motion.div>
@@ -916,31 +1007,43 @@ function ContactInfoStepContent({ step, onAnswer, analytics }: ContactInfoStepCo
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3, ease: 'easeOut' }}
-            style={{ display: 'flex', justifyContent: 'flex-end' }}
+            style={{ position: 'fixed', bottom: 32, right: 24, zIndex: 50 }}
           >
             <motion.button
               onClick={handleSubmit}
               disabled={!isValid}
-              whileHover={isValid ? { scale: 1.02 } : {}}
-              whileTap={isValid ? { scale: 0.98 } : {}}
+              whileHover={isValid ? { scale: 1.08 } : {}}
+              whileTap={isValid ? { scale: 0.95 } : {}}
+              animate={isValid ? {
+                boxShadow: [
+                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                ],
+              } : {}}
+              transition={{
+                boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+              }}
               style={{
-                backgroundColor: isValid ? COLORS.ACCENT : 'rgba(0, 0, 0, 0.06)',
-                color: isValid ? '#FFFFFF' : '#999',
-                padding: '14px 28px',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '500',
-                border: 'none',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: isValid
+                  ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%)'
+                  : 'rgba(0, 0, 0, 0.06)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                border: isValid ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
                 cursor: isValid ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                fontFamily: "'Geist', -apple-system, sans-serif",
-                boxShadow: isValid ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
-                transition: 'all 0.15s ease',
+                justifyContent: 'center',
+                color: isValid ? '#000' : '#999',
               }}
             >
-              Continue <span>→</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </motion.button>
           </motion.div>
         )}
@@ -1166,9 +1269,9 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
               }
             `}</style>
             {/* Render displayed text (typing animation) */}
-            <ReactMarkdown>
+            <ClientMarkdown>
               {normalizeMarkdown(displayedResponse || '')}
-            </ReactMarkdown>
+            </ClientMarkdown>
           </div>
         )}
 
@@ -1215,14 +1318,9 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
               textAlign: 'left',
             }}
           >
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => <p style={{ marginBottom: '16px' }}>{children}</p>,
-                strong: ({ children }) => <strong style={{ fontWeight: '700' }}>{children}</strong>,
-              }}
-            >
+            <ClientMarkdown>
               {embedData.afterText}
-            </ReactMarkdown>
+            </ClientMarkdown>
           </motion.div>
         )}
 
@@ -1232,30 +1330,40 @@ function AIMomentStepContent({ step, state, onContinue, flowId = 'rafael-tats' }
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}
+            style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px', paddingRight: '16px' }}
           >
             <motion.button
               onClick={onContinue}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                boxShadow: [
+                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                ],
+              }}
+              transition={{
+                boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+              }}
               style={{
-                backgroundColor: COLORS.ACCENT,
-                color: '#FFFFFF',
-                padding: '14px 28px',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '500',
-                border: 'none',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                fontFamily: "'Geist', -apple-system, sans-serif",
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                transition: 'all 0.15s ease',
+                justifyContent: 'center',
+                color: '#000',
               }}
             >
-              Continue <span>→</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </motion.button>
           </motion.div>
         )}
@@ -1471,30 +1579,40 @@ function VideoStepContent({ step, onContinue, flowId = 'rafael-tats' }: VideoSte
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}
+              style={{ position: 'fixed', bottom: 32, right: 24, zIndex: 50 }}
             >
               <motion.button
                 onClick={onContinue}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                animate={{
+                  boxShadow: [
+                    '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                    '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                    '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  ],
+                }}
+                transition={{
+                  boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+                }}
                 style={{
-                  backgroundColor: COLORS.ACCENT,
-                  color: '#FFFFFF',
-                  padding: '14px 28px',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  border: 'none',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  border: '1px solid rgba(255, 255, 255, 0.5)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontFamily: "'Geist', -apple-system, sans-serif",
-                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                  transition: 'all 0.15s ease',
+                  justifyContent: 'center',
+                  color: '#000',
                 }}
               >
-                Continue <span>→</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               </motion.button>
             </motion.div>
           )}
@@ -2066,11 +2184,11 @@ function getNestedValue(obj: any, path: string): any {
   return current
 }
 
-// Content transition variants - direction-aware horizontal slide
-const getContentVariants = (direction: number) => ({
-  initial: { opacity: 0, x: direction * 60 },
-  animate: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-  exit: { opacity: 0, x: direction * -60, transition: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] as const } }
+// Content transition variants - clean fade in place
+const getContentVariants = (_direction: number) => ({
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } },
+  exit: { opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }
 })
 
 interface PhaseFlowProps {
@@ -2094,6 +2212,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
   const initialStep = state.progress.currentPhase === levelId ? state.progress.currentStep : 0
   const [currentStepIndex, setCurrentStepIndex] = useState(initialStep)
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = back
+  const [isInitialMount, setIsInitialMount] = useState(true) // Track first render for fade-in
 
   // Exit condition state for disqualification
   const [exitCondition, setExitCondition] = useState<{
@@ -2119,6 +2238,15 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
   useEffect(() => {
     analytics.startStepTimer()
   }, [currentStepIndex, analytics])
+
+  // Clear initial mount flag after first render (for smooth fade-in on load)
+  useEffect(() => {
+    if (isInitialMount) {
+      // Small delay to ensure the fade-in animation completes before enabling slide
+      const timer = setTimeout(() => setIsInitialMount(false), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [isInitialMount])
 
   // Reset phase timer when phase changes (for time_in_phase_ms tracking)
   useEffect(() => {
@@ -2306,6 +2434,8 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
               step={currentStep}
               onAnswer={handleAnswer}
               sessionId={state.sessionId || undefined}
+              isFirstStep={currentStepIndex === 0}
+              introContent={currentStepIndex === 0 ? flow.mentor.welcome : undefined}
             />
           )
         } else if (currentStep.questionType === 'multi-select') {
@@ -2414,50 +2544,29 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
     }
   }
 
-  // Hide header and progress for diagnosis-sequence, loading screens, and steps with hideProgressBar
-  const isDiagnosisSequence = currentStep.type === 'diagnosis-sequence'
-  const isLoadingScreen = currentStep.type === 'loading'
-  const hideHeaderAndProgress = isDiagnosisSequence || isLoadingScreen || currentStep.hideProgressBar
+  // Back button visibility: show after first step, hide on certain step types
+  const showBackButton = currentStepIndex > 0 && !shouldDimBackButton && !currentStep.noBackButton
 
   return (
     <div style={{ backgroundColor: COLORS.BACKGROUND, minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
-      {/* Persistent Header - always fixed to top */}
-      {/* Hidden for diagnosis-sequence and loading screens */}
-      {!hideHeader && !hideHeaderAndProgress && (
-        <GlassHeader
-          onBack={goToPreviousStep}
-          showBackButton={(currentStepIndex > 0 || !!onBack) && !shouldDimBackButton}
-          useAbsolutePosition={false}
-          flowId={flowId}
-        />
-      )}
+      {/* Glass Header - ALWAYS visible (avatar + pill) */}
+      <GlassHeader flowId={flowId} />
 
-      {/* Progress Indicator - scrolls with content */}
-      {/* Hidden for diagnosis-sequence and loading screens */}
-      {!hideHeaderAndProgress && (
-        <div style={{
-          position: 'absolute',
-          top: (hideHeader && !onBack) ? 24 : 80,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '0 24px',
-        }}>
-          <StepProgress current={currentStepNumber} total={totalSteps} label={currentSectionLabel} />
-        </div>
-      )}
+      {/* Glass Back Button - separate, only visible after Q1 */}
+      <GlassBackButton
+        onClick={goToPreviousStep}
+        visible={showBackButton}
+      />
 
-      {/* Animated Content Area - slides horizontally */}
+      {/* Animated Content Area - fade on initial load, slide on step changes */}
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={currentStepIndex}
           custom={direction}
-          variants={getContentVariants(direction)}
-          initial="initial"
-          animate="animate"
-          exit="exit"
+          variants={isInitialMount ? undefined : getContentVariants(direction)}
+          initial={isInitialMount ? { opacity: 0 } : "initial"}
+          animate={isInitialMount ? { opacity: 1, transition: { duration: 0.4, ease: 'easeOut' } } : "animate"}
+          exit={isInitialMount ? { opacity: 0 } : "exit"}
           style={{ minHeight: '100vh' }}
         >
           {renderStepContent()}

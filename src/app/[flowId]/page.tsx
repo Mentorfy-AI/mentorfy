@@ -6,8 +6,8 @@ import { SignIn, useClerk } from '@clerk/nextjs'
 import { UserProvider, useUser, useUserState } from '@/context/UserContext'
 import { LandingPage } from '@/components/flow/screens/LandingPage'
 import { PhaseFlow } from '@/components/flow/screens/PhaseFlow'
-import { MentorAvatar } from '@/components/flow/shared/MentorAvatar'
-import { MentorBadge } from '@/components/flow/shared/MentorBadge'
+import { GlassHeader } from '@/components/flow/shared/GlassHeader'
+import { GlassBackButton } from '@/components/flow/shared/GlassBackButton'
 import { TimelineShell, Panel } from '@/components/flow/layouts/TimelineShell'
 import { AIChat } from '@/components/flow/screens/AIChat'
 import { COLORS, TIMING, LAYOUT } from '@/config/flow'
@@ -155,9 +155,11 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
   // Screen states: 'welcome', 'level-flow', 'experience'
   const currentScreen = state.progress.currentScreen
 
-  // Only block on session loading for screens that need session data
-  // Welcome screen can render immediately since it doesn't need session
-  if (sessionLoading && currentScreen !== 'welcome') {
+  // Only block on session loading for screens that truly need session data
+  // Level-flow can render immediately (first step is static intro content)
+  // Experience screen needs session for chat/personalization
+  const needsSessionToRender = currentScreen === 'experience'
+  if (sessionLoading && needsSessionToRender) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading...</div>
@@ -318,7 +320,6 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
             key={`level-${currentPhaseNumber}`}
             levelId={currentPhaseNumber}
             onComplete={handleInitialLevelComplete}
-            onBack={handleBackToWelcome}
             flowId={flow.id}
           />
         )}
@@ -326,70 +327,14 @@ function FlowContent({ flow }: { flow: FlowDefinition }) {
         {/* EXPERIENCE SHELL (Chat + PhaseFlow, 2 panels) */}
         {currentScreen === 'experience' && (
           <div key="experience" style={{ position: 'relative' }}>
-            {/* Stationary header - stays fixed while ALL panels slide */}
-            <div style={{
-              position: 'fixed',
-              top: 6,
-              left: 0,
-              right: 0,
-              zIndex: 100,
-              display: 'flex',
-              justifyContent: 'center',
-              padding: '0 20px',
-            }}>
-              <div style={{
-                width: '100%',
-                maxWidth: '720px',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '10px 14px',
-                borderRadius: '20px',
-                background: 'rgba(255, 255, 255, 0.25)',
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                backdropFilter: 'blur(24px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
-              }}>
-                {/* Back button - behavior changes based on panel */}
-                <button
-                  onClick={isHeaderBackDimmed ? undefined : handleHeaderBack}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    color: '#666',
-                    background: '#F0EBE4',
-                    border: '1px solid #E8E3DC',
-                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-                    cursor: isHeaderBackDimmed ? 'default' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: isHeaderBackDimmed ? 0.3 : 1,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
+            {/* Glass Header - ALWAYS visible (avatar + pill) */}
+            <GlassHeader flowId={flow.id} />
 
-                {/* Center - Avatar + Label */}
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                }}>
-                  <MentorAvatar size={40} flowId={flow.id} />
-                  <MentorBadge size="large" flowId={flow.id} />
-                </div>
-
-                {/* Spacer for layout balance */}
-                <div style={{ width: '32px', height: '32px' }} />
-              </div>
-            </div>
+            {/* Glass Back Button - separate, behavior changes based on panel */}
+            <GlassBackButton
+              onClick={handleHeaderBack}
+              visible={!isHeaderBackDimmed}
+            />
 
             <TimelineShell
               currentPanel={currentPanel}

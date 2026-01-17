@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactMarkdown from 'react-markdown'
+import { ClientMarkdown } from '@/components/shared/ClientMarkdown'
 import { InlineWidget } from 'react-calendly'
 import { GlassHeader } from '../shared/GlassHeader'
-import { StepProgress } from '../shared/StepProgress'
+import { GlassBackButton } from '../shared/GlassBackButton'
 import { COLORS } from '@/config/flow'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { getCalendlyUrlWithSession } from '@/lib/calendly'
@@ -197,24 +197,14 @@ export function DiagnosisSequenceFlow({ screens, calendlyUrl, onBack, flowId = '
         overflowY: 'auto',
       }}
     >
-      <GlassHeader
-        onBack={goToPreviousScreen}
-        showBackButton={currentScreenIndex > 0}
-        flowId={flowId}
-      />
+      {/* Glass Header - ALWAYS visible (avatar + pill) */}
+      <GlassHeader flowId={flowId} />
 
-      <div style={{
-        position: 'absolute',
-        top: 80,
-        left: 0,
-        right: 0,
-        zIndex: 50,
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '0 24px',
-      }}>
-        <StepProgress current={currentScreenIndex + 1} total={totalScreens} />
-      </div>
+      {/* Glass Back Button - only visible after first screen */}
+      <GlassBackButton
+        onClick={goToPreviousScreen}
+        visible={currentScreenIndex > 0}
+      />
 
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
@@ -243,7 +233,7 @@ export function DiagnosisSequenceFlow({ screens, calendlyUrl, onBack, flowId = '
               .diagnosis-markdown li { margin-bottom: 8px; }
               .diagnosis-markdown blockquote { border-left: 3px solid ${COLORS.ACCENT}; padding-left: 16px; margin: 16px 0; font-style: italic; color: #444; }
             `}</style>
-            <ReactMarkdown>{normalizeMarkdown(displayedText)}</ReactMarkdown>
+            <ClientMarkdown>{normalizeMarkdown(displayedText)}</ClientMarkdown>
             {isTyping && <span className="typing-cursor" style={{ color: '#333' }} />}
           </div>
 

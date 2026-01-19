@@ -62,6 +62,11 @@ function parseMarkdown(text: string): React.ReactNode[] {
       }
       currentList.items.push(line.replace(/^\d+\. /, ''))
     }
+    // Horizontal rule
+    else if (line.match(/^[-*_]{3,}$/)) {
+      flushList()
+      elements.push(<hr key={key++} style={{ borderWidth: 0, height: '1px', background: 'linear-gradient(to right, transparent, #ccc 20%, #ccc 80%, transparent)', margin: '24px 0' }} />)
+    }
     // Blockquote
     else if (line.startsWith('> ')) {
       flushList()

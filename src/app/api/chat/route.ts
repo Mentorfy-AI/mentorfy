@@ -10,6 +10,7 @@ import { getAvailableEmbedsFromConfig, type AvailableEmbeds } from '@/lib/embed-
 import { sanitizeContextForAI } from '@/lib/context-sanitizer'
 import { getFlow } from '@/data/flows'
 import { getRafaelChatPrompt } from '@/agents/rafael/chat'
+import { getBlackboxChatPrompt } from '@/agents/blackbox/chat'
 import type { EmbedData } from '@/types'
 
 /**
@@ -180,9 +181,14 @@ export async function POST(req: Request) {
 
     // Build dynamic prompt section
     const embedSection = buildEmbedSection(toolNames)
-    const basePrompt = agentId === 'rafael-chat'
-      ? getRafaelChatPrompt(embedSection)
-      : agent.systemPrompt
+    let basePrompt: string
+    if (agentId === 'rafael-chat') {
+      basePrompt = getRafaelChatPrompt(embedSection)
+    } else if (agentId === 'blackbox-chat') {
+      basePrompt = getBlackboxChatPrompt(embedSection)
+    } else {
+      basePrompt = agent.systemPrompt
+    }
 
     // Get last user message for memory search
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content || ''

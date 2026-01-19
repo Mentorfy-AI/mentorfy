@@ -20,7 +20,12 @@ import { growthoperatorAIMoment1Agent } from './growthoperator/ai-moment-1'
 import { growthoperatorAIMoment2Agent } from './growthoperator/ai-moment-2'
 import { growthoperatorAIMoment3Agent } from './growthoperator/ai-moment-3'
 import { growthoperatorAIMoment4Agent } from './growthoperator/ai-moment-4'
+import { growthoperatorContactCaptureAgent } from './growthoperator/contact-capture'
+import { growthoperatorAIReflection1Agent } from './growthoperator/ai-reflection-1'
+import { growthoperatorAIReflection2Agent } from './growthoperator/ai-reflection-2'
+import { growthoperatorDiagnosisV3Agent } from './growthoperator/diagnosis-v3'
 import { blackboxDiagnosisAgent } from './blackbox/diagnosis'
+import { blackboxChatAgent } from './blackbox/chat'
 
 const agents: Record<string, AgentConfig> = {
   // Rafael TATS agents
@@ -48,11 +53,17 @@ const agents: Record<string, AgentConfig> = {
   // Growth Operator v3 - Q8 and Q14 Personalization
   'growthoperator-q8-personalize': growthoperatorQ8PersonalizeAgent,
   'growthoperator-q14-personalize': growthoperatorQ14PersonalizeAgent,
+  // Growth Operator V3 (new flow)
+  'growthoperator-contact-capture': growthoperatorContactCaptureAgent,
+  'growthoperator-ai-reflection-1': growthoperatorAIReflection1Agent,
+  'growthoperator-ai-reflection-2': growthoperatorAIReflection2Agent,
+  'growthoperator-diagnosis-v3': growthoperatorDiagnosisV3Agent,
   // Legacy (keeping for backwards compatibility)
   'growthoperator-path-reveal': growthoperatorPathRevealAgent,
   'growthoperator-fit-assessment': growthoperatorFitAssessmentAgent,
   // Blackbox agents
   'blackbox-diagnosis': blackboxDiagnosisAgent,
+  'blackbox-chat': blackboxChatAgent,
 }
 
 export function getAgent(id: string): AgentConfig | undefined {

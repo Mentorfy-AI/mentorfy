@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ClientMarkdown } from '@/components/shared/ClientMarkdown'
-import { InlineWidget } from 'react-calendly'
+import { InlineWidget, useCalendlyEventListener } from 'react-calendly'
 import { GlassHeader } from '../shared/GlassHeader'
 import { GlassBackButton } from '../shared/GlassBackButton'
 import { COLORS } from '@/config/flow'
@@ -18,6 +18,7 @@ interface DiagnosisSequenceFlowProps {
   screens: string[]
   calendlyUrl?: string
   onBack?: () => void
+  onBookingComplete?: () => void
   flowId?: string
   sessionId?: string
   generationDurationMs?: number
@@ -41,7 +42,7 @@ interface DiagnosisSequenceFlowProps {
  * but adds complexity. Consider refactoring if more nested flows are needed.
  * See: bd issue for future refactoring considerations.
  */
-export function DiagnosisSequenceFlow({ screens, calendlyUrl, onBack, flowId = 'growthoperator', sessionId, generationDurationMs = 0, availableCapital }: DiagnosisSequenceFlowProps) {
+export function DiagnosisSequenceFlow({ screens, calendlyUrl, onBack, onBookingComplete, flowId = 'growthoperator', sessionId, generationDurationMs = 0, availableCapital }: DiagnosisSequenceFlowProps) {
   // Analytics
   const analytics = useAnalytics({ session_id: sessionId || '', flow_id: flowId })
   const diagnosisStartTimeRef = useRef<number>(Date.now())
@@ -51,6 +52,26 @@ export function DiagnosisSequenceFlow({ screens, calendlyUrl, onBack, flowId = '
   const diagnosisCompletedFiredRef = useRef(false)
   const ctaViewedFiredRef = useRef(false)
   const firedScrollThresholdsRef = useRef<Set<number>>(new Set())
+  const bookingConfirmationSentRef = useRef(false)
+
+  // Handle Calendly booking
+  useCalendlyEventListener({
+    onEventScheduled: (e) => {
+      if (bookingConfirmationSentRef.current) return
+      bookingConfirmationSentRef.current = true
+      console.log('Call booked (diagnosis):', e.data.payload)
+
+      // Track booking completion
+      analytics.trackBookingClicked({
+        source: 'diagnosis_sequence',
+        phasesCompleted: [],
+        stepId: 'diagnosis-booking',
+      })
+
+      // Navigate after showing confirmation
+      setTimeout(() => onBookingComplete?.(), 1500)
+    },
+  })
 
   const [currentScreenIndex, setCurrentScreenIndex] = useState(0)
   const [direction, setDirection] = useState(1)

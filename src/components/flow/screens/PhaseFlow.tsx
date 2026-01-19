@@ -32,9 +32,20 @@ interface MultipleChoiceStepContentProps {
     headline?: string
     closingCallout?: string
   }
+  flowId?: string
 }
 
-function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, introContent }: MultipleChoiceStepContentProps) {
+function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, introContent, flowId = 'rafael-tats' }: MultipleChoiceStepContentProps) {
+  const flow = getFlow(flowId)
+  const accentColor = flow.accentColor || COLORS.ACCENT
+
+  // Convert hex to RGB for rgba() usage
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '16, 185, 129'
+  }
+  const accentRgb = hexToRgb(accentColor)
+
   const [selected, setSelected] = useState<string | null>(null)
 
   // Typing animation state - same as other questions
@@ -289,8 +300,8 @@ function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, int
                     width: '100%',
                     padding: '18px 20px',
                     borderRadius: '14px',
-                    backgroundColor: selected === option.value ? 'rgba(16, 185, 129, 0.12)' : '#F0EBE4',
-                    border: selected === option.value ? `2px solid ${COLORS.ACCENT}` : '1px solid #E8E3DC',
+                    backgroundColor: selected === option.value ? `rgba(${accentRgb}, 0.12)` : '#F0EBE4',
+                    border: selected === option.value ? `2px solid ${accentColor}` : '1px solid #E8E3DC',
                     cursor: 'pointer',
                     fontFamily: "'Lora', Charter, Georgia, serif",
                     fontSize: '17px',
@@ -299,7 +310,7 @@ function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, int
                     textAlign: 'left',
                     transition: 'all 0.15s ease',
                     boxShadow: selected === option.value
-                      ? `0 0 0 2px ${COLORS.ACCENT}, 0 4px 12px rgba(16, 185, 129, 0.25)`
+                      ? `0 0 0 2px ${accentColor}, 0 4px 12px rgba(${accentRgb}, 0.25)`
                       : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                   }}
                 >
@@ -546,9 +557,20 @@ interface LongAnswerStepContentProps {
   onAnswer: (stateKey: string, value: string) => void
   sessionId?: string
   initialValue?: string
+  flowId?: string
 }
 
-function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }: LongAnswerStepContentProps) {
+function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '', flowId = 'rafael-tats' }: LongAnswerStepContentProps) {
+  const flow = getFlow(flowId)
+  const accentColor = flow.accentColor || COLORS.ACCENT
+
+  // Convert hex to RGB for rgba() usage
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '16, 185, 129'
+  }
+  const accentRgb = hexToRgb(accentColor)
+
   const [value, setValue] = useState(initialValue)
   const [isFocused, setIsFocused] = useState(false)
 
@@ -750,13 +772,13 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
             {/* Text Area - Inner shadow styling (typing into the page) */}
             <div style={{
               backgroundColor: '#E8E3DC',
-              border: isFocused ? `2px solid ${COLORS.ACCENT}` : '1px solid #DDD8D0',
+              border: isFocused ? `2px solid ${accentColor}` : '1px solid #DDD8D0',
               borderRadius: '14px',
               padding: '16px',
               minHeight: '160px',
               marginBottom: '20px',
               boxShadow: isFocused
-                ? `inset 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(16, 185, 129, 0.15)`
+                ? `inset 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(${accentRgb}, 0.15)`
                 : 'inset 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.06)',
               transition: 'all 0.15s ease',
             }}>
@@ -781,7 +803,7 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
               />
             </div>
 
-            {/* Continue Button - Green */}
+            {/* Continue Button */}
             <div style={{ position: 'fixed', bottom: 32, right: 24, zIndex: 50 }}>
               <motion.button
                 onClick={handleSubmit}
@@ -790,9 +812,9 @@ function LongAnswerStepContent({ step, onAnswer, sessionId, initialValue = '' }:
                 whileTap={isValid ? { scale: 0.95 } : {}}
                 animate={isValid ? {
                   boxShadow: [
-                    '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
-                    '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
-                    '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                    `0 0 15px rgba(${accentRgb}, 0.4), 0 0 30px rgba(${accentRgb}, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)`,
+                    `0 0 25px rgba(${accentRgb}, 0.6), 0 0 50px rgba(${accentRgb}, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)`,
+                    `0 0 15px rgba(${accentRgb}, 0.4), 0 0 30px rgba(${accentRgb}, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)`,
                   ],
                 } : {}}
                 transition={{
@@ -831,9 +853,20 @@ interface ContactInfoStepContentProps {
   step: any
   onAnswer: (stateKey: string, value: Record<string, string>) => void
   analytics: ReturnType<typeof useAnalytics>
+  flowId?: string
 }
 
-function ContactInfoStepContent({ step, onAnswer, analytics }: ContactInfoStepContentProps) {
+function ContactInfoStepContent({ step, onAnswer, analytics, flowId = 'rafael-tats' }: ContactInfoStepContentProps) {
+  const flow = getFlow(flowId)
+  const accentColor = flow.accentColor || COLORS.ACCENT
+
+  // Convert hex to RGB for rgba() usage
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '16, 185, 129'
+  }
+  const accentRgb = hexToRgb(accentColor)
+
   const { updateContact } = useUser()
   const [values, setValues] = useState<Record<string, string>>({})
   const [focusedField, setFocusedField] = useState<string | null>(null)
@@ -919,6 +952,36 @@ function ContactInfoStepContent({ step, onAnswer, analytics }: ContactInfoStepCo
       display: 'flex',
       flexDirection: 'column',
     }}>
+      {/* Headline (optional) */}
+      {step.headline && (
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: 'clamp(24px, 6vw, 30px)',
+          fontWeight: '600',
+          color: '#000',
+          textAlign: 'center',
+          lineHeight: '1.3',
+          marginBottom: step.subheadline ? '12px' : '24px',
+        }}>
+          {step.headline}
+        </div>
+      )}
+
+      {/* Subheadline (optional) */}
+      {step.subheadline && (
+        <div style={{
+          fontFamily: "'Lora', Charter, Georgia, serif",
+          fontSize: 'clamp(16px, 4.5vw, 21px)',
+          fontWeight: '400',
+          color: '#666',
+          textAlign: 'center',
+          lineHeight: '1.5',
+          marginBottom: '32px',
+        }}>
+          {step.subheadline}
+        </div>
+      )}
+
       {/* Question with typing animation */}
       <div style={{
         fontFamily: "'Lora', Charter, Georgia, serif",
@@ -983,14 +1046,14 @@ function ContactInfoStepContent({ step, onAnswer, analytics }: ContactInfoStepCo
                   width: '100%',
                   padding: '18px 20px',
                   backgroundColor: '#E8E3DC',
-                  border: focusedField === field.key ? `2px solid ${COLORS.ACCENT}` : '1px solid #DDD8D0',
+                  border: focusedField === field.key ? `2px solid ${accentColor}` : '1px solid #DDD8D0',
                   borderRadius: '14px',
                   fontSize: '16px',
                   fontFamily: "'Lora', Charter, Georgia, serif",
                   color: '#111',
                   outline: 'none',
                   boxShadow: focusedField === field.key
-                    ? `inset 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(16, 185, 129, 0.15)`
+                    ? `inset 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 3px ${accentColor}26`
                     : 'inset 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.06)',
                   transition: 'all 0.15s ease',
                 }}
@@ -1016,9 +1079,9 @@ function ContactInfoStepContent({ step, onAnswer, analytics }: ContactInfoStepCo
               whileTap={isValid ? { scale: 0.95 } : {}}
               animate={isValid ? {
                 boxShadow: [
-                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
-                  '0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
-                  '0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)',
+                  `0 0 15px rgba(${accentRgb}, 0.4), 0 0 30px rgba(${accentRgb}, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)`,
+                  `0 0 25px rgba(${accentRgb}, 0.6), 0 0 50px rgba(${accentRgb}, 0.3), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)`,
+                  `0 0 15px rgba(${accentRgb}, 0.4), 0 0 30px rgba(${accentRgb}, 0.2), 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.05)`,
                 ],
               } : {}}
               transition={{
@@ -1706,6 +1769,8 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
       })
 
       setActionComplete(true)
+      // Navigate to next screen after showing confirmation
+      setTimeout(() => onContinue?.(), 1500)
     },
   })
 
@@ -2110,62 +2175,68 @@ function SalesPageStepContent({ step, onContinue, onSkip, flowId = 'rafael-tats'
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
             >
-              {/* Risk Reversal Copy */}
-              <p style={{
-                fontFamily: "'Lora', Charter, Georgia, serif",
-                fontSize: '14px',
-                lineHeight: '1.6',
-                color: '#888',
-                textAlign: 'center',
-                margin: '24px 0 40px',
-                fontStyle: 'italic',
-              }}>
-                {isCalendlyVariant
-                  ? "No pressure. If we're not the right fit, we'll tell you."
-                  : "No risk. If Level 2 doesn't change how you see your business, message me. I'll make it right."
-                }
-              </p>
-
-              {/* Divider */}
-              <hr style={{
-                border: 'none',
-                borderTop: '1px solid rgba(0, 0, 0, 0.08)',
-                margin: '0 0 24px',
-              }} />
-
-              {/* Skip option - Secondary button */}
-              <div style={{ textAlign: 'center' }}>
+              {/* Risk Reversal Copy - hidden if step.hideFooter */}
+              {!step.hideFooter && (
                 <p style={{
-                  fontFamily: "'Geist', -apple-system, sans-serif",
-                  fontSize: '13px',
-                  color: '#999',
-                  marginBottom: '12px',
+                  fontFamily: "'Lora', Charter, Georgia, serif",
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  color: '#888',
+                  textAlign: 'center',
+                  margin: '24px 0 40px',
+                  fontStyle: 'italic',
                 }}>
-                  or continue without purchasing
+                  {isCalendlyVariant
+                    ? "No pressure. If we're not the right fit, we'll tell you."
+                    : "No risk. If Level 2 doesn't change how you see your business, message me. I'll make it right."
+                  }
                 </p>
-                <motion.button
-                  onClick={onSkip || onContinue}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: '#666',
-                    padding: '12px 24px',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    border: '1px solid rgba(0, 0, 0, 0.15)',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
+              )}
+
+              {/* Divider - hidden if step.hideFooter */}
+              {!step.hideFooter && (
+                <hr style={{
+                  border: 'none',
+                  borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+                  margin: '0 0 24px',
+                }} />
+              )}
+
+              {/* Skip option - Secondary button - hidden if step.hideFooter */}
+              {!step.hideFooter && (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{
                     fontFamily: "'Geist', -apple-system, sans-serif",
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Continue <span>→</span>
-                </motion.button>
-              </div>
+                    fontSize: '13px',
+                    color: '#999',
+                    marginBottom: '12px',
+                  }}>
+                    or continue without purchasing
+                  </p>
+                  <motion.button
+                    onClick={onSkip || onContinue}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: '#666',
+                      padding: '12px 24px',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      border: '1px solid rgba(0, 0, 0, 0.15)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontFamily: "'Geist', -apple-system, sans-serif",
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Continue <span>→</span>
+                  </motion.button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -2436,6 +2507,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
               sessionId={state.sessionId || undefined}
               isFirstStep={currentStepIndex === 0}
               introContent={currentStepIndex === 0 ? flow.mentor.welcome : undefined}
+              flowId={flowId}
             />
           )
         } else if (currentStep.questionType === 'multi-select') {
@@ -2453,6 +2525,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
               step={currentStep}
               onAnswer={handleAnswer}
               analytics={analytics}
+              flowId={flowId}
             />
           )
         } else {
@@ -2465,6 +2538,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
               onAnswer={handleAnswer}
               sessionId={state.sessionId || undefined}
               initialValue={typeof savedValue === 'string' ? savedValue : ''}
+              flowId={flowId}
             />
           )
         }
@@ -2492,6 +2566,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
             screens={diagnosisScreens}
             calendlyUrl={flow.embeds?.calendlyUrl}
             onBack={goToPreviousStep}
+            onBookingComplete={onComplete}
             flowId={flowId}
             sessionId={state.sessionId || undefined}
             availableCapital={state.answers?.assessment?.availableCapital}

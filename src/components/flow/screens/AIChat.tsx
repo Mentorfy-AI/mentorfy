@@ -15,6 +15,16 @@ import { COLORS, TIMING, LAYOUT, PHASE_NAMES } from '@/config/flow'
 import { getFlow } from '@/data/flows'
 import type { EmbedData } from '@/types'
 
+// Helper to convert hex to RGB for rgba
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null
+}
+
 /**
  * Extract text content from UIMessage parts
  */
@@ -190,7 +200,7 @@ I'm here whenever you want to chat. What's on your mind?`
 }
 
 // Section divider component (no phase/step language)
-function PhaseDivider({ phaseNumber }: { phaseNumber: number }) {
+function PhaseDivider({ phaseNumber, accentColor = COLORS.ACCENT }: { phaseNumber: number; accentColor?: string }) {
   const phaseName = PHASE_NAMES[phaseNumber] || 'Section'
 
   return (
@@ -220,7 +230,7 @@ function PhaseDivider({ phaseNumber }: { phaseNumber: number }) {
           fontFamily: "'Geist', -apple-system, sans-serif",
           fontSize: 11,
           fontWeight: 600,
-          color: COLORS.ACCENT,
+          color: accentColor,
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
         }}>
@@ -246,10 +256,12 @@ function PhaseDivider({ phaseNumber }: { phaseNumber: number }) {
 
 interface UserBubbleProps {
   children: ReactNode
+  accentColor?: string
 }
 
-// User message bubble - green, right-aligned
-function UserBubble({ children }: UserBubbleProps) {
+// User message bubble - accent colored, right-aligned
+function UserBubble({ children, accentColor = COLORS.ACCENT }: UserBubbleProps) {
+  const rgb = hexToRgb(accentColor)
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -258,7 +270,7 @@ function UserBubble({ children }: UserBubbleProps) {
       style={{ display: 'flex', justifyContent: 'flex-end' }}
     >
       <div style={{
-        backgroundColor: COLORS.ACCENT,
+        backgroundColor: accentColor,
         color: '#FFFFFF',
         padding: '14px 18px',
         borderRadius: '18px 18px 6px 18px',
@@ -266,7 +278,7 @@ function UserBubble({ children }: UserBubbleProps) {
         fontSize: '15px',
         lineHeight: '1.5',
         fontFamily: "'Geist', -apple-system, sans-serif",
-        boxShadow: '0 6px 28px rgba(16, 185, 129, 0.55)',
+        boxShadow: rgb ? `0 6px 28px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.55)` : '0 6px 28px rgba(16, 185, 129, 0.55)',
       }}>
         {children}
       </div>
@@ -408,7 +420,7 @@ function BlinkingCursor() {
 }
 
 // Render a single block with proper formatting
-function renderFormattedBlock(block: string, index: number, isFirst: boolean, isLastBlock = false, isComplete = true): ReactNode {
+function renderFormattedBlock(block: string, index: number, isFirst: boolean, isLastBlock = false, isComplete = true, accentColor = COLORS.ACCENT): ReactNode {
   const marginTop = isFirst ? 0 : '20px'
 
   // Check for horizontal rule
@@ -459,7 +471,7 @@ function renderFormattedBlock(block: string, index: number, isFirst: boolean, is
           const isLastItem = isLastBlock && i === numberedItems.length - 1
           return (
             <li key={i} style={{ marginBottom: '10px', display: 'flex', gap: '12px' }}>
-              <span style={{ color: COLORS.ACCENT, fontWeight: '600', flexShrink: 0 }}>{i + 1}.</span>
+              <span style={{ color: accentColor, fontWeight: '600', flexShrink: 0 }}>{i + 1}.</span>
               <span>
                 {parseInlineMarkdown(text)}
                 {isLastItem && !isComplete && <BlinkingCursor />}
@@ -489,7 +501,7 @@ function renderFormattedBlock(block: string, index: number, isFirst: boolean, is
           const isLastItem = isLastBlock && i === bulletItems.length - 1
           return (
             <li key={i} style={{ marginBottom: '10px', display: 'flex', gap: '12px' }}>
-              <span style={{ color: COLORS.ACCENT, fontWeight: '600', flexShrink: 0 }}>•</span>
+              <span style={{ color: accentColor, fontWeight: '600', flexShrink: 0 }}>•</span>
               <span>
                 {parseInlineMarkdown(text)}
                 {isLastItem && !isComplete && <BlinkingCursor />}
@@ -518,6 +530,7 @@ function renderFormattedBlock(block: string, index: number, isFirst: boolean, is
 
 interface FormattedContentProps {
   content: string
+  accentColor?: string
 }
 
 // Normalize markdown to ensure ## headers are properly separated as blocks
@@ -527,19 +540,20 @@ function normalizeMarkdown(content: string): string {
 }
 
 // Format assistant message content with proper styling
-function FormattedContent({ content }: FormattedContentProps) {
+function FormattedContent({ content, accentColor = COLORS.ACCENT }: FormattedContentProps) {
   const normalized = normalizeMarkdown(content)
   const blocks = normalized.split('\n\n').filter(p => p.trim())
-  return <>{blocks.map((block, i) => renderFormattedBlock(block, i, i === 0, i === blocks.length - 1, true))}</>
+  return <>{blocks.map((block, i) => renderFormattedBlock(block, i, i === 0, i === blocks.length - 1, true, accentColor))}</>
 }
 
 interface StreamingAssistantMessageProps {
   content: string
   onComplete?: () => void
+  accentColor?: string
 }
 
 // Streaming message component - uses renderFormattedBlock for consistent formatting
-function StreamingAssistantMessage({ content, onComplete }: StreamingAssistantMessageProps) {
+function StreamingAssistantMessage({ content, onComplete, accentColor = COLORS.ACCENT }: StreamingAssistantMessageProps) {
   const [displayedText, setDisplayedText] = useState('')
   const [isComplete, setIsComplete] = useState(false)
   const streamSpeed = TIMING.STREAM_SPEED
@@ -573,7 +587,7 @@ function StreamingAssistantMessage({ content, onComplete }: StreamingAssistantMe
       style={{ fontFamily: "'Lora', Charter, Georgia, serif" }}
     >
       {blocks.map((block, i) =>
-        renderFormattedBlock(block, i, i === 0, i === blocks.length - 1, isComplete)
+        renderFormattedBlock(block, i, i === 0, i === blocks.length - 1, isComplete, accentColor)
       )}
     </motion.div>
   )
@@ -800,10 +814,11 @@ interface StreamingEmbeddedMessageProps {
   onComplete?: () => void
   onEmbedShown?: (embedType: 'checkout' | 'booking' | 'video') => void
   onBookingComplete?: () => void
+  accentColor?: string
 }
 
 // Message with embedded content (streaming)
-function StreamingEmbeddedMessage({ embedData, onComplete, onEmbedShown, onBookingComplete }: StreamingEmbeddedMessageProps) {
+function StreamingEmbeddedMessage({ embedData, onComplete, onEmbedShown, onBookingComplete, accentColor = COLORS.ACCENT }: StreamingEmbeddedMessageProps) {
   const { beforeText, afterText } = embedData
   const [phase, setPhase] = useState(0) // 0: before, 1: embed, 2: after, 3: complete
   const [displayedBefore, setDisplayedBefore] = useState('')
@@ -861,7 +876,7 @@ function StreamingEmbeddedMessage({ embedData, onComplete, onEmbedShown, onBooki
     >
       {/* Before text */}
       {beforeBlocks.map((block, i) =>
-        renderFormattedBlock(block, i, i === 0, phase === 0 && i === beforeBlocks.length - 1, phase > 0)
+        renderFormattedBlock(block, i, i === 0, phase === 0 && i === beforeBlocks.length - 1, phase > 0, accentColor)
       )}
 
       {/* Embed */}
@@ -871,7 +886,7 @@ function StreamingEmbeddedMessage({ embedData, onComplete, onEmbedShown, onBooki
 
       {/* After text */}
       {phase >= 2 && afterBlocks.map((block, i) =>
-        renderFormattedBlock(block, `after-${i}` as any, false, phase === 2 && i === afterBlocks.length - 1, phase > 2)
+        renderFormattedBlock(block, `after-${i}` as any, false, phase === 2 && i === afterBlocks.length - 1, phase > 2, accentColor)
       )}
     </motion.div>
   )
@@ -882,10 +897,11 @@ interface StaticEmbeddedMessageProps {
   thinkingTime?: number
   onEmbedShown?: (embedType: 'checkout' | 'booking' | 'video') => void
   onBookingComplete?: () => void
+  accentColor?: string
 }
 
 // Static embedded message (non-streaming, already in state)
-function StaticEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBookingComplete }: StaticEmbeddedMessageProps) {
+function StaticEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBookingComplete, accentColor = COLORS.ACCENT }: StaticEmbeddedMessageProps) {
   const formatTime = (ms: number | undefined) => {
     if (!ms) return null
     return (ms / 1000).toFixed(2) + 's'
@@ -898,7 +914,7 @@ function StaticEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBookin
     <div style={{ fontFamily: "'Lora', Charter, Georgia, serif" }}>
       {/* Before text */}
       {beforeBlocks.map((block: string, i: number) =>
-        renderFormattedBlock(block, i, i === 0, false, true)
+        renderFormattedBlock(block, i, i === 0, false, true, accentColor)
       )}
 
       {/* Embed */}
@@ -906,7 +922,7 @@ function StaticEmbeddedMessage({ embedData, thinkingTime, onEmbedShown, onBookin
 
       {/* After text */}
       {afterBlocks.map((block: string, i: number) =>
-        renderFormattedBlock(block, `after-${i}` as any, false, false, true)
+        renderFormattedBlock(block, `after-${i}` as any, false, false, true, accentColor)
       )}
 
       {/* Thinking time */}
@@ -968,6 +984,8 @@ export function AIChat({
   const state = useUserState()
   const sessionId = useSessionId()
   const analytics = useAnalytics({ session_id: sessionId || '', flow_id: flowId })
+  const flow = getFlow(flowId)
+  const accentColor = flow.accentColor || COLORS.ACCENT
   const messageCountRef = useRef(0)
 
   // useChat for API communication with tool support
@@ -1072,9 +1090,6 @@ export function AIChat({
     const dividerId = `divider-${currentPhase}-${timestamp}`
     const messageId = `level-complete-${currentPhase}-${timestamp}`
 
-    // Generate the completion message content
-    const levelMessage = generatePhaseCompleteMessage(currentPhase, state)
-
     // Create divider message (only show if there are existing messages, i.e., not the first phase)
     const dividerMessage: Message = {
       id: dividerId,
@@ -1102,15 +1117,41 @@ export function AIChat({
     setStreamingMessageId(messageId)
     setIsTyping(true)
 
-    // After brief thinking delay, start streaming the content
-    setTimeout(() => {
-      setIsTyping(false)
-      setLocalMessages(prev => prev.map(msg =>
-        msg.id === messageId
-          ? { ...msg, content: levelMessage, _placeholder: false }
-          : msg
-      ))
-    }, TIMING.THINKING_DELAY)
+    // For blackbox flow, call the API to generate personalized first message
+    if (flowId === 'blackbox') {
+      // Call API with [START] trigger - the sync effect will handle streaming
+      sendMessage(
+        { text: '[START]' },
+        { body: { sessionId, agentId: `${flowId}-chat` } }
+      ).then(() => {
+        setIsTyping(false)
+        setLocalMessages(prev => prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, _placeholder: false }
+            : msg
+        ))
+      }).catch((err: any) => {
+        setIsTyping(false)
+        setLocalMessages(prev => prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, content: err.message || 'Something went wrong. Please try again.', _placeholder: false }
+            : msg
+        ))
+      })
+    } else {
+      // For other flows, use the static template
+      const levelMessage = generatePhaseCompleteMessage(currentPhase, state)
+
+      // After brief thinking delay, show the static content
+      setTimeout(() => {
+        setIsTyping(false)
+        setLocalMessages(prev => prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, content: levelMessage, _placeholder: false }
+            : msg
+        ))
+      }, TIMING.THINKING_DELAY)
+    }
 
     // Arrow ready after streaming would complete
     setTimeout(() => onArrowReady?.(), TIMING.ARROW_READY_DELAY)
@@ -1277,7 +1318,7 @@ export function AIChat({
           overflowY: externalScrollRef ? 'visible' : 'auto',
         }}
       >
-        <div style={{ padding: '85px 20px 0' }}>
+        <div style={{ padding: '120px 20px 0' }}>
           <div style={{
             maxWidth: '720px',
             margin: '0 auto',
@@ -1306,9 +1347,9 @@ export function AIChat({
                   }}
                 >
                   {message.role === 'divider' ? (
-                    <PhaseDivider phaseNumber={message.phaseNumber || 1} />
+                    <PhaseDivider phaseNumber={message.phaseNumber || 1} accentColor={accentColor} />
                   ) : message.role === 'user' ? (
-                    <UserBubble>{message.content}</UserBubble>
+                    <UserBubble accentColor={accentColor}>{message.content}</UserBubble>
                   ) : isStreaming ? (
                     isTyping ? (
                       <ThinkingIndicator onTimeUpdate={handleThinkingTimeUpdate} />
@@ -1318,11 +1359,13 @@ export function AIChat({
                         onComplete={handleStreamingComplete}
                         onEmbedShown={handleEmbedShown}
                         onBookingComplete={handleBookingComplete}
+                        accentColor={accentColor}
                       />
                     ) : (
                       <StreamingAssistantMessage
                         content={message.content || ''}
                         onComplete={handleStreamingComplete}
+                        accentColor={accentColor}
                       />
                     )
                   ) : message.embedData ? (
@@ -1331,10 +1374,11 @@ export function AIChat({
                       thinkingTime={message.thinkingTime}
                       onEmbedShown={handleEmbedShown}
                       onBookingComplete={handleBookingComplete}
+                      accentColor={accentColor}
                     />
                   ) : message.content ? (
                     <AssistantMessage content={message.content} thinkingTime={message.thinkingTime}>
-                      <FormattedContent content={message.content} />
+                      <FormattedContent content={message.content} accentColor={accentColor} />
                     </AssistantMessage>
                   ) : null}
                 </div>
@@ -1353,10 +1397,11 @@ export function AIChat({
         placeholder={`Message ${getFlow(flowId).mentor.name}...`}
         onSend={handleSendMessage}
         disabled={isTyping}
-        continuePhase={currentPhase <= 4 ? currentPhase : undefined}
+        continuePhase={currentPhase <= getFlow(flowId).phases.length ? currentPhase : undefined}
         continueReady={continueReady}
         onContinue={onContinue}
         sessionId={sessionId || undefined}
+        accentColor={accentColor}
       />
     </div>
   )

@@ -4,7 +4,7 @@ import { getFlow } from '@/data/flows'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 
-const ACCENT_COLOR = '#10B981'
+const DEFAULT_ACCENT_COLOR = '#10B981'
 
 interface Props {
   flowId?: string
@@ -15,6 +15,7 @@ interface Props {
 export function GlassHeader({ flowId = 'growthoperator' }: Props) {
   const [imgError, setImgError] = useState(false)
   const flow = getFlow(flowId)
+  const accentColor = flow.accentColor || DEFAULT_ACCENT_COLOR
 
   const avatarSize = 68
   const pillOverlap = 8 // Avatar kisses the pill
@@ -115,7 +116,7 @@ export function GlassHeader({ flowId = 'growthoperator' }: Props) {
 
         {/* Verified Badge */}
         <svg width={20} height={20} viewBox="0 0 24 24" fill="none" style={{ display: 'block', flexShrink: 0 }}>
-          <g fill={ACCENT_COLOR}>
+          <g fill={accentColor}>
             <circle cx="12" cy="4.5" r="3.5" />
             <circle cx="17.3" cy="6.7" r="3.5" />
             <circle cx="19.5" cy="12" r="3.5" />

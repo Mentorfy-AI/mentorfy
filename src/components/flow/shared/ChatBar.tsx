@@ -3,7 +3,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-const ACCENT_COLOR = '#10B981'
+const DEFAULT_ACCENT_COLOR = '#10B981'
+
+// Helper to convert hex to RGB for rgba
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null
+}
 
 interface AudioWaveformProps {
   analyserNode: AnalyserNode | null
@@ -109,10 +119,12 @@ interface VoiceRecordingBarProps {
   onCancel: () => void
   onSend: () => void
   analyserNode: AnalyserNode | null
+  accentColor?: string
 }
 
 // Voice Recording Bar component
-function VoiceRecordingBar({ onCancel, onSend, analyserNode }: VoiceRecordingBarProps) {
+function VoiceRecordingBar({ onCancel, onSend, analyserNode, accentColor = DEFAULT_ACCENT_COLOR }: VoiceRecordingBarProps) {
+  const rgb = hexToRgb(accentColor)
   const [recordingTime, setRecordingTime] = useState(0)
 
   useEffect(() => {
@@ -148,7 +160,7 @@ function VoiceRecordingBar({ onCancel, onSend, analyserNode }: VoiceRecordingBar
     >
       <motion.div
         initial={{ backgroundColor: 'rgba(255, 255, 255, 0.25)' }}
-        animate={{ backgroundColor: ACCENT_COLOR }}
+        animate={{ backgroundColor: accentColor }}
         transition={{ duration: 0.3 }}
         style={{
           width: '100%',
@@ -158,7 +170,7 @@ function VoiceRecordingBar({ onCancel, onSend, analyserNode }: VoiceRecordingBar
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          boxShadow: `0 4px 30px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.2)`,
+          boxShadow: rgb ? `0 4px 30px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3), 0 0 40px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)` : `0 4px 30px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.2)`,
           minHeight: '68px',
         }}
       >
@@ -232,7 +244,7 @@ function VoiceRecordingBar({ onCancel, onSend, analyserNode }: VoiceRecordingBar
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACCENT_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 19V5M5 12l7-7 7 7" />
           </svg>
         </motion.button>
@@ -256,6 +268,7 @@ interface ChatBarProps {
   onContinue?: () => void
   continueReady?: boolean
   sessionId?: string
+  accentColor?: string
 }
 
 // Chat input bar with liquid glass style
@@ -266,8 +279,10 @@ export function ChatBar({
   continuePhase,
   onContinue,
   continueReady = false,
-  sessionId
+  sessionId,
+  accentColor = DEFAULT_ACCENT_COLOR
 }: ChatBarProps) {
+  const rgb = hexToRgb(accentColor)
   const [value, setValue] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
@@ -482,6 +497,7 @@ export function ChatBar({
           onCancel={handleCancelRecording}
           onSend={handleSendRecording}
           analyserNode={analyserNode}
+          accentColor={accentColor}
         />
       ) : (
         <motion.div
@@ -517,7 +533,11 @@ export function ChatBar({
                 animate={continueReady ? {
                   opacity: 1,
                   y: 0,
-                  boxShadow: [
+                  boxShadow: rgb ? [
+                    `0 4px 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4), 0 2px 8px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
+                    `0 4px 32px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6), 0 2px 16px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`,
+                    `0 4px 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4), 0 2px 8px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
+                  ] : [
                     `0 4px 20px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(16, 185, 129, 0.2)`,
                     `0 4px 32px rgba(16, 185, 129, 0.6), 0 2px 16px rgba(16, 185, 129, 0.35)`,
                     `0 4px 20px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(16, 185, 129, 0.2)`,
@@ -541,7 +561,7 @@ export function ChatBar({
                   padding: '14px 24px',
                   borderRadius: '20px',
                   border: 'none',
-                  background: continueReady ? ACCENT_COLOR : '#D4CFC7',
+                  background: continueReady ? accentColor : '#D4CFC7',
                   cursor: continueReady ? 'pointer' : 'default',
                   display: 'flex',
                   alignItems: 'center',
@@ -703,7 +723,7 @@ export function ChatBar({
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: isUploading ? ACCENT_COLOR : '#F0EBE4',
+                  background: isUploading ? accentColor : '#F0EBE4',
                   border: isUploading ? 'none' : '1px solid #E8E3DC',
                   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                   display: 'flex',
@@ -783,10 +803,10 @@ export function ChatBar({
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: hasContent && !disabled ? 'pointer' : 'default',
-                    backgroundColor: hasContent ? ACCENT_COLOR : '#F0EBE4',
+                    backgroundColor: hasContent ? accentColor : '#F0EBE4',
                     border: hasContent ? 'none' : '1px solid #E8E3DC',
                     boxShadow: hasContent
-                      ? `0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.25)`
+                      ? (rgb ? `0 0 10px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5), 0 0 20px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)` : `0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.25)`)
                       : '0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                     transition: 'all 0.2s ease',
                   }}

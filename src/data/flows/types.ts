@@ -1,5 +1,6 @@
 export interface FlowDefinition {
   id: string
+  accentColor?: string
   mentor: MentorConfig
   phases: PhaseConfig[]
   agents: AgentConfig
@@ -33,12 +34,16 @@ export interface MentorConfig {
   welcome: {
     callout?: string
     headline: string
-    subheadline: string
+    subheadline?: string
+    closingCallout?: string
     buttonText: string
     videoUrl?: string
     disclaimer?: string
     socialProof?: string
     estimatedTime?: string
+  }
+  videos?: {
+    [key: string]: { url: string }
   }
 }
 
@@ -58,6 +63,7 @@ export interface StepConfig {
   options?: { label: string; value: string }[]
   stateKey?: string
   placeholder?: string
+  subheadline?: string
   fields?: ContactField[]
   promptKey?: string
   skipThinking?: boolean
@@ -66,6 +72,7 @@ export interface StepConfig {
   copyAboveVideo?: string
   copyBelowVideo?: string
   calendlyUrl?: string
+  hideFooter?: boolean // Hide the footer section on sales-page (skip option, risk reversal text)
   // Personalized question generation
   baseQuestion?: string
   personalizePromptKey?: string
@@ -89,6 +96,11 @@ export interface StepConfig {
   sectionIndex?: number // Which section this step belongs to (0-indexed)
   hideProgressBar?: boolean // Hide progress bar for this step (e.g., Q14 sacred moment)
   endsSection?: boolean // This step ends a section (AI moments)
+  // Video step specific
+  videoKey?: string // Key to look up video URL in mentor.videos
+  introText?: string // Text to show before video
+  // AI moment with contact capture
+  collectContact?: boolean // Whether this AI moment should also collect contact info
 }
 
 export interface ContactField {

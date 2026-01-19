@@ -1,21 +1,21 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { MentorAvatar } from '../shared/MentorAvatar'
-import { MentorBadge } from '../shared/MentorBadge'
+import { GlassHeader } from '../shared/GlassHeader'
 import { MentorfyWatermark } from '../shared/MentorfyWatermark'
 import { getFlow } from '@/data/flows'
 
-const ACCENT_COLOR = '#10B981'
+const DEFAULT_ACCENT_COLOR = '#10B981'
 const BACKGROUND_COLOR = '#FAF6F0'
 
 interface TextWithAccentProps {
   text: string
-  patterns?: string[] // Phrases to highlight in green
+  patterns?: string[] // Phrases to highlight
+  accentColor?: string
 }
 
-// Helper to render text with specific phrases highlighted in green
-function TextWithAccent({ text, patterns = [] }: TextWithAccentProps) {
+// Helper to render text with specific phrases highlighted
+function TextWithAccent({ text, patterns = [], accentColor = DEFAULT_ACCENT_COLOR }: TextWithAccentProps) {
   if (patterns.length === 0) {
     return <>{text}</>
   }
@@ -31,7 +31,7 @@ function TextWithAccent({ text, patterns = [] }: TextWithAccentProps) {
         const isHighlighted = patterns.some(p => p.toLowerCase() === part.toLowerCase())
         if (isHighlighted) {
           return (
-            <span key={i} style={{ color: ACCENT_COLOR }}>
+            <span key={i} style={{ color: accentColor }}>
               {part}
             </span>
           )
@@ -50,6 +50,7 @@ interface LandingPageProps {
 export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProps) {
   const flow = getFlow(flowId)
   const mentor = flow.mentor
+  const accentColor = flow.accentColor || DEFAULT_ACCENT_COLOR
 
   // Stagger animation variants
   const container = {
@@ -77,6 +78,9 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
       minHeight: '100vh',
       backgroundColor: BACKGROUND_COLOR,
     }}>
+      {/* Glass Header - ALWAYS visible (avatar + pill) */}
+      <GlassHeader flowId={flowId} />
+
       <motion.div
         variants={container}
         initial="hidden"
@@ -84,7 +88,7 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
         style={{
           maxWidth: '600px',
           margin: '0 auto',
-          padding: '48px 24px 0',
+          padding: '100px 24px 0', // Extra top padding for header
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -92,15 +96,6 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
           minHeight: '100vh',
         }}
       >
-        {/* Avatar - Larger for trust */}
-        <motion.div variants={item} style={{ marginBottom: '8px' }}>
-          <MentorAvatar size={88} flowId={flowId} />
-        </motion.div>
-
-        {/* Name + Badge - Tighter to avatar */}
-        <motion.div variants={item} style={{ marginBottom: '24px' }}>
-          <MentorBadge flowId={flowId} />
-        </motion.div>
 
         {/* Callout (optional - the hook) - italic, black, bold */}
         {mentor.welcome.callout && (
@@ -120,6 +115,7 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
             <TextWithAccent
               text={mentor.welcome.callout}
               patterns={flowId === 'growthoperator' ? ["still hasn't"] : ['$2k-$10k']}
+              accentColor={accentColor}
             />
           </motion.p>
         )}
@@ -141,6 +137,7 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
           <TextWithAccent
             text={mentor.welcome.headline}
             patterns={flowId === 'growthoperator' ? ['not', "haven't been told"] : ['$2k-$10k']}
+            accentColor={accentColor}
           />
         </motion.h1>
 
@@ -254,7 +251,7 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
               gap: '8px',
             }}
           >
-            <span style={{ color: ACCENT_COLOR, fontSize: '13px', letterSpacing: '2px' }}>★★★★★</span>
+            <span style={{ color: accentColor, fontSize: '13px', letterSpacing: '2px' }}>★★★★★</span>
             <span style={{
               fontFamily: "'Geist', -apple-system, sans-serif",
               fontSize: '13px',

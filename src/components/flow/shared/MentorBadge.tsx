@@ -2,7 +2,7 @@
 
 import { getFlow } from '@/data/flows'
 
-const ACCENT_COLOR = '#10B981'
+const DEFAULT_ACCENT_COLOR = '#10B981'
 
 interface Props {
   size?: 'large' | 'small'
@@ -13,6 +13,7 @@ interface Props {
 export function MentorBadge({ size = 'large', flowId = 'rafael-tats' }: Props) {
   const isLarge = size === 'large'
   const flow = getFlow(flowId)
+  const accentColor = flow.accentColor || DEFAULT_ACCENT_COLOR
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
       <span style={{
@@ -24,7 +25,7 @@ export function MentorBadge({ size = 'large', flowId = 'rafael-tats' }: Props) {
         {flow.mentor.name}
       </span>
       <svg width={isLarge ? 20 : 16} height={isLarge ? 20 : 16} viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
-        <g fill={ACCENT_COLOR}>
+        <g fill={accentColor}>
           <circle cx="12" cy="4.5" r="3.5" />
           <circle cx="17.3" cy="6.7" r="3.5" />
           <circle cx="19.5" cy="12" r="3.5" />

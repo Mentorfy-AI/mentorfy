@@ -2,17 +2,16 @@ import type { FlowDefinition } from './types'
 
 export const blackboxFlow: FlowDefinition = {
   id: 'blackbox',
+  accentColor: '#EF4444',
 
   mentor: {
-    name: 'Brady Badour',
+    name: 'Blackbox AI',
     handle: '@blackbox',
-    avatar: '/brady.jpg',
+    avatar: '/blackbox-avatar.png',
     welcome: {
-      callout: 'Placeholder callout text...',
-      headline: 'Placeholder headline text',
-      subheadline: 'Placeholder subheadline text.',
-      buttonText: 'Start Assessment',
-      disclaimer: 'Placeholder disclaimer text.',
+      headline: 'JOIN THE VIP LIST',
+      subheadline: 'Get early access to hidden opportunities before they are made public to your phone',
+      buttonText: 'Join Now',
     },
   },
 
@@ -29,69 +28,28 @@ export const blackboxFlow: FlowDefinition = {
   webhookUrl: process.env.BLACKBOX_WEBHOOK_URL,
 
   contextMapping: {
-    // Q1-Q3: Placeholder questions
-    'assessment.q1': 'placeholder.q1',
-    'assessment.q2': 'placeholder.q2',
-    'assessment.q3': 'placeholder.q3',
-    // Contact info
     'user.name': 'user.name',
     'user.email': 'user.email',
     'user.phone': 'user.phone',
+    'assessment.currentWork': 'assessment.currentWork',
+    'assessment.goal': 'assessment.goal',
+    'assessment.obstacles': 'assessment.obstacles',
+    'assessment.ageConfirm': 'assessment.ageConfirm',
   },
 
   phases: [
     {
       id: 1,
-      name: 'Assessment',
+      name: 'VIP Signup',
       steps: [
-        // Q1: Placeholder question 1
-        {
-          stepKey: 'q1-placeholder',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: 'Placeholder question 1?',
-          options: [
-            { value: 'option-a', label: 'Option A' },
-            { value: 'option-b', label: 'Option B' },
-            { value: 'option-c', label: 'Option C' },
-          ],
-          stateKey: 'assessment.q1',
-        },
-
-        // Q2: Placeholder question 2
-        {
-          stepKey: 'q2-placeholder',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: 'Placeholder question 2?',
-          options: [
-            { value: 'option-a', label: 'Option A' },
-            { value: 'option-b', label: 'Option B' },
-            { value: 'option-c', label: 'Option C' },
-          ],
-          stateKey: 'assessment.q2',
-        },
-
-        // Q3: Placeholder question 3
-        {
-          stepKey: 'q3-placeholder',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: 'Placeholder question 3?',
-          options: [
-            { value: 'option-a', label: 'Option A' },
-            { value: 'option-b', label: 'Option B' },
-            { value: 'option-c', label: 'Option C' },
-          ],
-          stateKey: 'assessment.q3',
-        },
-
         // CONTACT GATE: Name, Email, Phone
         {
           stepKey: 'contact-gate',
           type: 'question',
           questionType: 'contact-info',
-          question: 'Enter your info to see your personalized diagnosis.',
+          headline: 'JOIN THE VIP LIST',
+          subheadline: 'Get early access to hidden opportunities before they are made public to your phone',
+          question: 'Where should I send the hidden opportunities?',
           fields: [
             { key: 'name', label: 'Name', type: 'text', placeholder: 'Your name', autoComplete: 'name' },
             { key: 'email', label: 'Email', type: 'email', placeholder: 'your@email.com', autoComplete: 'email' },
@@ -101,39 +59,59 @@ export const blackboxFlow: FlowDefinition = {
           noBackButton: true,
         },
 
-        // LOADING SCREEN
+        // Q1: Current Work
         {
-          stepKey: 'loading-diagnosis',
-          type: 'loading',
-          loadingMessages: {
-            initial: [
-              'Analyzing your responses...',
-              'Identifying patterns in your journey...',
-              'This is interesting...',
-              'Connecting the dots...',
-              'I see what happened here...',
-              'Preparing your diagnosis...',
-            ],
-            waiting: [
-              'Almost there...',
-              'Just a moment longer...',
-              'Putting the finishing touches...',
-              'This is taking a bit longer than usual...',
-              'Still working on it...',
-              'Hang tight...',
-            ],
-            ready: "Alright it's ready... let's dive in.",
-          },
-          minDuration: 12000,
-          noBackButton: true,
+          stepKey: 'q1-current-work',
+          type: 'question',
+          questionType: 'open-ended',
+          question: 'Level Up Your Career...\n\nWhat do you currently do for work?',
+          placeholder: 'Tell us about your current role or occupation...',
+          stateKey: 'assessment.currentWork',
         },
 
-        // DIAGNOSIS SEQUENCE
+        // Q2: Goal
         {
-          stepKey: 'diagnosis-sequence',
-          type: 'diagnosis-sequence',
-          promptKey: 'blackbox-diagnosis',
-          noBackButton: true,
+          stepKey: 'q2-goal',
+          type: 'question',
+          questionType: 'open-ended',
+          question: 'Set A Goal...\n\nWhat do you want to accomplish with us?',
+          placeholder: 'Share your goals and aspirations...',
+          stateKey: 'assessment.goal',
+        },
+
+        // Q3: Obstacles
+        {
+          stepKey: 'q3-obstacles',
+          type: 'question',
+          questionType: 'open-ended',
+          question: "Overcome Your Obstacles...\n\nWhat's the biggest thing holding you back from accomplishing your goals?",
+          placeholder: 'Be honest about what challenges you face...',
+          stateKey: 'assessment.obstacles',
+        },
+
+        // Q4: Age Confirmation
+        {
+          stepKey: 'q4-age',
+          type: 'question',
+          questionType: 'multiple-choice',
+          question: 'Are you 18+ or older?',
+          options: [
+            { value: 'yes', label: 'Yes' },
+            { value: 'no', label: 'No' },
+          ],
+          stateKey: 'assessment.ageConfirm',
+        },
+
+        // Calendly Booking
+        {
+          stepKey: 'booking',
+          type: 'sales-page',
+          variant: 'calendly',
+          headline: 'Book Your 1 on 1 Onboarding Call With Your Coach',
+          copyAboveVideo: '',
+          copyBelowVideo: '',
+          calendlyUrl: 'https://calendly.com/brady-mentorfy/30min',
+          hideFooter: true,
         },
       ],
     },

@@ -2258,8 +2258,8 @@ function getNestedValue(obj: any, path: string): any {
 // Content transition variants - clean fade in place
 const getContentVariants = (_direction: number) => ({
   initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } },
-  exit: { opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }
+  animate: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' as const } },
+  exit: { opacity: 0, transition: { duration: 0.2, ease: 'easeOut' as const } }
 })
 
 interface PhaseFlowProps {
@@ -2640,7 +2640,7 @@ export function PhaseFlow({ levelId, onComplete, onBack, hideHeader = false, bac
           custom={direction}
           variants={isInitialMount ? undefined : getContentVariants(direction)}
           initial={isInitialMount ? { opacity: 0 } : "initial"}
-          animate={isInitialMount ? { opacity: 1, transition: { duration: 0.4, ease: 'easeOut' } } : "animate"}
+          animate={isInitialMount ? { opacity: 1, transition: { duration: 0.4, ease: 'easeOut' as const } } : "animate"}
           exit={isInitialMount ? { opacity: 0 } : "exit"}
           style={{ minHeight: '100vh' }}
         >

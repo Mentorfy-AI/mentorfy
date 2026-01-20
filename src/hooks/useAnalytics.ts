@@ -162,7 +162,7 @@ export function useAnalytics(context: AnalyticsContext) {
   // ─────────────────────────────────────────────────────────────
   const trackBookingClicked = useCallback(
     (props: {
-      source: 'sales_page' | 'chat'
+      source: 'sales_page' | 'chat' | 'diagnosis_sequence'
       phasesCompleted: number[]
       stepId?: string            // If source = sales_page
       chatMessageIndex?: number  // If source = chat

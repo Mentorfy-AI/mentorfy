@@ -420,7 +420,7 @@ function BlinkingCursor() {
 }
 
 // Render a single block with proper formatting
-function renderFormattedBlock(block: string, index: number, isFirst: boolean, isLastBlock = false, isComplete = true, accentColor = COLORS.ACCENT): ReactNode {
+function renderFormattedBlock(block: string, index: number, isFirst: boolean, isLastBlock = false, isComplete = true, accentColor: string = COLORS.ACCENT): ReactNode {
   const marginTop = isFirst ? 0 : '20px'
 
   // Check for horizontal rule

@@ -58,8 +58,9 @@ export function UserProvider({ children, flowId = 'rafael-tats' }: UserProviderP
   const [sessionLoading, setSessionLoading] = useState(true)
 
   // UI-only state with reducer
+  // Start directly on level-flow (no separate landing page)
   const [uiState, dispatch] = useReducer(uiReducer, {
-    currentScreen: 'welcome' as const,
+    currentScreen: 'level-flow' as const,
     currentPanel: 0,
   })
 

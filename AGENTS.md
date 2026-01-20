@@ -60,3 +60,7 @@ A **work session** is when you are working on one or more **bd** issues.
 - Import paths use `@/` alias
 - Inline styles preferred over CSS classes
 - framer-motion ease arrays need `as const` for TypeScript
+
+# RULES 
+
+Always use bun

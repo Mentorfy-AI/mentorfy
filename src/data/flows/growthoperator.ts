@@ -8,17 +8,21 @@ export const growthoperatorFlow: FlowDefinition = {
     handle: '@growthoperator',
     avatar: '/brady.jpg',
     welcome: {
-      callout: "If online business still hasn't worked for you YET...",
-      headline: "It's not your fault. It's not the model. There's something you haven't been told.",
-      subheadline: "Take this AI assessment to find out what's actually been in your way.",
+      callout: "If you're an agency owner whos {{green:burnt out}} from competing in a saturated market",
+      headline: "I'll Show You How {{green:1000s}} Are Partnering With Creators To Scale\n{{green:\"AI Education Companies\"}} While\nStaying Behind The Scenes",
+      closingCallout: "...Without Ever Begging For New Clients Again",
       buttonText: 'Start Assessment',
       disclaimer: "Warning: This experience adapts based on your answers. Answer honestly... your diagnosis depends on it.",
+    },
+    videos: {
+      'video-1-frame': { url: 'https://kile.wistia.com/medias/xr4873j8ps' },
+      'video-2-reveal': { url: 'https://kile.wistia.com/medias/xr4873j8ps' },
     },
   },
 
   agents: {
     chat: { model: 'claude-haiku-4-5-20251001', maxTokens: 1024, temperature: 0.7 },
-    diagnosis: { model: 'claude-opus-4-5-20251101', maxTokens: 4096 },
+    diagnosis: { model: 'claude-opus-4-5-20251101', maxTokens: 8192 },
     summary: { model: 'claude-haiku-4-5-20251001', maxTokens: 1024 },
   },
 
@@ -32,29 +36,17 @@ export const growthoperatorFlow: FlowDefinition = {
   // Maps session context paths to semantic AI-friendly paths for diagnosis
   // Format: { outputPath: inputPath } - AI receives data at outputPath
   contextMapping: {
-    // Section 1: The Dream + Gap
-    'assessment.whyHere': 'assessment.whyHere',
-    'assessment.desiredIncome': 'assessment.desiredIncome',
-    'assessment.currentIncome': 'assessment.currentIncome',
-    'assessment.modelsTried': 'assessment.modelsTried',
-    'assessment.modelsCount': 'assessment.modelsCount',
-    // Section 2: The Weight
-    'assessment.duration': 'assessment.duration',
-    'assessment.totalInvestment': 'assessment.totalInvestment',
-    'assessment.availableCapital': 'assessment.availableCapital',
-    'assessment.deeperCost': 'assessment.deeperCost',
-    // Section 3: The Pattern + Constellation
-    'assessment.positionInEquation': 'assessment.positionInEquation',
-    'assessment.teacherMoney': 'assessment.teacherMoney',
-    'assessment.aiRelationship': 'assessment.aiRelationship',
-    'assessment.thoughtConstellation': 'assessment.thoughtConstellation',
-    // Section 4: The Confession
+    // V3 Questions
+    'assessment.timeInGame': 'assessment.timeInGame',
+    'assessment.skillLevel': 'assessment.skillLevel',
+    'assessment.goal': 'assessment.goal',
+    'assessment.currentReality': 'assessment.currentReality',
+    'assessment.whatTried': 'assessment.whatTried',
+    'assessment.dailyReality': 'assessment.dailyReality',
+    'assessment.performanceGap': 'assessment.performanceGap',
+    'assessment.fear': 'assessment.fear',
+    'assessment.identityFriction': 'assessment.identityFriction',
     'assessment.confession': 'assessment.confession',
-    // Section 5: Stakes + Fear
-    'assessment.whyKeepGoing': 'assessment.whyKeepGoing',
-    'assessment.whatWouldChange': 'assessment.whatWouldChange',
-    'assessment.urgency': 'assessment.urgency',
-    'assessment.biggestFear': 'assessment.biggestFear',
     // Contact
     'user.name': 'user.name',
     'user.email': 'user.email',
@@ -67,425 +59,253 @@ export const growthoperatorFlow: FlowDefinition = {
       name: 'Assessment',
       steps: [
         // ============================================================
-        // SECTION 1: THE DREAM + GAP
-        // Progress Bar Label: "Your Situation"
+        // Q1-Q4: QUALIFICATION QUESTIONS
         // ============================================================
 
-        // Q1: Why are you here?
+        // Q1: Time in the Game
         {
-          stepKey: 'q1-why-here',
+          stepKey: 'q1-time',
           type: 'question',
           questionType: 'multiple-choice',
-          question: "Why are you here?",
+          question: "But first, I need to know who I'm speaking to… how long have you been in the game for?",
           options: [
-            { value: 'figuring-out', label: "I'm still trying to figure this online business thing out" },
-            { value: 'tried-didnt-work', label: "I've tried things that didn't work and I'm looking for what will" },
-            { value: 'stuck', label: "I'm stuck and I need a new direction" },
-            { value: 'something-told-me', label: 'Something told me to click... so here I am' },
+            { value: '5plus', label: "Longer than most — 5+ years" },
+            { value: '3-5', label: "It's been a while — 3 to 5 years" },
+            { value: '1-3', label: "Relatively new — 1 to 3 years" },
+            { value: '6mo-1yr', label: "Just started — 6 months to 1 year" },
+            { value: 'brand-new', label: "Brand new — not the right fit yet" },
           ],
-          stateKey: 'assessment.whyHere',
+          stateKey: 'assessment.timeInGame',
           sectionLabel: 'Your Situation',
           sectionIndex: 0,
         },
 
-        // Q2: Desired income
+        // Q2: Skill Level
         {
-          stepKey: 'q2-desired-income',
+          stepKey: 'q2-skills',
           type: 'question',
           questionType: 'multiple-choice',
-          question: "If this actually worked... what would you want to be making?",
+          question: "Okay cool, so you've got some experience. How would you describe your skill level?",
           options: [
-            { value: '5k', label: '$5,000/month — enough to breathe' },
-            { value: '10k', label: '$10,000/month — real freedom starts here' },
-            { value: '25k', label: '$25,000/month — life changing money' },
-            { value: '50k', label: '$50,000/month — a completely different life' },
-            { value: '100k+', label: '$100,000+/month — the big dream' },
+            { value: 'wizard', label: "Wizard — I've generated well over $1M in business revenue throughout my career" },
+            { value: 'advanced', label: "Advanced — I've got skills that have generated $250K-$1M in business revenue" },
+            { value: 'professional', label: "Professional — I've had a massive impact on the businesses I've worked with" },
+            { value: 'intermediate', label: "Intermediate — I definitely have a valuable skillset" },
+            { value: 'rookie', label: "Rookie — I'm skill stacking right now" },
+            { value: 'beginner', label: "Just getting started — I should probably get some experience first" },
           ],
-          stateKey: 'assessment.desiredIncome',
+          stateKey: 'assessment.skillLevel',
           sectionLabel: 'Your Situation',
           sectionIndex: 0,
         },
 
-        // Q3: Current income
+        // Q3: The Goal
         {
-          stepKey: 'q3-current-income',
+          stepKey: 'q3-goal',
           type: 'question',
           questionType: 'multiple-choice',
-          question: "What are you actually making right now?",
+          question: "Great, now I have a better idea of where you're at. But tell me what kind of person you are…\n\nWhat's your big goal in business?",
           options: [
-            { value: '<1k', label: 'Less than $1,000/month' },
-            { value: '1k-3k', label: '$1,000 - $3,000/month' },
-            { value: '3k-5k', label: '$3,000 - $5,000/month' },
-            { value: '5k-10k', label: '$5,000 - $10,000/month' },
-            { value: '10k+', label: 'Over $10,000/month' },
+            { value: '1m-plus', label: "Over $1M a month — I know it's possible" },
+            { value: '500k-1m', label: "$500K - $1M a month — I wanna get here before I go any higher" },
+            { value: '100k-500k', label: "$100K - $500K a month — I've gotta touch a six figure month soon" },
+            { value: '50k-100k', label: "$50K - $100K a month — I'd be extremely happy if I got here" },
+            { value: '10k-50k', label: "$10K - $50K a month — This is achievable for me" },
+            { value: '5k-10k', label: "$5K - $10K a month — I need room to breathe" },
           ],
-          stateKey: 'assessment.currentIncome',
+          stateKey: 'assessment.goal',
           sectionLabel: 'Your Situation',
           sectionIndex: 0,
         },
 
-        // Q4: What have you tried?
+        // Q4: Current Reality
         {
-          stepKey: 'q4-models-tried',
+          stepKey: 'q4-current',
           type: 'question',
           questionType: 'multiple-choice',
-          question: "What have you actually tried?",
+          question: "So be honest with me… where are you at right now?",
           options: [
-            { value: 'ecommerce', label: 'Ecommerce — dropshipping, Amazon, print on demand' },
-            { value: 'agency', label: 'Agency or services — SMMA, freelancing, lead gen, AI automation' },
-            { value: 'sales', label: 'Sales — closing, setting, remote sales roles' },
-            { value: 'content', label: 'Content — YouTube, TikTok, podcasts, newsletters' },
-            { value: 'coaching', label: 'Coaching or courses — selling what you know' },
-            { value: 'affiliate', label: 'Affiliate — promoting other people\'s stuff' },
-            { value: 'software', label: 'Software — SaaS, apps, no-code tools' },
-            { value: 'trading', label: 'Trading or investing — crypto, forex, stocks' },
-            { value: 'nothing-serious', label: "I haven't really tried anything seriously yet" },
+            { value: '100k-plus', label: "Above $100K a month — I'm looking for something that can get to the next level" },
+            { value: '50k-100k', label: "Between $50K - $100K a month — I need something more consistent" },
+            { value: '10k-50k', label: "Around $10K - $50K a month — I've been fluctuating for a while" },
+            { value: '5k-10k', label: "Between $5K - $10K a month — I've been struggling to get new business" },
+            { value: '1k-5k', label: "Between $1K - $5K a month — I've got something going but it's not consistent yet" },
+            { value: 'below-1k', label: "Below $1K a month — I'm still trying to get real traction" },
           ],
-          stateKey: 'assessment.modelsTried',
+          stateKey: 'assessment.currentReality',
           sectionLabel: 'Your Situation',
           sectionIndex: 0,
         },
 
-        // Q5: How many models?
-        {
-          stepKey: 'q5-models-count',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "How many different things have you actually gone all-in on?",
-          options: [
-            { value: '1', label: 'Just one thing so far' },
-            { value: '2-3', label: '2-3 different models' },
-            { value: '4-5', label: '4-5 different models' },
-            { value: '5+', label: "More than 5... I've been searching for a while" },
-          ],
-          stateKey: 'assessment.modelsCount',
-          sectionLabel: 'Your Situation',
-          sectionIndex: 0,
-        },
-
-        // AI MOMENT 1: Recognition + Forward Pull
-        {
-          stepKey: 'ai-moment-1',
-          type: 'ai-moment',
-          promptKey: 'ai-moment-1',
-          noBackButton: true,
-          endsSection: true,
-          sectionIndex: 0,
-        },
-
         // ============================================================
-        // SECTION 2: THE WEIGHT
-        // Progress Bar Label: "Your Journey"
-        // ============================================================
-
-        // Q6: Duration
-        {
-          stepKey: 'q6-duration',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "How long have you been trying to make this work?",
-          options: [
-            { value: '<6mo', label: 'Less than 6 months' },
-            { value: '6mo-1yr', label: '6 months to a year' },
-            { value: '1-2yr', label: '1-2 years' },
-            { value: '2-3yr', label: '2-3 years' },
-            { value: '3-5yr', label: '3-5 years' },
-            { value: '5yr+', label: 'More than 5 years' },
-          ],
-          stateKey: 'assessment.duration',
-          sectionLabel: 'Your Journey',
-          sectionIndex: 1,
-        },
-
-        // Q7: Total investment
-        {
-          stepKey: 'q7-investment',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "When you add it all up — courses, coaching, tools, ads, everything — how much have you put on the line?",
-          options: [
-            { value: '<500', label: 'Less than $500' },
-            { value: '500-2k', label: '$500 - $2,000' },
-            { value: '2k-5k', label: '$2,000 - $5,000' },
-            { value: '5k-10k', label: '$5,000 - $10,000' },
-            { value: '10k-25k', label: '$10,000 - $25,000' },
-            { value: '25k+', label: 'More than $25,000' },
-          ],
-          stateKey: 'assessment.totalInvestment',
-          sectionLabel: 'Your Journey',
-          sectionIndex: 1,
-        },
-
-        // Q8: Available capital (PERSONALIZED)
-        {
-          stepKey: 'q8-available-capital',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "How much do you actually have available right now to put toward finally making this work?",
-          baseQuestion: "How much do you actually have available right now to put toward finally making this work?",
-          personalizePromptKey: 'q8-personalize',
-          options: [
-            { value: '<1k', label: 'Less than $1,000' },
-            { value: '1k-3k', label: '$1,000 - $3,000' },
-            { value: '3k-5k', label: '$3,000 - $5,000' },
-            { value: '5k-10k', label: '$5,000 - $10,000' },
-            { value: '10k+', label: 'More than $10,000' },
-          ],
-          stateKey: 'assessment.availableCapital',
-          sectionLabel: 'Your Journey',
-          sectionIndex: 1,
-        },
-
-        // Q9: Deeper cost
-        {
-          stepKey: 'q9-deeper-cost',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "What has this cost you beyond money?",
-          options: [
-            { value: 'time', label: "Time I'm never getting back" },
-            { value: 'confidence', label: 'Confidence in myself' },
-            { value: 'relationships', label: 'Relationships — strain with people who matter' },
-            { value: 'opportunities', label: 'Other opportunities I let pass' },
-            { value: 'peace', label: 'My peace of mind' },
-            { value: 'all', label: 'All of the above' },
-          ],
-          stateKey: 'assessment.deeperCost',
-          sectionLabel: 'Your Journey',
-          sectionIndex: 1,
-        },
-
-        // AI MOMENT 2: Validation + Pattern Tease
-        {
-          stepKey: 'ai-moment-2',
-          type: 'ai-moment',
-          promptKey: 'ai-moment-2',
-          noBackButton: true,
-          endsSection: true,
-          sectionIndex: 1,
-        },
-
-        // ============================================================
-        // SECTION 3: THE PATTERN + CONSTELLATION
-        // Progress Bar Label: "Going Deeper"
-        // ============================================================
-
-        // Q10: Position in equation
-        {
-          stepKey: 'q10-position',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "In the things you've tried... where were YOU in the equation?",
-          options: [
-            { value: 'expert', label: 'I was trying to be the expert — the one with the knowledge and credibility' },
-            { value: 'marketer', label: 'I was trying to be the marketer — getting attention, building an audience' },
-            { value: 'everything', label: 'I was doing everything myself — expert, marketer, operator, all of it' },
-            { value: 'someone-elses', label: "I was working in someone else's system — their business, their rules" },
-            { value: 'never-thought', label: 'I never really thought about where I was positioned' },
-          ],
-          stateKey: 'assessment.positionInEquation',
-          sectionLabel: 'Going Deeper',
-          sectionIndex: 2,
-        },
-
-        // Q11: Teacher money
-        {
-          stepKey: 'q11-teacher-money',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "The people who taught you this stuff... how did THEY make most of their money?",
-          options: [
-            { value: 'teaching', label: 'Teaching it — courses, coaching, content about the thing' },
-            { value: 'doing', label: 'Actually doing it — making money from the business model itself' },
-            { value: 'both', label: 'Both — doing it AND teaching it' },
-            { value: 'never-thought', label: 'I never really thought about it' },
-            { value: 'self-taught', label: 'I mostly taught myself' },
-          ],
-          stateKey: 'assessment.teacherMoney',
-          sectionLabel: 'Going Deeper',
-          sectionIndex: 2,
-        },
-
-        // Q12: AI relationship
-        {
-          stepKey: 'q12-ai-relationship',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "How has AI changed how you think about all of this?",
-          options: [
-            { value: 'uncertain', label: 'Everything feels more uncertain now' },
-            { value: 'opportunity', label: "I see opportunity but I don't know how to capture it" },
-            { value: 'left-behind', label: "I'm worried about being left behind" },
-            { value: 'hype', label: "I think it's mostly hype — things haven't really changed" },
-            { value: 'where-i-fit', label: "I'm trying to figure out where I fit in the new landscape" },
-          ],
-          stateKey: 'assessment.aiRelationship',
-          sectionLabel: 'Going Deeper',
-          sectionIndex: 2,
-        },
-
-        // Q13: Thought constellation (MULTI-SELECT)
-        {
-          stepKey: 'q13-constellation',
-          type: 'question',
-          questionType: 'multi-select',
-          question: "Which of these thoughts have actually crossed your mind?",
-          instruction: "Select all that apply",
-          options: [
-            { value: 'not-smart-enough', label: '"Maybe I\'m just not smart enough for this"' },
-            { value: 'wasted-time', label: '"I\'ve wasted so much time"' },
-            { value: 'everyone-else', label: '"Everyone else seems to figure it out except me"' },
-            { value: 'same-place-5yr', label: '"What if I\'m still in the same place in 5 years?"' },
-            { value: 'normal-job', label: '"I should have just gotten a normal job"' },
-            { value: 'cant-give-up', label: '"I can\'t give up now — I\'ve already put too much in"' },
-            { value: 'something-missing', label: '"There has to be something I\'m missing"' },
-            { value: 'game-rigged', label: '"The game feels rigged"' },
-          ],
-          stateKey: 'assessment.thoughtConstellation',
-          sectionLabel: 'Going Deeper',
-          sectionIndex: 2,
-        },
-
-        // AI MOMENT 3: Insight Delivery + Pre-Frame
-        {
-          stepKey: 'ai-moment-3',
-          type: 'ai-moment',
-          promptKey: 'ai-moment-3',
-          noBackButton: true,
-          endsSection: true,
-          sectionIndex: 2,
-        },
-
-        // ============================================================
-        // SECTION 4: THE CONFESSION
-        // ============================================================
-
-        // Q14: The confession (OPEN-ENDED)
-        {
-          stepKey: 'q14-confession',
-          type: 'question',
-          questionType: 'open-ended',
-          question: "In one sentence... what's the most frustrating part of this whole journey that you don't really talk about?",
-          placeholder: "Type your answer here...",
-          stateKey: 'assessment.confession',
-          sectionLabel: 'The Confession',
-          noBackButton: true,
-          sectionIndex: 3,
-        },
-
-        // AI MOMENT 4: Acknowledgment + Bridge
-        {
-          stepKey: 'ai-moment-4',
-          type: 'ai-moment',
-          promptKey: 'ai-moment-4',
-          noBackButton: true,
-          endsSection: true,
-          sectionIndex: 3,
-        },
-
-        // ============================================================
-        // SECTION 5: THE STAKES + FEAR
-        // Progress Bar Label: "What's At Stake"
-        // ============================================================
-
-        // Q15: What's kept you going
-        {
-          stepKey: 'q15-why-going',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "Despite everything... what's kept you going?",
-          options: [
-            { value: 'seen-others', label: "I've seen other people make it work — I know it's possible" },
-            { value: 'refuse-normal', label: 'I refuse to go back to "normal" — that\'s not an option for me' },
-            { value: 'no-backup', label: "I don't have a backup plan — I need this to work" },
-            { value: 'believe', label: "I still believe I'll figure it out eventually" },
-            { value: 'cant-let-go', label: "I can't explain it — something in me just won't let go" },
-          ],
-          stateKey: 'assessment.whyKeepGoing',
-          sectionLabel: "What's At Stake",
-          sectionIndex: 4,
-        },
-
-        // Q16: What would change
-        {
-          stepKey: 'q16-what-changes',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "If this actually worked... what would change first?",
-          options: [
-            { value: 'quit-job', label: "I'd quit my job" },
-            { value: 'stop-stress', label: "I'd stop stressing about money all the time" },
-            { value: 'made-it', label: "I'd finally feel like I actually made it" },
-            { value: 'freedom', label: "I'd have real freedom — my time would be mine" },
-            { value: 'take-care', label: "I'd be able to take care of the people I love" },
-            { value: 'everything', label: 'Honestly? Everything would change' },
-          ],
-          stateKey: 'assessment.whatWouldChange',
-          sectionLabel: "What's At Stake",
-          sectionIndex: 4,
-        },
-
-        // Q17: Urgency
-        {
-          stepKey: 'q17-urgency',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "How urgent is this for you?",
-          options: [
-            { value: 'patient', label: "I'm patient — I just want to find the right thing" },
-            { value: '6mo', label: 'I want real progress in the next 6 months' },
-            { value: 'this-year', label: 'I need something to work this year' },
-            { value: 'urgent', label: "It's urgent — I'm running out of time or money or both" },
-            { value: 'ready-now', label: "I'm ready to move now — I'm done waiting" },
-          ],
-          stateKey: 'assessment.urgency',
-          sectionLabel: "What's At Stake",
-          sectionIndex: 4,
-        },
-
-        // Q18: Biggest fear
-        {
-          stepKey: 'q18-fear',
-          type: 'question',
-          questionType: 'multiple-choice',
-          question: "What are you most afraid of?",
-          options: [
-            { value: 'stuck', label: "I'm afraid I'll still be stuck in the same place a year from now" },
-            { value: 'waste-money', label: "I'm afraid I'll waste more money on something that doesn't work" },
-            { value: 'left-behind', label: "I'm afraid everyone else will figure it out and I'll get left behind" },
-            { value: 'give-up', label: "I'm afraid I'll eventually have to give up on this whole dream" },
-            { value: 'not-cut-out', label: "I'm afraid that maybe I'm just not cut out for this" },
-          ],
-          stateKey: 'assessment.biggestFear',
-          sectionLabel: "What's At Stake",
-          sectionIndex: 4,
-        },
-
-        // ============================================================
-        // CONTACT CAPTURE
+        // CONTACT CAPTURE (After Q4)
         // ============================================================
         {
           stepKey: 'contact-gate',
           type: 'question',
           questionType: 'contact-info',
-          question: "Now I've got what I need.\n\nI'm working on putting together your diagnosis right now.\n\nEnter your contact info below so I can show you what's actually going on...",
+          question: "Thanks for being honest with me.\n\nI'm about to show you something that'll change how you see your entire situation.\n\nBut I need your contact info first so my team can send this to you when we're done.",
           fields: [
             { key: 'name', label: 'Name', type: 'text', placeholder: 'Your name', autoComplete: 'name' },
             { key: 'email', label: 'Email', type: 'email', placeholder: 'your@email.com', autoComplete: 'email' },
             { key: 'phone', label: 'Phone', type: 'tel', placeholder: '(555) 123-4567', autoComplete: 'tel' },
           ],
           stateKey: 'user',
-          sectionLabel: 'Almost There',
+          sectionLabel: 'Your Info',
+          sectionIndex: 1,
+          noBackButton: true,
+        },
+
+        // ============================================================
+        // AI REFLECTION #1 (After Contact Capture)
+        // ============================================================
+        {
+          stepKey: 'ai-reflection-1',
+          type: 'ai-moment',
+          promptKey: 'ai-reflection-1',
+          noBackButton: true,
+          sectionLabel: 'Going Deeper',
+          sectionIndex: 3,
+        },
+
+        // ============================================================
+        // Q5-Q7: DEEPER QUESTIONS
+        // ============================================================
+
+        // Q5: What They've Tried (Multi-select)
+        {
+          stepKey: 'q5-tried',
+          type: 'question',
+          questionType: 'multi-select',
+          question: "Let's talk about what you've already tried to close that gap.\n\nSelect everything that applies:",
+          instruction: "Select all that apply",
+          options: [
+            { value: 'niched-down', label: 'Niched down to a specific industry or service — told myself "the riches are in the niches"' },
+            { value: 'raised-prices', label: 'Raised my prices — convinced myself I just needed to "charge my worth"' },
+            { value: 'hired-help', label: "Hired help or built out systems — got more efficient at a business that still wasn't scaling" },
+            { value: 'bought-courses', label: "Bought courses or joined coaching programs — learned a lot, implemented little, changed nothing" },
+            { value: 'personal-brand', label: "Tried to build a personal brand — felt like shouting into the void" },
+            { value: 'worked-longer', label: "Worked longer hours — thought grinding harder was the answer" },
+            { value: 'switched-niches', label: "Switched services or niches entirely — same problems, different packaging" },
+          ],
+          stateKey: 'assessment.whatTried',
+          sectionLabel: 'Going Deeper',
+          sectionIndex: 3,
+        },
+
+        // Q6: The Daily Reality
+        {
+          stepKey: 'q6-daily',
+          type: 'question',
+          questionType: 'multiple-choice',
+          question: "Now let's talk about what your life actually looks like right now.\n\nWhich one of these hits closest to home?",
+          options: [
+            { value: 'client-work', label: 'I spend most of my time doing client work — growing the business always gets pushed to "later"' },
+            { value: 'no-normal', label: "There's no such thing as a \"normal\" week — I'm constantly reacting, never getting ahead" },
+            { value: 'feast-famine', label: "I'm either drowning in work or panicking about where the next client is coming from — no in-between" },
+            { value: 'false-freedom', label: 'I technically have "freedom" but I can\'t go an hour without checking my phone' },
+            { value: 'more-hours', label: "I work more hours than I ever did at a job — for less money and way more uncertainty" },
+            { value: 'moving-target', label: 'I keep telling myself "once I hit [X], things will calm down" — but [X] keeps moving' },
+          ],
+          stateKey: 'assessment.dailyReality',
+          sectionLabel: 'Going Deeper',
+          sectionIndex: 3,
+        },
+
+        // Q7: The Performance Gap
+        {
+          stepKey: 'q7-performance',
+          type: 'question',
+          questionType: 'multiple-choice',
+          question: "One more. And I need you to be honest with this one.\n\nWhen someone asks 'how's business going?' — what do you usually SAY versus what's actually TRUE?",
+          options: [
+            { value: 'same', label: "What I say and what's true are basically the same — things are legitimately going well" },
+            { value: 'great-fine', label: 'I say "it\'s going great" but really it\'s just... fine' },
+            { value: 'growing-stuck', label: 'I say "we\'re growing" but honestly I\'ve been stuck at the same level for a while' },
+            { value: 'keeping-busy', label: 'I say "keeping busy" because I don\'t want to explain that I\'m struggling' },
+            { value: 'stopped-talking', label: "I've stopped bringing it up — I don't know what to say anymore and I'm tired of performing" },
+          ],
+          stateKey: 'assessment.performanceGap',
+          sectionLabel: 'Going Deeper',
+          sectionIndex: 3,
+        },
+
+        // ============================================================
+        // AI REFLECTION #2 (After Q7)
+        // ============================================================
+        {
+          stepKey: 'ai-reflection-2',
+          type: 'ai-moment',
+          promptKey: 'ai-reflection-2',
+          noBackButton: true,
+          sectionLabel: 'The Pattern',
+          sectionIndex: 4,
+        },
+
+        // ============================================================
+        // Q8-Q10: PERSONAL QUESTIONS
+        // ============================================================
+
+        // Q8: The Fear
+        {
+          stepKey: 'q8-fear',
+          type: 'question',
+          questionType: 'multiple-choice',
+          question: "Be honest with me — what scares you the most right now?",
+          options: [
+            { value: 'same-place', label: "That I'll still be in this exact same place a year from now — grinding, hoping, nothing actually different" },
+            { value: 'wrong-call', label: 'That I made the wrong call leaving the "safe" path — and the people who doubted me were right' },
+            { value: 'never-work', label: "That I'm working this hard for something that's never actually going to work" },
+            { value: 'burn-out', label: "That I'm going to burn out completely before I ever figure this out" },
+            { value: 'others-see', label: "That the people closest to me can see I'm struggling — even when I pretend I'm not" },
+            { value: 'wasted-years', label: "That I've already wasted the best years of my twenties building something with no real future" },
+          ],
+          stateKey: 'assessment.fear',
+          sectionLabel: 'The Truth',
+          sectionIndex: 5,
+        },
+
+        // Q9: The Identity Friction
+        {
+          stepKey: 'q9-identity',
+          type: 'question',
+          questionType: 'multiple-choice',
+          question: "Which of these do you relate to most right now?",
+          options: [
+            { value: 'freelancer-website', label: "I call myself an agency owner — but if I'm being honest, I'm really just a freelancer with a website" },
+            { value: 'cant-consistent', label: "I've proven I can get results — I just can't seem to make this thing consistent no matter what I try" },
+            { value: 'performing', label: "I feel like I'm performing success way more than I'm actually experiencing it" },
+            { value: 'work-harder', label: "I work harder than almost anyone I know — and somehow have less to show for it" },
+            { value: 'skills-freedom', label: "I've built real skills — but I'm starting to wonder if they'll ever translate into real freedom" },
+            { value: 'never-fit', label: "Something about this model has never fully fit me — but I don't know what else I'd do" },
+          ],
+          stateKey: 'assessment.identityFriction',
+          sectionLabel: 'The Truth',
+          sectionIndex: 5,
+        },
+
+        // Q10: The Confession (Open-ended)
+        {
+          stepKey: 'q10-confession',
+          type: 'question',
+          questionType: 'open-ended',
+          question: "Last question. And this one matters.\n\nWhat's the thing you don't usually say out loud about where you're at right now?\n\nThe thing you'd only tell someone who really gets it.",
+          placeholder: "Take your time with this. What you write here will shape what I show you next.",
+          stateKey: 'assessment.confession',
+          sectionLabel: 'The Truth',
           sectionIndex: 5,
           noBackButton: true,
         },
 
         // ============================================================
-        // LOADING SCREEN
+        // VIDEO + LOADING (Combined)
         // ============================================================
         {
           stepKey: 'loading-diagnosis',
           type: 'loading',
+          promptKey: 'diagnosis-v3',
+          videoKey: 'video-2-reveal',
+          introText: "Alright, I've got everything I need. I'm putting together your diagnosis now. This usually takes about 90 seconds, so watch this while you wait.",
           loadingMessages: {
             initial: [
               'Analyzing your responses...',
@@ -503,7 +323,7 @@ export const growthoperatorFlow: FlowDefinition = {
               'Still working on it...',
               'Hang tight...',
             ],
-            ready: "Alright it's ready... let's dive in.",
+            ready: "Alright, it's ready.",
           },
           minDuration: 12000,
           noBackButton: true,
@@ -511,12 +331,12 @@ export const growthoperatorFlow: FlowDefinition = {
         },
 
         // ============================================================
-        // DIAGNOSIS SEQUENCE (8 Screens)
+        // 5-SCREEN DIAGNOSIS SEQUENCE
         // ============================================================
         {
           stepKey: 'diagnosis-sequence',
           type: 'diagnosis-sequence',
-          promptKey: 'diagnosis-comprehensive',
+          promptKey: 'diagnosis-v3',
           noBackButton: true,
           hideProgressBar: true,
         },

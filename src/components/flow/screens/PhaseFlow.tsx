@@ -16,6 +16,7 @@ import { COLORS } from '@/config/flow'
 import { LoadingScreenStepContent } from './LoadingScreenStepContent'
 import { DiagnosisSequenceFlow } from './DiagnosisSequenceFlow'
 import { getCalendlyUrlWithSession } from '@/lib/calendly'
+import { MentorfyWatermark } from '../shared/MentorfyWatermark'
 
 // Normalize markdown to ensure ## headers are properly separated
 function normalizeMarkdown(content: string): string {
@@ -211,11 +212,12 @@ function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, int
               color: '#000',
               lineHeight: '1.35',
               marginBottom: '12px',
+              whiteSpace: 'pre-line',
             }}>
               {introContent.headline.split(/(\{\{green:[^}]+\}\})/).map((part, i) => {
                 const match = part.match(/\{\{green:([^}]+)\}\}/)
                 if (match) {
-                  return <span key={i} style={{ color: '#10B981' }}>{match[1]}</span>
+                  return <span key={i} style={{ color: '#10B981', whiteSpace: 'nowrap' }}>{match[1]}</span>
                 }
                 return part
               })}
@@ -320,6 +322,35 @@ function MultipleChoiceStepContent({ step, onAnswer, sessionId, isFirstStep, int
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Watermark and disclaimer for first step */}
+        {isFirstStep && (
+          <>
+            <MentorfyWatermark />
+            <div style={{
+              marginTop: '24px',
+              padding: '0 16px',
+              textAlign: 'center',
+            }}>
+              <p style={{
+                fontFamily: "'Geist', -apple-system, sans-serif",
+                fontSize: '9px',
+                color: '#999',
+                lineHeight: '1.5',
+                marginBottom: '8px',
+              }}>
+                This site is not a part of the Facebook™ website or Meta Platforms, Inc. Additionally, this site is NOT endorsed by Facebook™ in any way. Disclaimer: This educational opportunity is designed to teach individuals how to SCALE THEIR HIGH TICKET BUSINESS. It is not financial, legal, or investment advice. Results may vary and are not guaranteed. Always do your own due diligence.
+              </p>
+              <p style={{
+                fontFamily: "'Geist', -apple-system, sans-serif",
+                fontSize: '9px',
+                color: '#999',
+              }}>
+                © 2026 GROWTH OPERATOR LLC. All Rights Reserved
+              </p>
+            </div>
+          </>
+        )}
     </div>
   )
 }

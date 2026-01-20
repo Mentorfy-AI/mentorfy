@@ -14,25 +14,19 @@ interface TextWithAccentProps {
   accentColor?: string
 }
 
-// Helper to render text with specific phrases highlighted
-function TextWithAccent({ text, patterns = [], accentColor = DEFAULT_ACCENT_COLOR }: TextWithAccentProps) {
-  if (patterns.length === 0) {
-    return <>{text}</>
-  }
-
-  // Build regex from patterns (escape special chars, join with |)
-  const escapedPatterns = patterns.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const regex = new RegExp(`(${escapedPatterns.join('|')})`, 'gi')
-  const parts = text.split(regex)
+// Helper to render text with {{green:...}} syntax highlighted
+function TextWithAccent({ text, accentColor = DEFAULT_ACCENT_COLOR }: TextWithAccentProps) {
+  // Parse {{green:...}} syntax
+  const parts = text.split(/(\{\{green:[^}]+\}\})/)
 
   return (
     <>
       {parts.map((part, i) => {
-        const isHighlighted = patterns.some(p => p.toLowerCase() === part.toLowerCase())
-        if (isHighlighted) {
+        const match = part.match(/\{\{green:([^}]+)\}\}/)
+        if (match) {
           return (
-            <span key={i} style={{ color: accentColor }}>
-              {part}
+            <span key={i} style={{ color: accentColor, whiteSpace: 'nowrap' }}>
+              {match[1]}
             </span>
           )
         }
@@ -114,7 +108,6 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
           >
             <TextWithAccent
               text={mentor.welcome.callout}
-              patterns={flowId === 'growthoperator' ? ["still hasn't"] : ['$2k-$10k']}
               accentColor={accentColor}
             />
           </motion.p>
@@ -132,11 +125,11 @@ export function LandingPage({ onStart, flowId = 'rafael-tats' }: LandingPageProp
             margin: '0 0 24px 0',
             maxWidth: '480px',
             padding: '0 8px',
+            whiteSpace: 'pre-line',
           }}
         >
           <TextWithAccent
             text={mentor.welcome.headline}
-            patterns={flowId === 'growthoperator' ? ['not', "haven't been told"] : ['$2k-$10k']}
             accentColor={accentColor}
           />
         </motion.h1>
